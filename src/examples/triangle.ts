@@ -145,7 +145,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       passEncoder!.setScissorRect(0, 0, width, height);
       passEncoder!.setVertexBuffer(0, vertexBuffer!);
       passEncoder!.setIndexBuffer(indexBuffer!, "uint16");
-      passEncoder!.setBindGroup(0, emptyBindGroup!); // NEW: Set the bind group
+      passEncoder!.setBindGroup(0, emptyBindGroup!);
       passEncoder!.drawIndexed(3);
       passEncoder!.end();
 
