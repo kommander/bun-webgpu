@@ -1,0 +1,18 @@
+{
+  "name": "bun-webgpu",
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@webgpu/types": "^0.1.60",
+    "sharp": "^0.34.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
