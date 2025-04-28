@@ -21,9 +21,14 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
 		if (!descriptor || !descriptor.device) {
 			throw new Error("GPUCanvasContextMock.configure: Invalid descriptor or missing device.");
 		}
-		
-    this._configuration = { ...descriptor };
-		this._device = descriptor.device; 
+
+    this._configuration = {
+        ...descriptor,
+        alphaMode: descriptor.alphaMode ?? 'premultiplied',
+        usage: descriptor.usage ?? (GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC),
+        colorSpace: descriptor.colorSpace ?? 'srgb',
+    };
+		this._device = descriptor.device;
 
 		// Invalidate any previously vended texture
 		this._currentTexture?.destroy();
@@ -51,7 +56,7 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
 			usage: this._configuration.usage ?? (GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC),
 			viewFormats: Array.from(this._configuration.viewFormats ?? []),
 			colorSpace: this._configuration.colorSpace ?? 'srgb',
-			alphaMode: this._configuration.alphaMode ?? 'opaque',
+			alphaMode: this._configuration.alphaMode ?? 'premultiplied',
 		};
 
 		if (this._configuration.toneMapping) {
