@@ -18,7 +18,7 @@ export class GPUBufferImpl implements GPUBuffer {
     private _mode: GPUMapModeFlags | null = null;
     private _descriptor: GPUBufferDescriptor;
     private _mapState: GPUBufferMapState = 'unmapped';
-    private _pendingMap: boolean = false;
+    private _pendingMap: Promise<undefined> | null = null;
 
     __brand: "GPUBuffer" = "GPUBuffer";
     label: string = '';
@@ -50,14 +50,12 @@ export class GPUBufferImpl implements GPUBuffer {
 
     mapAsync(mode: GPUMapModeFlags, offset?: GPUSize64, size?: GPUSize64): Promise<undefined> {
       if (this._pendingMap) {
-        return Promise.reject(new Error('Buffer is already pending a map operation'));
+        return this._pendingMap;
       }
 
       this._mode = mode;
       this._mapState = 'pending';
-      this._pendingMap = true;
-
-      return new Promise((resolve, reject) => {
+      this._pendingMap = new Promise((resolve, reject) => {
           // TODO: WGPU requires offset to be multiple of 8 or 0, size multiple of 4. ??
           const mapOffset = BigInt(offset ?? 0);
           const mapSize = BigInt(size ?? this._size);
@@ -66,13 +64,14 @@ export class GPUBufferImpl implements GPUBuffer {
               (status: number, messagePtr: Pointer | null, messageSize: number, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
                 this.instanceTicker.unregister();
                 callback.close(); 
-                this._pendingMap = false;
+                this._pendingMap = null;
                 
                   if (status === BufferMapAsyncStatus.Success) {
                       this._mapState = 'mapped';
                       resolve(undefined);
                   } else {
                       this._mapState = 'unmapped';
+                      console.error('WGPU Buffer Map Error', status);
                       const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
                       const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
                       reject(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
@@ -85,6 +84,7 @@ export class GPUBufferImpl implements GPUBuffer {
           );
 
           if (!callback || !callback.ptr) {
+            this._pendingMap = null;
             fatalError('Could not create buffer map callback');
           }
 
@@ -103,9 +103,14 @@ export class GPUBufferImpl implements GPUBuffer {
               );
               this.instanceTicker.register();
           } catch(e) {
+              this._pendingMap = null;
+              this._mapState = 'unmapped';
+              this.instanceTicker.unregister();
               reject(e);
           }
       });
+
+      return this._pendingMap;
     }
 
     getMappedRangePtr(offset?: GPUSize64, size?: GPUSize64): Pointer {
@@ -121,7 +126,7 @@ export class GPUBufferImpl implements GPUBuffer {
       
       const dataPtr = this.lib.wgpuBufferGetMappedRange(this.bufferPtr, readOffset, readSize);
       if (dataPtr === null || dataPtr.valueOf() === 0) {
-          fatalError("getMappedRange: Received null pointer (buffer likely not mapped or range invalid).");
+          fatalError("getMappedRangePtr: Received null pointer (buffer likely not mapped or range invalid).");
       }
       
       return dataPtr;
@@ -137,7 +142,7 @@ export class GPUBufferImpl implements GPUBuffer {
       const dataPtr = this.lib.wgpuBufferGetConstMappedRange(this.bufferPtr, readOffset, readSize);
       
       if (dataPtr === null || dataPtr.valueOf() === 0) {
-          fatalError("getConstMappedRange: Received null pointer (buffer likely not mapped or range invalid).");
+          fatalError("getConstMappedRangePtr: Received null pointer (buffer likely not mapped or range invalid).");
       }
       
       return dataPtr;
