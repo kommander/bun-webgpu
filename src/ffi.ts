@@ -56,8 +56,7 @@ function findLibrary(): string {
 
 function _loadLibrary() {
     const libPath = findLibrary();
-    console.log("ffi2 - Loading library:", libPath);
-
+    
     // Define the FFI interface based on webgpu.h functions
     // Naming convention: wgpuFunctionName
     const { symbols } = dlopen(libPath, {
