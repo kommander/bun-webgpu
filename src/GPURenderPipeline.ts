@@ -1,5 +1,6 @@
 import type { Pointer } from "bun:ffi";
 import type { FFI_SYMBOLS } from "./ffi";
+import { fatalError } from "./utils/error";
 
 export class GPURenderPipelineImpl implements GPURenderPipeline {
     __brand: "GPURenderPipeline" = "GPURenderPipeline";
@@ -12,8 +13,7 @@ export class GPURenderPipelineImpl implements GPURenderPipeline {
     }
 
     getBindGroupLayout(index: number): GPUBindGroupLayout {
-        console.error('getBindGroupLayout', this.ptr, index);
-        throw new Error("Not implemented");
+        fatalError('getBindGroupLayout not implemented');
     }
 
     destroy(): undefined {

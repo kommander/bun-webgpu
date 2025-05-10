@@ -1,5 +1,7 @@
 import { type Pointer, ptr } from "bun:ffi";
 import { FFI_SYMBOLS } from "./ffi";
+import { fatalError } from "./utils/error";
+import { WGPU_WHOLE_SIZE } from "./structs_def";
 
 const IndexFormat: Record<GPUIndexFormat, number> = { // NEW
   uint16: 1,
@@ -16,28 +18,23 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   setBlendConstant(color: GPUColor): undefined {
-    console.error('setBlendConstant', this.ptr, color);
-    throw new Error("Not implemented");
+    fatalError('setBlendConstant not implemented');
   }
 
   setStencilReference(reference: GPUStencilValue): undefined {
-    console.error('setStencilReference', this.ptr, reference);
-    throw new Error("Not implemented");
+    fatalError('setStencilReference not implemented');
   }
 
   beginOcclusionQuery(queryIndex: GPUSize32): undefined {
-    console.error('beginOcclusionQuery', this.ptr, queryIndex);
-    throw new Error("Not implemented");
+    fatalError('beginOcclusionQuery not implemented');
   }
 
   endOcclusionQuery(): undefined {
-    console.error('endOcclusionQuery', this.ptr);
-    throw new Error("Not implemented");
+    fatalError('endOcclusionQuery not implemented');
   }
 
   executeBundles(bundles: Iterable<GPURenderBundle>): undefined {
-    console.error('executeBundles', this.ptr, bundles);
-    throw new Error("Not implemented");
+    fatalError('executeBundles not implemented');
   }
 
   setPipeline(pipeline: GPURenderPipeline): undefined {
@@ -77,7 +74,7 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
            return;
       }
       // Use WGPU_WHOLE_SIZE equivalent if size is not provided
-      const bufferSize = size ?? 0xFFFFFFFFFFFFFFFFn; 
+      const bufferSize = size ?? WGPU_WHOLE_SIZE; 
       this.lib.wgpuRenderPassEncoderSetVertexBuffer(this.ptr, slot, buffer.ptr, BigInt(offset), BigInt(bufferSize)); 
   }
 
@@ -88,7 +85,7 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
       }
       const formatValue = IndexFormat[format];
       // Use WGPU_WHOLE_SIZE equivalent if size is not provided
-      const bufferSize = size ?? 0xFFFFFFFFFFFFFFFFn; 
+      const bufferSize = size ?? WGPU_WHOLE_SIZE; 
       this.lib.wgpuRenderPassEncoderSetIndexBuffer(this.ptr, buffer.ptr, formatValue, BigInt(offset), BigInt(bufferSize)); 
   }
 
@@ -115,11 +112,11 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number | bigint): undefined {
-    throw new Error("Not implemented");
+    fatalError('drawIndirect not implemented');
   }
 
   drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number | bigint): undefined {
-    throw new Error("Not implemented");
+    fatalError('drawIndexedIndirect not implemented');
   }
 
   end(): undefined {
@@ -128,18 +125,15 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   pushDebugGroup(message: string): undefined {
-    console.error('pushDebugGroup', this.ptr, message);
-    throw new Error("Not implemented");
+    fatalError('pushDebugGroup not implemented');
   }
 
   popDebugGroup(): undefined {
-    console.error('popDebugGroup', this.ptr);
-    throw new Error("Not implemented");
+    fatalError('popDebugGroup not implemented');
   }
 
   insertDebugMarker(markerLabel: string): undefined {
-    console.error('insertDebugMarker', this.ptr, markerLabel);
-    throw new Error("Not implemented");
+    fatalError('insertDebugMarker not implemented');
   }
 
   destroy(): undefined {

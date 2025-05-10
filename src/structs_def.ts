@@ -4,6 +4,7 @@ import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
 
 export const WGPUBool = 'bool_u32';
 export const UINT64_MAX = 0xFFFFFFFFFFFFFFFFn;
+export const WGPU_WHOLE_SIZE = 0xFFFFFFFFFFFFFFFFn;
 
 export const WGPUCallbackMode = {
     WaitAnyOnly: 0x00000001,

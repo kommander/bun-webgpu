@@ -1,5 +1,6 @@
 import { type Pointer } from "bun:ffi";
 import { FFI_SYMBOLS } from "./ffi";
+import { fatalError } from "./utils/error";
 
 export class GPUShaderModuleImpl implements GPUShaderModule {
     __brand: "GPUShaderModule" = "GPUShaderModule";
@@ -9,7 +10,7 @@ export class GPUShaderModuleImpl implements GPUShaderModule {
     }
 
     getCompilationInfo(): Promise<GPUCompilationInfo> {
-        throw new Error("Not implemented");
+        return fatalError('getCompilationInfo not implemented');
     }
     
     destroy(): undefined {
