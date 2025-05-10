@@ -5,6 +5,7 @@ import { GPUDeviceImpl } from "./GPUDevice";
 import { WGPUCallbackInfoStruct, WGPUCallbackMode, WGPUDeviceDescriptorStruct, WGPUErrorType, type WGPUUncapturedErrorCallbackInfo } from "./structs_def";
 import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
+import { WGPUFeatureNameDef } from "./structs_def";
 
 const RequestDeviceStatus = {
   Success: 1,
@@ -12,6 +13,11 @@ const RequestDeviceStatus = {
   Error: 3,
   Unknown: 4,
 } as const;
+
+// This assumes WGPUFeatureNameDef values are contiguous or at least correctly ordered for bitmasking.
+const BIT_INDEX_TO_FEATURE_NAME = Object.entries(WGPUFeatureNameDef.enum)
+    .sort(([, aVal], [, bVal]) => (aVal as number) - (bVal as number))
+    .map(([name]) => name as GPUFeatureName);
 
 let deviceCount = 0;
 
@@ -35,33 +41,34 @@ export class GPUAdapterImpl implements GPUAdapter {
     }
 
     get features(): GPUSupportedFeatures {
-        // if (this._features === null) {
-        //      try {
-        //          const featureMask = this.lib.adapterGetFeatures(this.adapterPtr);
-        //          const supportedFeatures = new Set<GPUFeatureName>();
-        //          const maskBigInt = BigInt(featureMask);
+        if (this._features === null) {
+             try {
+                 const featureMask = this.lib.wgpuAdapterGetFeatures(this.adapterPtr);
+                 const supportedFeatures = new Set<GPUFeatureName>();
+                 const maskBigInt = BigInt(featureMask);
  
-        //          for (let i = 0; i < BIT_INDEX_TO_FEATURE_NAME.length; i++) {
-        //              // Check if the i-th bit is set
-        //              if ((maskBigInt & (1n << BigInt(i))) !== 0n) {
-        //                  const featureName = BIT_INDEX_TO_FEATURE_NAME[i];
-        //                  if (featureName) {
-        //                      supportedFeatures.add(featureName);
-        //                  } else {
-        //                       console.warn(`GPUAdapter.features: Unmapped feature bit set at index ${i}`);
-        //                  }
-        //              }
-        //          }
-        //          this._features = Object.freeze(supportedFeatures);
+                 for (let i = 0; i < BIT_INDEX_TO_FEATURE_NAME.length; i++) {
+                     // Check if the i-th bit is set
+                     if ((maskBigInt & (1n << BigInt(i))) !== 0n) {
+                         const featureName = BIT_INDEX_TO_FEATURE_NAME[i];
+                         if (featureName) {
+                             supportedFeatures.add(featureName);
+                         } else {
+                              console.warn(`GPUAdapter.features: Unmapped feature bit set at index ${i}`);
+                         }
+                     }
+                 }
+                 this._features = Object.freeze(supportedFeatures);
  
-        //      } catch (e) {
-        //           console.error("Error calling adapterGetFeatures FFI function:", e);
-        //           return Object.freeze(new Set<GPUFeatureName>()); // Return frozen empty set
-        //      }
-        // }
+             } catch (e) {
+                  console.error("Error calling adapterGetFeatures FFI function:", e);
+                  // Return a new frozen empty set to avoid modifying a shared mutable object
+                  // if this getter is called again after an error.
+                  return Object.freeze(new Set<GPUFeatureName>()); 
+             }
+        }
 
-        // return this._features;
-        throw new Error("Not implemented");
+        return this._features;
      }
 
     get limits(): GPUSupportedLimits {

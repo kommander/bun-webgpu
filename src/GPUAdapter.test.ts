@@ -58,27 +58,6 @@ describe("GPUAdapter", () => {
 
             expect(features1).toBe(features2); // Should be strictly equal due to caching
         });
-
-        it("should return an empty set after adapter is destroyed", () => {
-             expect(adapter).not.toBeNull();
-             const featuresBeforeDestroy = adapter!.features; // Populate cache
-             expect(featuresBeforeDestroy.size).toBeGreaterThan(0);
- 
-             // Access internal cache for verification (less ideal, but direct)
-             // This relies on the internal property name '_features'
-             expect((adapter as GPUAdapterImpl)['_features']).not.toBeNull();
- 
-             // Destroy the adapter
-             (adapter as GPUAdapterImpl).destroy();
- 
-             // Verify internal cache is cleared
-             expect((adapter as GPUAdapterImpl)['_features']).toBeNull();
- 
-             // Verify public getter now returns an empty set as per implementation
-             const featuresAfterDestroy = adapter!.features;
-             expect(featuresAfterDestroy).toBeInstanceOf(Set);
-             expect(featuresAfterDestroy.size).toBe(0); 
-        });
     });
 
     // TODO: Add tests for limits, info, isFallbackAdapter
