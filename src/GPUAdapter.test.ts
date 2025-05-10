@@ -58,8 +58,70 @@ describe("GPUAdapter", () => {
 
             expect(features1).toBe(features2); // Should be strictly equal due to caching
         });
+
+        it("should return an empty set after adapter is destroyed and features were previously accessed", () => {
+            expect(adapter).not.toBeNull();
+            adapter!.features; // Populate cache
+            (adapter as GPUAdapterImpl).destroy();
+            const featuresAfterDestroy = adapter!.features;
+            expect(featuresAfterDestroy).toBeInstanceOf(Set);
+            expect(featuresAfterDestroy.size).toBe(0);
+        });
     });
 
-    // TODO: Add tests for limits, info, isFallbackAdapter
+    describe("limits", () => {
+        it("should return a valid GPUSupportedLimits object", () => {
+            expect(adapter).not.toBeNull();
+            const limits = adapter!.limits;
+
+            expect(limits).not.toBeNull();
+            expect(limits.__brand).toBe("GPUSupportedLimits");
+            // Check a few key properties to ensure it's populated
+            expect(typeof limits.maxTextureDimension2D).toBe('number');
+            expect(limits.maxTextureDimension2D).toBeGreaterThanOrEqual(0); 
+            expect(typeof limits.maxUniformBufferBindingSize).toBe('number');
+            expect(limits.maxUniformBufferBindingSize).toBeGreaterThanOrEqual(0);
+
+            // console.log("Adapter Limits Found:", limits);
+        });
+
+        it("should return the same cached object on subsequent calls", () => {
+            expect(adapter).not.toBeNull();
+            const limits1 = adapter!.limits;
+            const limits2 = adapter!.limits;
+
+            expect(limits1).toBe(limits2); // Should be strictly equal due to caching
+        });
+
+        it("should return default limits after adapter is destroyed and limits were previously accessed", () => {
+            expect(adapter).not.toBeNull();
+            adapter!.limits; // Populate cache before destroying
+            
+            // Temporarily store the adapter to destroy and then re-fetch to test destruction path
+            const adapterToDestroy = adapter as GPUAdapterImpl;
+            adapterToDestroy.destroy();
+
+            const limitsAfterDestroy = adapterToDestroy.limits; 
+            expect(limitsAfterDestroy).not.toBeNull();
+            expect(limitsAfterDestroy.__brand).toBe("GPUSupportedLimits");
+            // Check if it returns the default (e.g., 0 for many values)
+            expect(limitsAfterDestroy.maxTextureDimension2D).toBe(0); 
+        });
+
+        it("should return default limits after adapter is destroyed and limits were NOT previously accessed", () => {
+            expect(adapter).not.toBeNull();
+            // Do not access adapter!.limits before destroy() here
+
+            const adapterToDestroy = adapter as GPUAdapterImpl;
+            adapterToDestroy.destroy();
+
+            const limitsAfterDestroy = adapterToDestroy.limits;
+            expect(limitsAfterDestroy).not.toBeNull();
+            expect(limitsAfterDestroy.__brand).toBe("GPUSupportedLimits");
+            expect(limitsAfterDestroy.maxTextureDimension2D).toBe(0);
+        });
+    });
+
+    // TODO: Add tests for info, isFallbackAdapter
 
 }); 

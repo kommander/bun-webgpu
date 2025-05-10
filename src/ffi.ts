@@ -133,6 +133,10 @@ function _loadLibrary() {
         args: [FFIType.pointer], // adapter: WGPUAdapter
         returns: FFIType.u64,    // returns WGPUFeatureFlags (uint64_t)
       },
+      wgpuAdapterGetLimits: {
+        args: [FFIType.pointer, FFIType.pointer], // adapter: WGPUAdapter, limits: *mut WGPULimits
+        returns: FFIType.u32, // WGPUStatus
+      },
       // Add other adapter functions like GetFeatures, GetLimits, HasFeature etc.
 
       // --- Device Functions ---

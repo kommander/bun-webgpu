@@ -1,8 +1,9 @@
-import { FFIType, JSCallback, toArrayBuffer, type Pointer, ptr } from "bun:ffi";
+
+import { JSCallback, type Pointer, ptr } from "bun:ffi";
 import { 
     BufferUsageFlags, 
 } from ".";
-import { WGPUSupportedFeaturesStruct, WGPUFeatureNameDef, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUChainedStructStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct } from "./structs_def";
+import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
 import { FFI_SYMBOLS } from "./ffi";
@@ -11,7 +12,6 @@ import { GPUCommandEncoderImpl } from "./GPUCommandEncoder";
 import { GPUTextureImpl } from "./GPUTexture";
 import { GPUBufferImpl } from "./GPUBuffer";
 import { GPUSamplerImpl } from "./GPUSampler";
-import { GPUTextureViewImpl } from "./GPUTextureView";
 import { GPUBindGroupImpl } from "./GPUBindGroup";
 import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout";
 import { GPUQuerySetImpl } from "./GPUQuerySet";
@@ -22,7 +22,6 @@ import { GPURenderPipelineImpl } from "./GPURenderPipeline";
 import { fatalError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
-import { WGPUBindGroupLayoutEntryStruct } from './structs_def';
 import type { InstanceTicker } from "./GPU";
 
 const FFIResourceType = {
@@ -99,8 +98,6 @@ export class DeviceTicker {
     }
 }
 
-
-// Default limits object (Consider moving to a constants file)
 const DEFAULT_SUPPORTED_LIMITS: GPUSupportedLimits = Object.freeze({
     __brand: "GPUSupportedLimits",
     maxTextureDimension1D: 0,

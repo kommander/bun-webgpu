@@ -371,7 +371,7 @@ export const WGPUSupportedFeaturesStruct = defineStruct([
 const WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF;
 const WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFFn;
 
-const defaultLimitsForPacking = {
+export const defaultLimitsForPacking = {
     maxTextureDimension1D: WGPU_LIMIT_U32_UNDEFINED,
     maxTextureDimension2D: WGPU_LIMIT_U32_UNDEFINED,
     maxTextureDimension3D: WGPU_LIMIT_U32_UNDEFINED,
@@ -446,7 +446,6 @@ export const WGPULimitsStruct = defineStruct([
     ['maxStorageTexturesInFragmentStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
 ], { 
     default: {
-        __brand: "GPUSupportedLimits",
         ...defaultLimitsForPacking,
     }
 });
