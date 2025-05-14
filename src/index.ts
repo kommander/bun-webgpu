@@ -6,14 +6,6 @@ import { GPUImpl } from "./GPU";
 
 export * from "./mocks/GPUCanvasContext";
 
-export const CustomZigError = {
-  INSTANCE_NULL: 999,
-  ALLOC_FAILED: 997,
-  ADAPTER_NULL: 996,
-  BUFFER_NULL: 992, // Added for bufferMapAsyncFFI
-  // CALLBACK_NULL_DEV: 995, // Removed as it wasn't used
-} as const;
-
 export const TextureUsageFlags = {
   COPY_SRC: 1 << 0,
   COPY_DST: 1 << 1,
