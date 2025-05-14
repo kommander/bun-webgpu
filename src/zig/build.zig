@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
     // Define all target configurations we want to support
     // Mirroring renderoo's targets for now
     const targets = [_]std.Target.Query{
-        // .{ .cpu_arch = .x86_64, .os_tag = .linux },
+        .{ .cpu_arch = .x86_64, .os_tag = .linux },
         // .{ .cpu_arch = .x86_64, .os_tag = .macos },
         .{ .cpu_arch = .aarch64, .os_tag = .macos },
         // .{ .cpu_arch = .x86_64, .os_tag = .windows },
@@ -26,7 +26,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(root_source_path),
             .target = target,
             .optimize = optimize,
-            // .link_libc = false, // Assuming WebGPU might need libc, can be re-evaluated
+            .link_libc = true,
         });
 
         // Add WGPU header include path (relative to this build.zig file)
