@@ -7,6 +7,12 @@ import os from "os";
 // Get the directory of the current module
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
+// const DEFAULT_PATH = join(__dirname, "../dawn/");
+const DEFAULT_PATH = join(__dirname, "zig/lib/");
+// const LIB_NAME = "webgpu_dawn";
+const LIB_NAME = "webgpu_wrapper";
+
+
 // Map platform and architecture to the target name format used in our build
 function getPlatformTarget(): string {
   const platform = os.platform();
@@ -32,54 +38,42 @@ function getPlatformTarget(): string {
 
 function findLibrary(): string {
   const target = getPlatformTarget();
-  const libDir = join(__dirname, "../dawn/");
+  const libDir = DEFAULT_PATH;
 
   // First try target-specific directory
   const [arch, osName] = target.split('-');
   const isWindows = osName === 'windows';
-  const libraryName = isWindows ? 'webgpu_dawn' : 'libwebgpu_dawn';
+  const libraryName = isWindows ? LIB_NAME : `lib${LIB_NAME}`;
   const targetLibPath = join(libDir, target, `${libraryName}.${suffix}`);
 
   if (existsSync(targetLibPath)) {
     return targetLibPath;
   }
 
-  // Fall back to generic location if target-specific not found
-  const genericLibPath = join(libDir, `${libraryName}.${suffix}`);
-
-  if (existsSync(genericLibPath)) {
-    return genericLibPath;
-  }
-
-  throw new Error(`Could not find dawn library for platform: ${target} at ${targetLibPath} or ${genericLibPath}`);
+  throw new Error(`Could not find dawn library for platform: ${target} at ${targetLibPath}`);
 }
 
 function _loadLibrary() {
     const libPath = findLibrary();
     
     // Define the FFI interface based on webgpu.h functions
-    // Naming convention: wgpuFunctionName
     const { symbols } = dlopen(libPath, {
       // --- Core API Functions ---
-      wgpuGetProcAddress: {
-        args: [FFIType.cstring], // procName: WGPUStringView (treat as cstring for simplicity)
-        returns: FFIType.pointer, // WGPUProc
-      },
-      wgpuCreateInstance: {
+      zwgpuCreateInstance: {
         args: [FFIType.pointer], // descriptor: *const WGPUInstanceDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUInstance
       },
 
       // --- Instance Functions ---
-      wgpuInstanceCreateSurface: {
+      zwgpuInstanceCreateSurface: {
         args: [FFIType.pointer, FFIType.pointer], // instance: WGPUInstance, descriptor: *const WGPUSurfaceDescriptor
         returns: FFIType.pointer, // -> WGPUSurface
       },
-      wgpuInstanceProcessEvents: {
+      zwgpuInstanceProcessEvents: {
         args: [FFIType.pointer], // instance: WGPUInstance
         returns: FFIType.void,
       },
-      wgpuInstanceRequestAdapter: {
+      zwgpuInstanceRequestAdapter: {
         args: [
           FFIType.pointer, // instance: WGPUInstance
           FFIType.pointer, // options: *const WGPURequestAdapterOptions (nullable)
@@ -87,7 +81,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.u64, // -> WGPUFuture (id)
       },
-      wgpuInstanceWaitAny: {
+      zwgpuInstanceWaitAny: {
           args: [
               FFIType.pointer, // instance: WGPUInstance
               FFIType.u64,     // futureCount: size_t (using u64)
@@ -96,28 +90,28 @@ function _loadLibrary() {
           ],
           returns: FFIType.u32, // -> WGPUWaitStatus (enum)
       },
-      wgpuInstanceRelease: {
+      zwgpuInstanceRelease: {
         args: [FFIType.pointer], // instance: WGPUInstance
         returns: FFIType.void,
       },
-      wgpuInstanceAddRef: { // Typically not needed from JS due to GC, but included for completeness
+      zwgpuInstanceAddRef: { // Typically not needed from JS due to GC, but included for completeness
         args: [FFIType.pointer], // instance: WGPUInstance
         returns: FFIType.void,
       },
 
       // --- Adapter Functions ---
-      wgpuAdapterCreateDevice: {
+      zwgpuAdapterCreateDevice: {
         args: [
           FFIType.pointer, // adapter: WGPUAdapter
           FFIType.pointer, // descriptor: *const WGPUDeviceDescriptor (nullable)
         ],
         returns: FFIType.pointer, // -> WGPUDevice
       },
-      wgpuAdapterGetInfo: {
+      zwgpuAdapterGetInfo: {
           args: [FFIType.pointer, FFIType.pointer], // adapter: WGPUAdapter, info: *mut WGPUAdapterInfo
           returns: FFIType.u32, // WGPUStatus
       },
-      wgpuAdapterRequestDevice: {
+      zwgpuAdapterRequestDevice: {
         args: [
           FFIType.pointer, // adapter: WGPUAdapter
           FFIType.pointer, // options: *const WGPUDeviceDescriptor (nullable)
@@ -125,86 +119,86 @@ function _loadLibrary() {
         ],
         returns: FFIType.u64, // -> WGPUFuture (id)
       },
-      wgpuAdapterRelease: {
+      zwgpuAdapterRelease: {
         args: [FFIType.pointer], // adapter: WGPUAdapter
         returns: FFIType.void,
       },
-      wgpuAdapterGetFeatures: { // Added for getting adapter features
+      zwgpuAdapterGetFeatures: { // Added for getting adapter features
         args: [FFIType.pointer], // adapter: WGPUAdapter
         returns: FFIType.u64,    // returns WGPUFeatureFlags (uint64_t)
       },
-      wgpuAdapterGetLimits: {
+      zwgpuAdapterGetLimits: {
         args: [FFIType.pointer, FFIType.pointer], // adapter: WGPUAdapter, limits: *mut WGPULimits
         returns: FFIType.u32, // WGPUStatus
       },
       // Add other adapter functions like GetFeatures, GetLimits, HasFeature etc.
 
       // --- Device Functions ---
-      wgpuDeviceCreateBuffer: {
+      zwgpuDeviceCreateBuffer: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUBufferDescriptor
         returns: FFIType.pointer, // -> WGPUBuffer
       },
-      wgpuDeviceCreateTexture: {
+      zwgpuDeviceCreateTexture: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUTextureDescriptor
         returns: FFIType.pointer, // -> WGPUTexture
       },
-      wgpuDeviceCreateSampler: {
+      zwgpuDeviceCreateSampler: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUSamplerDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUSampler
       },
-      wgpuDeviceCreateShaderModule: {
+      zwgpuDeviceCreateShaderModule: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUShaderModuleDescriptor
         returns: FFIType.pointer, // -> WGPUShaderModule
       },
-      wgpuDeviceCreateBindGroupLayout: {
+      zwgpuDeviceCreateBindGroupLayout: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUBindGroupLayoutDescriptor
         returns: FFIType.pointer, // -> WGPUBindGroupLayout
       },
-       wgpuDeviceCreateBindGroup: {
+       zwgpuDeviceCreateBindGroup: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUBindGroupDescriptor
         returns: FFIType.pointer, // -> WGPUBindGroup
       },
-      wgpuDeviceCreatePipelineLayout: {
+      zwgpuDeviceCreatePipelineLayout: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUPipelineLayoutDescriptor
         returns: FFIType.pointer, // -> WGPUPipelineLayout
       },
-      wgpuDeviceCreateRenderPipeline: {
+      zwgpuDeviceCreateRenderPipeline: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPURenderPipelineDescriptor
         returns: FFIType.pointer, // -> WGPURenderPipeline
       },
-      wgpuDeviceCreateComputePipeline: {
+      zwgpuDeviceCreateComputePipeline: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUComputePipelineDescriptor
         returns: FFIType.pointer, // -> WGPUComputePipeline
       },
-      wgpuDeviceCreateCommandEncoder: {
+      zwgpuDeviceCreateCommandEncoder: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUCommandEncoderDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUCommandEncoder
       },
-      wgpuDeviceCreateQuerySet: {
+      zwgpuDeviceCreateQuerySet: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUQuerySetDescriptor
         returns: FFIType.pointer, // -> WGPUQuerySet
       },
-      wgpuDeviceGetQueue: {
+      zwgpuDeviceGetQueue: {
           args: [FFIType.pointer], // device: WGPUDevice
           returns: FFIType.pointer, // -> WGPUQueue
       },
-      wgpuDeviceGetLimits: {
+      zwgpuDeviceGetLimits: {
           args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, limits: *mut WGPULimits
           returns: FFIType.u32, // WGPUStatus
       },
-      wgpuDeviceHasFeature: {
+      zwgpuDeviceHasFeature: {
         args: [FFIType.pointer, FFIType.u32], // device: WGPUDevice, feature: WGPUFeatureName (enum)
         returns: FFIType.bool, // WGPUBool (use bool for direct mapping)
       },
-      wgpuDeviceGetFeatures: {
+      zwgpuDeviceGetFeatures: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, features: *mut WGPUSupportedFeatures
         returns: FFIType.void,
       },
-      wgpuDevicePushErrorScope: {
+      zwgpuDevicePushErrorScope: {
           args: [FFIType.pointer, FFIType.u32], // device: WGPUDevice, filter: WGPUErrorFilter (enum)
           returns: FFIType.void,
       },
-      wgpuDevicePopErrorScope: {
+      zwgpuDevicePopErrorScope: {
           args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, callbackInfo: WGPUPopErrorScopeCallbackInfo
           returns: FFIType.u64, // WGPUFuture (id)
       },
@@ -212,34 +206,34 @@ function _loadLibrary() {
       //     args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, callbackInfo: WGPUUncapturedErrorCallbackInfo
       //     returns: FFIType.void,
       // },
-      wgpuDeviceTick: {
+      zwgpuDeviceTick: {
           args: [FFIType.pointer], // device: WGPUDevice
           returns: FFIType.void,
       },
-      wgpuDeviceDestroy: {
+      zwgpuDeviceDestroy: {
           args: [FFIType.pointer], // device: WGPUDevice
           returns: FFIType.void,
       },
-      wgpuDeviceRelease: {
+      zwgpuDeviceRelease: {
         args: [FFIType.pointer], // device: WGPUDevice
         returns: FFIType.void,
       },
       // Add other device functions...
 
       // --- Buffer Functions ---
-      wgpuBufferGetMappedRange: {
+      zwgpuBufferGetMappedRange: {
         args: [FFIType.pointer, FFIType.u64, FFIType.u64], // buffer: WGPUBuffer, offset: size_t, size: size_t
         returns: FFIType.ptr, // void*
       },
-      wgpuBufferGetConstMappedRange: {
+      zwgpuBufferGetConstMappedRange: {
         args: [FFIType.pointer, FFIType.u64, FFIType.u64], // buffer: WGPUBuffer, offset: size_t, size: size_t
         returns: FFIType.ptr, // const void*
       },
-      wgpuBufferUnmap: {
+      zwgpuBufferUnmap: {
         args: [FFIType.pointer], // buffer: WGPUBuffer
         returns: FFIType.void,
       },
-      wgpuBufferMapAsync: {
+      zwgpuBufferMapAsync: {
         args: [
           FFIType.pointer, // buffer: WGPUBuffer
           FFIType.u64,     // mode: WGPUMapMode (flags)
@@ -249,106 +243,106 @@ function _loadLibrary() {
         ],
         returns: FFIType.u64, // WGPUFuture (id)
       },
-      wgpuBufferDestroy: {
+      zwgpuBufferDestroy: {
           args: [FFIType.pointer], // buffer: WGPUBuffer
           returns: FFIType.void,
       },
-      wgpuBufferRelease: {
+      zwgpuBufferRelease: {
         args: [FFIType.pointer], // buffer: WGPUBuffer
         returns: FFIType.void,
       },
       // Add other buffer functions...
 
       // --- Texture Functions ---
-       wgpuTextureCreateView: {
+       zwgpuTextureCreateView: {
         args: [FFIType.pointer, FFIType.pointer], // texture: WGPUTexture, descriptor: *const WGPUTextureViewDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUTextureView
       },
-      wgpuTextureDestroy: {
+      zwgpuTextureDestroy: {
           args: [FFIType.pointer], // texture: WGPUTexture
           returns: FFIType.void,
       },
-      wgpuTextureRelease: {
+      zwgpuTextureRelease: {
         args: [FFIType.pointer], // texture: WGPUTexture
         returns: FFIType.void,
       },
       // Add other texture functions...
 
       // --- TextureView Functions ---
-      wgpuTextureViewRelease: {
+      zwgpuTextureViewRelease: {
         args: [FFIType.pointer], // textureView: WGPUTextureView
         returns: FFIType.void,
       },
       // Add other texture view functions...
 
       // --- Sampler Functions ---
-       wgpuSamplerRelease: {
+       zwgpuSamplerRelease: {
         args: [FFIType.pointer], // sampler: WGPUSampler
         returns: FFIType.void,
       },
       // Add other sampler functions...
 
       // --- ShaderModule Functions ---
-      wgpuShaderModuleGetCompilationInfo: {
+      zwgpuShaderModuleGetCompilationInfo: {
           args: [FFIType.pointer, FFIType.pointer], // shaderModule: WGPUShaderModule, callbackInfo: WGPUCompilationInfoCallbackInfo
           returns: FFIType.u64, // WGPUFuture (id)
       },
-      wgpuShaderModuleRelease: {
+      zwgpuShaderModuleRelease: {
         args: [FFIType.pointer], // shaderModule: WGPUShaderModule
         returns: FFIType.void,
       },
       // Add other shader module functions...
 
       // --- BindGroupLayout Functions ---
-      wgpuBindGroupLayoutRelease: {
+      zwgpuBindGroupLayoutRelease: {
         args: [FFIType.pointer], // bindGroupLayout: WGPUBindGroupLayout
         returns: FFIType.void,
       },
 
       // --- BindGroup Functions ---
-      wgpuBindGroupRelease: {
+      zwgpuBindGroupRelease: {
         args: [FFIType.pointer], // bindGroup: WGPUBindGroup
         returns: FFIType.void,
       },
 
       // --- PipelineLayout Functions ---
-      wgpuPipelineLayoutRelease: {
+      zwgpuPipelineLayoutRelease: {
         args: [FFIType.pointer], // pipelineLayout: WGPUPipelineLayout
         returns: FFIType.void,
       },
 
       // --- QuerySet Functions ---
-      wgpuQuerySetDestroy: {
+      zwgpuQuerySetDestroy: {
         args: [FFIType.pointer], // querySet: WGPUQuerySet
         returns: FFIType.void,
       },
-      wgpuQuerySetRelease: {
+      zwgpuQuerySetRelease: {
         args: [FFIType.pointer], // querySet: WGPUQuerySet
         returns: FFIType.void,
       },
 
       // --- RenderPipeline Functions ---
-      wgpuRenderPipelineRelease: {
+      zwgpuRenderPipelineRelease: {
         args: [FFIType.pointer], // renderPipeline: WGPURenderPipeline
         returns: FFIType.void,
       },
 
       // --- ComputePipeline Functions ---
-      wgpuComputePipelineRelease: {
+      zwgpuComputePipelineRelease: {
         args: [FFIType.pointer], // computePipeline: WGPUComputePipeline
         returns: FFIType.void,
       },
 
       // --- CommandEncoder Functions ---
-      wgpuCommandEncoderBeginRenderPass: {
+      zwgpuCommandEncoderBeginRenderPass: {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPUCommandEncoder, descriptor: *const WGPURenderPassDescriptor
         returns: FFIType.pointer, // -> WGPURenderPassEncoder
       },
-      wgpuCommandEncoderBeginComputePass: {
+      zwgpuCommandEncoderBeginComputePass: {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPUCommandEncoder, descriptor: *const WGPUComputePassDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUComputePassEncoder
       },
-      wgpuCommandEncoderClearBuffer: {
+      zwgpuCommandEncoderClearBuffer: {
         args: [
           FFIType.pointer, // commandEncoder: WGPUCommandEncoder
           FFIType.pointer, // buffer: WGPUBuffer
@@ -357,7 +351,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuCommandEncoderCopyBufferToBuffer: {
+      zwgpuCommandEncoderCopyBufferToBuffer: {
         args: [
             FFIType.pointer, // commandEncoder: WGPUCommandEncoder
             FFIType.pointer, // source: WGPUBuffer
@@ -368,7 +362,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuCommandEncoderCopyBufferToTexture: {
+      zwgpuCommandEncoderCopyBufferToTexture: {
         args: [
             FFIType.pointer, // commandEncoder
             FFIType.pointer, // source: *const WGPUTexelCopyBufferInfo
@@ -377,7 +371,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuCommandEncoderCopyTextureToBuffer: {
+      zwgpuCommandEncoderCopyTextureToBuffer: {
           args: [
               FFIType.pointer, // commandEncoder
               FFIType.pointer, // source: *const WGPUTexelCopyTextureInfo
@@ -386,7 +380,7 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuCommandEncoderCopyTextureToTexture: {
+      zwgpuCommandEncoderCopyTextureToTexture: {
           args: [
               FFIType.pointer, // commandEncoder
               FFIType.pointer, // source: *const WGPUTexelCopyTextureInfo
@@ -395,15 +389,15 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuCommandEncoderFinish: {
+      zwgpuCommandEncoderFinish: {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPUCommandEncoder, descriptor: *const WGPUCommandBufferDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUCommandBuffer
       },
-      wgpuCommandEncoderRelease: {
+      zwgpuCommandEncoderRelease: {
         args: [FFIType.pointer], // commandEncoder: WGPUCommandEncoder
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderSetScissorRect: {
+      zwgpuRenderPassEncoderSetScissorRect: {
         args: [
           FFIType.pointer, // renderPassEncoder: WGPURenderPassEncoder
           FFIType.u32,     // x: uint32_t
@@ -413,7 +407,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderSetViewport: {
+      zwgpuRenderPassEncoderSetViewport: {
         args: [
           FFIType.pointer, // renderPassEncoder: WGPURenderPassEncoder
           FFIType.f32,     // x: float
@@ -428,11 +422,11 @@ function _loadLibrary() {
       // Add other command encoder functions...
 
       // --- RenderPassEncoder Functions ---
-      wgpuRenderPassEncoderSetPipeline: {
+      zwgpuRenderPassEncoderSetPipeline: {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderPassEncoder, pipeline: WGPURenderPipeline
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderSetBindGroup: {
+      zwgpuRenderPassEncoderSetBindGroup: {
         args: [
             FFIType.pointer, // encoder: WGPURenderPassEncoder
             FFIType.u32,     // groupIndex: uint32_t
@@ -442,7 +436,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderSetVertexBuffer: {
+      zwgpuRenderPassEncoderSetVertexBuffer: {
         args: [
             FFIType.pointer, // encoder: WGPURenderPassEncoder
             FFIType.u32,     // slot: uint32_t
@@ -452,7 +446,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderSetIndexBuffer: {
+      zwgpuRenderPassEncoderSetIndexBuffer: {
           args: [
               FFIType.pointer, // encoder: WGPURenderPassEncoder
               FFIType.pointer, // buffer: WGPUBuffer
@@ -462,7 +456,7 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuRenderPassEncoderDraw: {
+      zwgpuRenderPassEncoderDraw: {
         args: [
             FFIType.pointer, // encoder: WGPURenderPassEncoder
             FFIType.u32,     // vertexCount: uint32_t
@@ -472,7 +466,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderDrawIndexed: {
+      zwgpuRenderPassEncoderDrawIndexed: {
         args: [
             FFIType.pointer, // encoder: WGPURenderPassEncoder
             FFIType.u32,     // indexCount: uint32_t
@@ -483,22 +477,22 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderEnd: {
+      zwgpuRenderPassEncoderEnd: {
         args: [FFIType.pointer], // encoder: WGPURenderPassEncoder
         returns: FFIType.void,
       },
-      wgpuRenderPassEncoderRelease: {
+      zwgpuRenderPassEncoderRelease: {
         args: [FFIType.pointer], // encoder: WGPURenderPassEncoder
         returns: FFIType.void,
       },
       // Add other render pass functions...
 
       // --- ComputePassEncoder Functions ---
-      wgpuComputePassEncoderSetPipeline: {
+      zwgpuComputePassEncoderSetPipeline: {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPUComputePassEncoder, pipeline: WGPUComputePipeline
         returns: FFIType.void,
       },
-      wgpuComputePassEncoderSetBindGroup: {
+      zwgpuComputePassEncoderSetBindGroup: {
           args: [
               FFIType.pointer, // encoder: WGPUComputePassEncoder
               FFIType.u32,     // groupIndex: uint32_t
@@ -508,7 +502,7 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuComputePassEncoderDispatchWorkgroups: {
+      zwgpuComputePassEncoderDispatchWorkgroups: {
           args: [
               FFIType.pointer, // encoder: WGPUComputePassEncoder
               FFIType.u32,     // workgroupCountX: uint32_t
@@ -517,7 +511,7 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuComputePassEncoderDispatchWorkgroupsIndirect: {
+      zwgpuComputePassEncoderDispatchWorkgroupsIndirect: {
           args: [
               FFIType.pointer, // encoder: WGPUComputePassEncoder
               FFIType.pointer, // indirectBuffer: WGPUBuffer
@@ -525,24 +519,24 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuComputePassEncoderEnd: {
+      zwgpuComputePassEncoderEnd: {
         args: [FFIType.pointer], // encoder: WGPUComputePassEncoder
         returns: FFIType.void,
       },
-      wgpuComputePassEncoderRelease: {
+      zwgpuComputePassEncoderRelease: {
         args: [FFIType.pointer], // encoder: WGPUComputePassEncoder
         returns: FFIType.void,
       },
       // Add other compute pass functions...
 
       // --- CommandBuffer Functions ---
-      wgpuCommandBufferRelease: {
+      zwgpuCommandBufferRelease: {
         args: [FFIType.pointer], // commandBuffer: WGPUCommandBuffer
         returns: FFIType.void,
       },
 
       // --- Queue Functions ---
-      wgpuQueueSubmit: {
+      zwgpuQueueSubmit: {
         args: [
             FFIType.pointer, // queue: WGPUQueue
             FFIType.u64,     // commandCount: size_t
@@ -550,7 +544,7 @@ function _loadLibrary() {
         ],
         returns: FFIType.void,
       },
-      wgpuQueueWriteBuffer: {
+      zwgpuQueueWriteBuffer: {
           args: [
               FFIType.pointer, // queue: WGPUQueue
               FFIType.pointer, // buffer: WGPUBuffer
@@ -560,7 +554,7 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuQueueWriteTexture: {
+      zwgpuQueueWriteTexture: {
           args: [
               FFIType.pointer, // queue: WGPUQueue
               FFIType.pointer, // destination: *const WGPUTexelCopyTextureInfo
@@ -571,76 +565,93 @@ function _loadLibrary() {
           ],
           returns: FFIType.void,
       },
-      wgpuQueueOnSubmittedWorkDone: {
+      zwgpuQueueOnSubmittedWorkDone: {
           args: [
               FFIType.pointer, // queue: WGPUQueue
               FFIType.pointer, // callbackInfo: WGPUQueueWorkDoneCallbackInfo
           ],
           returns: FFIType.u64, // WGPUFuture (id)
       },
-      wgpuQueueRelease: {
+      zwgpuQueueRelease: {
         args: [FFIType.pointer], // queue: WGPUQueue
         returns: FFIType.void,
       },
        // Add other queue functions...
 
       // --- Surface Functions ---
-       wgpuSurfaceConfigure: {
+       zwgpuSurfaceConfigure: {
         args: [FFIType.pointer, FFIType.pointer], // surface: WGPUSurface, config: *const WGPUSurfaceConfiguration
         returns: FFIType.void,
       },
-      wgpuSurfaceUnconfigure: {
+      zwgpuSurfaceUnconfigure: {
         args: [FFIType.pointer], // surface: WGPUSurface
         returns: FFIType.void,
       },
-      wgpuSurfaceGetCurrentTexture: {
+      zwgpuSurfaceGetCurrentTexture: {
         args: [FFIType.pointer, FFIType.pointer], // surface: WGPUSurface, surfaceTexture: *mut WGPUSurfaceTexture
         returns: FFIType.void,
       },
-      wgpuSurfacePresent: {
+      zwgpuSurfacePresent: {
         args: [FFIType.pointer], // surface: WGPUSurface
         returns: FFIType.void,
       },
-      wgpuSurfaceRelease: {
+      zwgpuSurfaceRelease: {
         args: [FFIType.pointer], // surface: WGPUSurface
         returns: FFIType.void,
       },
       // Add other surface functions...
 
       // --- Freeing Functions (Important for structs returned by pointer) ---
-      wgpuAdapterInfoFreeMembers: {
+      zwgpuAdapterInfoFreeMembers: {
           args: [FFIType.pointer], // value: WGPUAdapterInfo (passed by pointer but represents struct value)
           returns: FFIType.void,
       },
-      wgpuSurfaceCapabilitiesFreeMembers: {
+      zwgpuSurfaceCapabilitiesFreeMembers: {
         args: [FFIType.pointer], // value: WGPUSurfaceCapabilities (passed by pointer)
         returns: FFIType.void,
       },
-      wgpuSupportedFeaturesFreeMembers: { // Added for freeing features array
+      zwgpuSupportedFeaturesFreeMembers: { // Added for freeing features array
         args: [FFIType.pointer], // value: WGPUSupportedFeatures (passed by pointer)
         returns: FFIType.void,
       },
-      wgpuSharedBufferMemoryEndAccessStateFreeMembers: {
+      zwgpuSharedBufferMemoryEndAccessStateFreeMembers: {
         args: [FFIType.pointer], // value: WGPUSharedBufferMemoryEndAccessState
         returns: FFIType.void,
       },
-      wgpuSharedTextureMemoryEndAccessStateFreeMembers: {
+      zwgpuSharedTextureMemoryEndAccessStateFreeMembers: {
         args: [FFIType.pointer], // value: WGPUSharedTextureMemoryEndAccessState
         returns: FFIType.void,
       },
       // Add other FreeMembers functions as needed...
 
-
       // NOTE: This is not exhaustive. Many more functions exist in webgpu.h
       // Add more bindings here as needed, following the patterns above.
-      // Pay attention to pointer types (*const vs *mut), nullable pointers,
-      // struct layouts, enums, and flags.
-
     });
     return symbols;
 }
 
-export const FFI_SYMBOLS = process.env.DEBUG === 'true' ? convertToDebugSymbols(_loadLibrary()) : _loadLibrary(); 
+const rawSymbols = _loadLibrary();
+
+type StripZWPrefix<KeyType extends string> =
+  KeyType extends `zw${infer Rest}` ? `w${Rest}` : KeyType;
+
+type TransformedSymbolKeys<T extends object> = {
+  [K in keyof T as StripZWPrefix<K & string>]: T[K];
+};
+
+// The type of the final normalizedSymbols object
+type NormalizedSymbolsType = TransformedSymbolKeys<typeof rawSymbols>;
+
+const normalizedSymbols = Object.keys(rawSymbols).reduce(
+  (acc, key) => {
+    const newKey = key.replace(/^zw/, 'w') as keyof NormalizedSymbolsType; // Assert the new key type
+    (acc as any)[newKey] = (rawSymbols as Record<string, any>)[key];
+    return acc;
+  },
+  {} as NormalizedSymbolsType // Crucially, type the initial accumulator
+);
+
+export const FFI_SYMBOLS = process.env.DEBUG === 'true' ? convertToDebugSymbols(normalizedSymbols) : normalizedSymbols; 
 
 function convertToDebugSymbols<T extends Record<string, any>>(symbols: T): T {
     const debugSymbols: Record<string, any> = {};

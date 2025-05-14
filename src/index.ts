@@ -51,7 +51,11 @@ export const MapModeFlags = {
 } as const;
 
 function createInstance(): Pointer | null {
-    try { return FFI_SYMBOLS.wgpuCreateInstance(null); } catch(e) { console.error("FFI Error: createInstance", e); return null; }
+    try { 
+      return FFI_SYMBOLS.wgpuCreateInstance(null); 
+    } catch(e) { 
+      console.error("FFI Error: createInstance", e); return null; 
+    }
 }
 
 export function createGPUInstance(): GPUImpl {

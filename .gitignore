@@ -2,6 +2,7 @@
 .zig-cache
 zig-out
 triangle.png
+src/zig/lib
 
 # dependencies (bun install)
 node_modules

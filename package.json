@@ -5,7 +5,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "bun test"
+    "test": "bun test",
+    "build:dev": "cd src/zig && zig build -Doptimize=Debug",
+    "build:prod": "cd src/zig && zig build -Doptimize=ReleaseFast"
   },
   "devDependencies": {
     "@types/bun": "latest",
