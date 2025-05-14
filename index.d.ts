@@ -13,6 +13,7 @@ declare global {
     interface GPUBuffer {
         readonly ptr: Pointer;
         getMappedRangePtr(offset?: GPUSize64, size?: GPUSize64): Pointer;
+        release(): undefined;
     }
 
     interface GPUCommandBuffer {

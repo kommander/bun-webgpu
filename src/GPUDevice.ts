@@ -24,39 +24,6 @@ import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
 
-const FFIResourceType = {
-    Buffer: 0,
-    Sampler: 1,
-    TextureView: 2,
-} as const;
-
-const CompareFunctionFFI: Record<GPUCompareFunction, number> = {
-    never: 1,
-    less: 2,
-    "less-equal": 3,
-    greater: 4,
-    "greater-equal": 5,
-    equal: 6,
-    "not-equal": 7,
-    always: 8,
-} as const;
-
-const MipmapFilterModeFFI: Record<GPUMipmapFilterMode, number> = {
-    nearest: 0,
-    linear: 1,
-} as const;
-
-const FilterModeFFI: Record<GPUFilterMode, number> = {
-    nearest: 0,
-    linear: 1,
-} as const;
-
-const AddressModeFFI: Record<GPUAddressMode, number> = {
-    repeat: 0,
-    "mirror-repeat": 1,
-    "clamp-to-edge": 2,
-} as const;
-
 export const TextureDimension: Record<GPUTextureDimension, number> = {
     "1d": 0, // '1d' -> tdim_1d = 0
     "2d": 1, // '2d' -> tdim_2d = 1
@@ -137,7 +104,6 @@ const DEFAULT_SUPPORTED_LIMITS: GPUSupportedLimits = Object.freeze({
 export class GPUDeviceImpl implements GPUDevice {
     private queuePtr: Pointer | null = null;
     private _queue: GPUQueue | null = null;
-    private globalJSErrorCallbackHandle: JSCallback | null = null;
     private _userUncapturedErrorCallback: DeviceErrorCallback | null = null;
     private _ticker: DeviceTicker;
     private _lost: Promise<GPUDeviceLostInfo>;

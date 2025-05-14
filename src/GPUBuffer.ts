@@ -190,7 +190,11 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     release(): undefined {
-      try { this.lib.wgpuBufferRelease(this.bufferPtr); } catch(e) { console.error("FFI Error: wgpuBufferRelease", e); }
+      try { 
+        this.lib.wgpuBufferRelease(this.bufferPtr); 
+      } catch(e) { 
+        console.error("FFI Error: wgpuBufferRelease", e); 
+      }
     }
 
     destroy(): undefined {

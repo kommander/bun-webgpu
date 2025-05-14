@@ -2,6 +2,7 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
 	readonly __brand: "GPUCanvasContext" = "GPUCanvasContext";
 	private _configuration: GPUCanvasConfiguration | null = null;
 	private _currentTexture: GPUTexture | null = null;
+	private _nextTexture: GPUTexture | null = null;
   private width: number;
   private height: number;
 
@@ -71,25 +72,33 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
     this.width = width;
     this.height = height;
 		if (this._configuration && this._device) {
-    	this.updateCurrentTexture();
+    	this.createTextures();
 		}
     return undefined;
   }
 
-  private updateCurrentTexture(): undefined {
+  private createTextures(): undefined {
+		if (this._currentTexture) {
+      this._currentTexture.destroy();
+    }
+		if (this._nextTexture) {
+			this._nextTexture.destroy();
+		}
+
+    this._currentTexture = this.createRenderTexture(this.width, this.height);
+		this._nextTexture = this.createRenderTexture(this.width, this.height);
+  }
+
+	private createRenderTexture(width: number, height: number): GPUTexture {
 		if (!this._configuration || !this._device) {
 			throw new Error("GPUCanvasContextMock.getCurrentTexture: Context is not configured.");
 		}
 
-    if (this._currentTexture) {
-      this._currentTexture.destroy();
-    }
-
-    this._currentTexture = this._device.createTexture({
+		return this._device.createTexture({
       label: 'canvasCurrentTexture',
-      size: { // Use current canvas size
-        width: this.width,
-        height: this.height,
+      size: {
+        width: width,
+        height: height,
         depthOrArrayLayers: 1,
       },
       format: this._configuration.format,
@@ -98,7 +107,7 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
       mipLevelCount: 1,
       sampleCount: 1,
     });
-  }
+	}
 
 	getCurrentTexture(): GPUTexture {
 		if (!this._configuration || !this._device) {
@@ -106,9 +115,16 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
 		}
 
 		if (!this._currentTexture) {
-			this.updateCurrentTexture();
+			this.createTextures();
 		}
 
+		return this._currentTexture!;
+	}
+
+	switchTextures(): GPUTexture {
+		const temp = this._currentTexture;
+		this._currentTexture = this._nextTexture;
+		this._nextTexture = temp;
 		return this._currentTexture!;
 	}
 }
