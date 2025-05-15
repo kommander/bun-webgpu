@@ -5,6 +5,9 @@ const c = @cImport({
     @cInclude("webgpu.h");
 });
 
+var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+const arena_allocator = arena.allocator();
+
 // --- Instance Functions ---
 
 pub export fn zwgpuCreateInstance(descriptor: ?*const c.WGPUInstanceDescriptor) c.WGPUInstance {
@@ -133,8 +136,32 @@ pub export fn zwgpuDeviceHasFeature(device: c.WGPUDevice, feature: c.WGPUFeature
     return c.wgpuDeviceHasFeature(device, feature) != 0;
 }
 
-pub export fn zwgpuDeviceGetFeatures(device: c.WGPUDevice, features: *c.WGPUSupportedFeatures) void {
-    c.wgpuDeviceGetFeatures(device, features);
+// Note: On linux the u32 features array allocated by dawn is freed again when leaving the boundary,
+// even though it should be kept until freed via wgpuSupportedFeaturesFreeMembers,
+// that is why we copy it to the zig heap.
+pub export fn zwgpuDeviceGetFeatures(device: c.WGPUDevice, js_features_struct_ptr: *c.WGPUSupportedFeatures) void {
+    var temp_dawn_features_struct: c.WGPUSupportedFeatures = undefined;
+    c.wgpuDeviceGetFeatures(device, &temp_dawn_features_struct);
+
+    if (temp_dawn_features_struct.featureCount > 0 and temp_dawn_features_struct.features != null) {
+        const arena_features_array = arena_allocator.alloc(c.WGPUFeatureName, temp_dawn_features_struct.featureCount) catch {
+            js_features_struct_ptr.featureCount = 0;
+            js_features_struct_ptr.features = null;
+            c.wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct);
+            return;
+        };
+
+        const dawn_features_slice = temp_dawn_features_struct.features[0..temp_dawn_features_struct.featureCount];
+        @memcpy(arena_features_array, dawn_features_slice);
+
+        js_features_struct_ptr.featureCount = temp_dawn_features_struct.featureCount;
+        js_features_struct_ptr.features = arena_features_array.ptr; // JS now points to arena!
+    } else {
+        js_features_struct_ptr.featureCount = 0;
+        js_features_struct_ptr.features = null;
+    }
+
+    c.wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct);
 }
 
 pub export fn zwgpuDevicePushErrorScope(device: c.WGPUDevice, filter: c.WGPUErrorFilter) void {
