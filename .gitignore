@@ -3,6 +3,7 @@
 zig-out
 triangle.png
 src/zig/lib
+src/lib
 
 # dependencies (bun install)
 node_modules

@@ -191,7 +191,6 @@ export class GPUDeviceImpl implements GPUDevice {
                 console.error("Error getting device features via wgpuDeviceGetFeatures:", e);
                 this._features = Object.freeze(new Set<string>()); // Set empty on error
             } finally {
-                 // 6. Free the C-allocated members pointed to by the struct
                  if (supportedFeaturesStructPtr) {
                     try {
                         this.lib.wgpuSupportedFeaturesFreeMembers(supportedFeaturesStructPtr);

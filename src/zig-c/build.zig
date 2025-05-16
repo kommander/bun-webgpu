@@ -5,11 +5,10 @@ pub fn build(b: *std.Build) void {
     const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization level (Debug, ReleaseFast, ReleaseSafe, ReleaseSmall)") orelse .Debug;
 
     const lib_name = "webgpu_wrapper";
-    const root_source_path = "lib.zig";
+    // const root_source_path = "lib.c"; // No longer using root_source_file for .c files
     const output_base_dir = "../../lib";
 
     // Define all target configurations we want to support
-    // Mirroring renderoo's targets for now
     const targets = [_]std.Target.Query{
         .{ .cpu_arch = .x86_64, .os_tag = .linux },
         // .{ .cpu_arch = .x86_64, .os_tag = .macos },
@@ -23,14 +22,21 @@ pub fn build(b: *std.Build) void {
         const target = b.resolveTargetQuery(target_query);
         const target_lib = b.addSharedLibrary(.{
             .name = lib_name,
-            .root_source_file = b.path(root_source_path),
+            // .root_source_file = b.path(root_source_path), // Removed
             .target = target,
             .optimize = optimize,
             .link_libc = true,
         });
 
+        // Add C source file with its specific flags
+        target_lib.addCSourceFile(.{
+            .file = b.path("lib.c"),
+            .flags = &.{"-DWGPU_IMPLEMENTATION"}, // Define WGPU_IMPLEMENTATION for lib.c
+        });
+
         // Add WGPU header include path (relative to this build.zig file)
         target_lib.addIncludePath(.{ .cwd_relative = "../../dawn" });
+
         // Link WGPU library (libwebgpu_dawn.dylib / webgpu_dawn.dll etc.)
         target_lib.linkSystemLibrary("webgpu_dawn");
         // The library path for the linker to find the dawn library during build

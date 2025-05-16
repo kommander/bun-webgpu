@@ -8,7 +8,7 @@ import os from "os";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 // const DEFAULT_PATH = join(__dirname, "../dawn/");
-const DEFAULT_PATH = join(__dirname, "zig/lib/");
+const DEFAULT_PATH = join(__dirname, "lib/");
 // const LIB_NAME = "webgpu_dawn";
 const LIB_NAME = "webgpu_wrapper";
 
@@ -651,21 +651,152 @@ const normalizedSymbols = Object.keys(rawSymbols).reduce(
   {} as NormalizedSymbolsType // Crucially, type the initial accumulator
 );
 
-export const FFI_SYMBOLS = process.env.DEBUG === 'true' ? convertToDebugSymbols(normalizedSymbols) : normalizedSymbols; 
+export const FFI_SYMBOLS = process.env.DEBUG === 'true' || process.env.TRACE_WEBGPU === 'true' ? convertToDebugSymbols(normalizedSymbols) : normalizedSymbols; 
 
 function convertToDebugSymbols<T extends Record<string, any>>(symbols: T): T {
     const debugSymbols: Record<string, any> = {};
-    Object.entries(symbols).forEach(([key, value]) => {
+
+    if (process.env.DEBUG === 'true') {
+      Object.entries(symbols).forEach(([key, value]) => {
+          if (typeof value === 'function') {
+              debugSymbols[key] = (...args: any[]) => {
+                  console.log(`${key}(${args.map(arg => String(arg)).join(', ')})`);
+                  const result = value(...args);
+                  console.log(`${key} returned:`, String(result));
+                  return result;
+              };
+          } else {
+              debugSymbols[key] = value; // Copy non-function properties as is
+          }
+      });
+    }
+
+    if (process.env.TRACE_WEBGPU === 'true') {
+      const traceSymbols: Record<string, any> = {};
+      Object.entries(symbols).forEach(([key, value]) => {
         if (typeof value === 'function') {
-            debugSymbols[key] = (...args: any[]) => {
-                console.log(`${key}(${args.map(arg => String(arg)).join(', ')})`);
-                const result = value(...args);
-                console.log(`${key} returned:`, String(result));
-                return result;
-            };
+          traceSymbols[key] = [];
+          debugSymbols[key] = (...args: any[]) => {
+            const start = performance.now();
+            const result = value(...args);
+            const end = performance.now();
+            traceSymbols[key].push(end - start);
+            return result;
+          };
         } else {
-             debugSymbols[key] = value; // Copy non-function properties as is
+            debugSymbols[key] = value; // Copy non-function properties as is
         }
-    });
+      });
+      process.on('exit', () => {
+        const allStats: Array<{
+            name: string;
+            count: number;
+            total: number;
+            average: number;
+            min: number;
+            max: number;
+            median: number;
+            p90: number;
+            p99: number;
+        }> = [];
+
+        for (const [key, timings] of Object.entries(traceSymbols)) {
+            if (!Array.isArray(timings) || timings.length === 0) {
+                continue;
+            }
+
+            const sortedTimings = [...timings].sort((a, b) => a - b);
+            const count = sortedTimings.length;
+
+            const total = sortedTimings.reduce((acc, t) => acc + t, 0);
+            const average = total / count;
+            const min = sortedTimings[0];
+            const max = sortedTimings[count - 1];
+            
+            const medianIndex = Math.floor(count / 2);
+            const p90Index = Math.floor(count * 0.9);
+            const p99Index = Math.floor(count * 0.99);
+
+            const median = sortedTimings[medianIndex];
+            const p90 = sortedTimings[Math.min(p90Index, count - 1)];
+            const p99 = sortedTimings[Math.min(p99Index, count - 1)];
+            
+            allStats.push({
+                name: key,
+                count,
+                total,
+                average,
+                min,
+                max,
+                median,
+                p90,
+                p99,
+            });
+        }
+
+        allStats.sort((a, b) => b.total - a.total);
+
+        console.log("\n--- WebGPU FFI Call Performance ---");
+        console.log("Sorted by total time spent (descending)");
+        console.log("-------------------------------------------------------------------------------------------------------------------------");
+        
+        if (allStats.length === 0) {
+            console.log("No trace data collected or all symbols had zero calls.");
+        } else {
+            const nameHeader = "Symbol";
+            const callsHeader = "Calls";
+            const totalHeader = "Total (ms)";
+            const avgHeader = "Avg (ms)";
+            const minHeader = "Min (ms)";
+            const maxHeader = "Max (ms)";
+            const medHeader = "Med (ms)";
+            const p90Header = "P90 (ms)";
+            const p99Header = "P99 (ms)";
+
+            const nameWidth = Math.max(nameHeader.length, ...allStats.map(s => s.name.length));
+            const countWidth = Math.max(callsHeader.length, ...allStats.map(s => String(s.count).length));
+            const totalWidth = Math.max(totalHeader.length, ...allStats.map(s => s.total.toFixed(2).length));
+            const avgWidth = Math.max(avgHeader.length, ...allStats.map(s => s.average.toFixed(2).length));
+            const minWidth = Math.max(minHeader.length, ...allStats.map(s => s.min.toFixed(2).length));
+            const maxWidth = Math.max(maxHeader.length, ...allStats.map(s => s.max.toFixed(2).length));
+            const medianWidth = Math.max(medHeader.length, ...allStats.map(s => s.median.toFixed(2).length));
+            const p90Width = Math.max(p90Header.length, ...allStats.map(s => s.p90.toFixed(2).length));
+            const p99Width = Math.max(p99Header.length, ...allStats.map(s => s.p99.toFixed(2).length));
+
+            // Header
+            console.log(
+                `${nameHeader.padEnd(nameWidth)} | ` +
+                `${callsHeader.padStart(countWidth)} | ` +
+                `${totalHeader.padStart(totalWidth)} | ` +
+                `${avgHeader.padStart(avgWidth)} | ` +
+                `${minHeader.padStart(minWidth)} | ` +
+                `${maxHeader.padStart(maxWidth)} | ` +
+                `${medHeader.padStart(medianWidth)} | ` +
+                `${p90Header.padStart(p90Width)} | ` +
+                `${p99Header.padStart(p99Width)}`
+            );
+            // Separator
+            console.log(
+                `${"-".repeat(nameWidth)}-+-${"-".repeat(countWidth)}-+-${"-".repeat(totalWidth)}-+-${"-".repeat(avgWidth)}-+-${"-".repeat(minWidth)}-+-${"-".repeat(maxWidth)}-+-${"-".repeat(medianWidth)}-+-${"-".repeat(p90Width)}-+-${"-".repeat(p99Width)}`
+            );
+
+            allStats.forEach(stat => {
+                console.log(
+                    `${stat.name.padEnd(nameWidth)} | ` +
+                    `${String(stat.count).padStart(countWidth)} | ` +
+                    `${stat.total.toFixed(2).padStart(totalWidth)} | ` +
+                    `${stat.average.toFixed(2).padStart(avgWidth)} | ` +
+                    `${stat.min.toFixed(2).padStart(minWidth)} | ` +
+                    `${stat.max.toFixed(2).padStart(maxWidth)} | ` +
+                    `${stat.median.toFixed(2).padStart(medianWidth)} | ` +
+                    `${stat.p90.toFixed(2).padStart(p90Width)} | ` +
+                    `${stat.p99.toFixed(2).padStart(p99Width)}`
+                );
+            });
+        }
+        console.log("-------------------------------------------------------------------------------------------------------------------------");
+      });
+    }
+
     return debugSymbols as T;
 }
