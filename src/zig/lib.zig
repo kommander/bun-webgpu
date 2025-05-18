@@ -2,7 +2,7 @@ const std = @import("std");
 
 // Import C headers from webgpu.h
 const c = @cImport({
-    @cInclude("webgpu.h");
+    @cInclude("dawn/webgpu.h");
 });
 
 var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
