@@ -1,6 +1,6 @@
 # bun-webgpu
 
-WebGPU (Dawn) FFI bindings for Bun.
+WebGPU ([Dawn](https://dawn.googlesource.com/dawn)) FFI bindings for Bun.
 
 ## Usage
 
