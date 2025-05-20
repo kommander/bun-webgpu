@@ -106,7 +106,7 @@ pub fn build(b: *std.Build) void {
             // Explicit MSVC runtime linking
             target_lib.linkSystemLibrary("vcruntime");
             target_lib.linkSystemLibrary("msvcrt");
-            target_lib.linkSystemLibrary("ucrt");
+            // target_lib.linkSystemLibrary("ucrt");
             target_lib.linkSystemLibrary("libcmt");
         } else if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
