@@ -82,7 +82,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(root_source_path),
             .target = if (target.result.os.tag == .windows) b.resolveTargetQuery(.{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .msvc }) else target,
             .optimize = optimize,
-            .link_libc = true,
+            .link_libc = if (target.result.os.tag == .windows) false else true,
         });
 
         target_lib.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{dawn_platform_libs_dir_str}) });
