@@ -67,7 +67,7 @@ jobs:
 
     - name: Build Binaries
       run: |
-        bun run build:prod -Dtarget=${matrix.target}
+        bun run build:prod -Dtarget=${{ matrix.target }}
 
     - name: Package
       run: |
