@@ -93,7 +93,8 @@ pub fn build(b: *std.Build) void {
         target_lib.addLibraryPath(.{ .cwd_relative = "../../dawn/libs" });
 
         if (target.result.os.tag == .windows) {
-            target_lib.linkLibCpp();
+            target_lib.linkSystemLibrary("vcruntime");
+            target_lib.linkSystemLibrary("msvcrt");
         } else if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
             target_lib.linkFramework("Foundation");
