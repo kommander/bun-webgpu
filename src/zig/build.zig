@@ -93,8 +93,21 @@ pub fn build(b: *std.Build) void {
         target_lib.addLibraryPath(.{ .cwd_relative = "../../dawn/libs" });
 
         if (target.result.os.tag == .windows) {
+            // Link core Windows system libraries
+            target_lib.linkSystemLibrary("user32");
+            target_lib.linkSystemLibrary("kernel32");
+            target_lib.linkSystemLibrary("gdi32");
+            target_lib.linkSystemLibrary("ole32");
+            target_lib.linkSystemLibrary("uuid");
+            target_lib.linkSystemLibrary("d3d11");
+            target_lib.linkSystemLibrary("d3d12");
+            target_lib.linkSystemLibrary("dxgi");
+
+            // Explicit MSVC runtime linking
             target_lib.linkSystemLibrary("vcruntime");
             target_lib.linkSystemLibrary("msvcrt");
+            target_lib.linkSystemLibrary("ucrt");
+            target_lib.linkSystemLibrary("libcmt");
         } else if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
             target_lib.linkFramework("Foundation");
