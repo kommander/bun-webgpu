@@ -82,7 +82,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(root_source_path),
             .target = if (target.result.os.tag == .windows) b.resolveTargetQuery(.{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .msvc }) else target,
             .optimize = optimize,
-            .link_libc = if (target.result.os.tag == .windows) false else true,
+            .link_libc = true,
         });
 
         target_lib.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{dawn_platform_libs_dir_str}) });
@@ -116,7 +116,7 @@ pub fn build(b: *std.Build) void {
             // Explicit MSVC runtime linking
             target_lib.linkSystemLibrary("libcmt");
             target_lib.linkSystemLibrary("libvcruntime");
-            target_lib.linkSystemLibrary("libucrt");
+            // target_lib.linkSystemLibrary("libucrt");
         } else if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
             target_lib.linkFramework("Foundation");
