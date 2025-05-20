@@ -65,6 +65,10 @@ jobs:
       run: |
         bun install
 
+    - name: Download artifacts
+      run: |
+        bun run dawn/download_artifacts.ts -p ${{ matrix.os }} -b ${{ matrix.build_type }}
+
     - name: Build Binaries
       run: |
         bun run build:prod -Dtarget=${{ matrix.target }}

@@ -13,6 +13,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@webgpu/types": "^0.1.60",
+    "commander": "^14.0.0",
     "sharp": "^0.34.0"
   },
   "peerDependencies": {

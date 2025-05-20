@@ -3,10 +3,12 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { tmpdir } from 'os';
+import { program } from 'commander';
 
 interface Args {
   runPath: string;
   buildType: 'debug' | 'release';
+  platform?: string; // Added optional platform
 }
 
 interface ProcessableArtifact {
@@ -82,16 +84,44 @@ async function main(args: Args) {
       if (!artifact.name.endsWith(buildTypeSuffix) || artifact.expired) {
         continue;
       }
+
+      let matchedPlatformId: string | undefined = undefined;
+
       for (const matcher of platformMatchers) {
         if (matcher.test(artifact.name)) {
-          artifactsToProcess.add({ artifactData: artifact, platformId: matcher.id });
+          matchedPlatformId = matcher.id;
           break;
         }
+      }
+
+      if (!matchedPlatformId) {
+        continue;
+      }
+
+      if (args.platform) {
+        if (platformDirNameMap[args.platform]) {
+          if (matchedPlatformId === args.platform) {
+            artifactsToProcess.add({ artifactData: artifact, platformId: matchedPlatformId });
+          }
+        } else {
+          const artifactPlatformGenericName = platformDirNameMap[matchedPlatformId]?.split('-')[1]; //e.g. 'macos' from 'aarch64-macos'
+          if (artifactPlatformGenericName && artifactPlatformGenericName.includes(args.platform.toLowerCase())) {
+             artifactsToProcess.add({ artifactData: artifact, platformId: matchedPlatformId });
+          } else if (matchedPlatformId.toLowerCase().includes(args.platform.toLowerCase())) {
+            artifactsToProcess.add({ artifactData: artifact, platformId: matchedPlatformId });
+          }
+        }
+      } else {
+        artifactsToProcess.add({ artifactData: artifact, platformId: matchedPlatformId });
       }
     }
 
     if (artifactsToProcess.size === 0) {
-      console.log(`No artifacts found matching the specified platforms and build type '${args.buildType}'.`);
+      if (args.platform) {
+        console.log(`No artifacts found matching platform '${args.platform}' and build type '${args.buildType}'.`);
+      } else {
+        console.log(`No artifacts found matching the specified platforms and build type '${args.buildType}'.`);
+      }
       return;
     }
 
@@ -207,40 +237,33 @@ async function main(args: Args) {
 }
 
 if (import.meta.main) {
-  const cliArgs = process.argv.slice(2);
-
   const defaultRunPath = 'kommander/dawn/actions/runs/15122153809';
   const defaultBuildType = 'release';
 
-  let runPath: string;
-  let buildTypeInput: string;
+  program
+    .name('download_artifacts.ts')
+    .description('Downloads and unpacks build artifacts from a GitHub Actions run.')
+    .option('-r, --runPath <path>', 'GitHub Actions run path (e.g., owner/repo/actions/runs/runId)', defaultRunPath)
+    .option('-b, --buildType <type>', "Build type: 'debug' or 'release'", defaultBuildType)
+    .option('-p, --platform <name>', 'Optional: Specific platform to download (e.g., macos-latest, windows-latest, linux, macos)')
+    .action((options) => {
+      const runPath = options.runPath;
+      const buildType = options.buildType.toLowerCase();
+      const platform = options.platform;
 
-  if (cliArgs.length === 0) {
-    runPath = defaultRunPath;
-    buildTypeInput = defaultBuildType;
-  } else if (cliArgs.length === 1) {
-    const firstArg = cliArgs[0]!.toLowerCase();
-    if (firstArg === 'debug' || firstArg === 'release') {
-      runPath = defaultRunPath;
-      buildTypeInput = firstArg;
-    } else {
-      runPath = cliArgs[0]!;
-      buildTypeInput = defaultBuildType;
-    }
-  } else { // 2 or more arguments
-    runPath = cliArgs[0]!;
-    buildTypeInput = cliArgs[1]!.toLowerCase();
-  }
+      console.log(`Using runPath: ${runPath}`);
+      console.log(`Using buildType: ${buildType}`);
+      if (platform) {
+        console.log(`Using platform: ${platform}`);
+      }
 
-  console.log(`Using runPath: ${runPath}`);
-  console.log(`Using buildType: ${buildTypeInput}`);
+      if (buildType !== 'debug' && buildType !== 'release') {
+        console.error(`Invalid build type "${buildType}". Must be "debug" or "release".`);
+        program.help();
+      }
 
-  if (buildTypeInput !== 'debug' && buildTypeInput !== 'release') {
-    console.error(`Invalid build type "${buildTypeInput}". Must be "debug" or "release".`);
-    console.error('Usage: ./download_artifacts.ts [<owner/repo/actions/runs/runId_or_buildType>] [<buildType_if_runId_first>]');
-    console.error('If only one arg: "debug" or "release" sets build type, otherwise sets run path.');
-    process.exit(1);
-  }
+      main({ runPath, buildType: buildType as 'debug' | 'release', platform });
+    });
 
-  main({ runPath, buildType: buildTypeInput });
+  program.parse(process.argv);
 } 
