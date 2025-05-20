@@ -61,6 +61,10 @@ jobs:
     - uses: oven-sh/setup-bun@v2
       with:
         bun-version: latest
+    
+    - name: Install GH CLI
+      if: matrix.os == 'ubuntu-latest'
+      uses: dev-hanz-ops/install-gh-cli-action@v0.2.1
 
     - name: Install dependencies
       run: |
