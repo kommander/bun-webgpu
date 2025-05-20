@@ -95,11 +95,11 @@ pub fn build(b: *std.Build) void {
         if (target.result.os.tag == .windows) {
             const sdk_path = "C:/Program Files (x86)/Windows Kits/10";
             const sdk_version = "10.0.22621.0"; // Must be the same as the SDK version in the workflow
-            const ucrt_path = b.path(b.fmt("{s}/Lib/{s}/ucrt/x64", .{ sdk_path, sdk_version }));
-            const um_path = b.path(b.fmt("{s}/Lib/{s}/um/x64", .{ sdk_path, sdk_version }));
+            const ucrt_path_str = b.fmt("{s}/Lib/{s}/ucrt/x64", .{ sdk_path, sdk_version });
+            const um_path_str = b.fmt("{s}/Lib/{s}/um/x64", .{ sdk_path, sdk_version });
 
-            target_lib.addLibraryPath(ucrt_path);
-            target_lib.addLibraryPath(um_path);
+            target_lib.addLibraryPath(.{ .cwd_relative = ucrt_path_str });
+            target_lib.addLibraryPath(.{ .cwd_relative = um_path_str });
 
             // Link core Windows system libraries
             target_lib.linkSystemLibrary("user32");
