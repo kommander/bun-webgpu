@@ -110,12 +110,12 @@ pub fn build(b: *std.Build) void {
             target_lib.linkSystemLibrary("d3d11");
             target_lib.linkSystemLibrary("d3d12");
             target_lib.linkSystemLibrary("dxgi");
+            target_lib.linkSystemLibrary("dxguid");
 
             // Explicit MSVC runtime linking
             target_lib.linkSystemLibrary("vcruntime");
             target_lib.linkSystemLibrary("msvcrt");
             target_lib.linkSystemLibrary("ucrt");
-            target_lib.linkSystemLibrary("libcmt");
         } else if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
             target_lib.linkFramework("Foundation");
