@@ -98,8 +98,8 @@ pub fn build(b: *std.Build) void {
             const ucrt_path = b.path(b.fmt("{s}/Lib/{s}/ucrt/x64", .{ sdk_path, sdk_version }));
             const um_path = b.path(b.fmt("{s}/Lib/{s}/um/x64", .{ sdk_path, sdk_version }));
 
-            target_lib.addLibraryPath(.{ .path = ucrt_path });
-            target_lib.addLibraryPath(.{ .path = um_path });
+            target_lib.addLibraryPath(ucrt_path);
+            target_lib.addLibraryPath(um_path);
 
             // Link core Windows system libraries
             target_lib.linkSystemLibrary("user32");
