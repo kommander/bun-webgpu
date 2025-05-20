@@ -92,7 +92,9 @@ pub fn build(b: *std.Build) void {
         target_lib.addLibraryPath(.{ .cwd_relative = dawn_platform_libs_dir_str });
         target_lib.addLibraryPath(.{ .cwd_relative = "../../dawn/libs" });
 
-        if (target.result.os.tag == .macos) {
+        if (target.result.os.tag == .windows) {
+            target_lib.linkLibCpp();
+        } else if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
             target_lib.linkFramework("Foundation");
             target_lib.linkFramework("CoreFoundation");
