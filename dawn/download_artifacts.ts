@@ -209,7 +209,7 @@ async function main(args: Args) {
 if (import.meta.main) {
   const cliArgs = process.argv.slice(2);
 
-  const defaultRunPath = 'kommander/dawn/actions/runs/15100585039';
+  const defaultRunPath = 'kommander/dawn/actions/runs/15122153809';
   const defaultBuildType = 'release';
 
   let runPath: string;
@@ -242,5 +242,5 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  main({ runPath, buildType: buildTypeInput as 'debug' | 'release' });
+  main({ runPath, buildType: buildTypeInput });
 } 

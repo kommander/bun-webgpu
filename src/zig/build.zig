@@ -9,11 +9,9 @@ pub fn build(b: *std.Build) void {
     const root_source_path = "lib.zig";
     const output_base_dir = "../../lib";
 
-    // Define all target configurations we want to support
-    // Mirroring renderoo's targets for now
     const targets = [_]std.Target.Query{
-        // .{ .cpu_arch = .x86_64, .os_tag = .linux },
-        // .{ .cpu_arch = .x86_64, .os_tag = .macos },
+        .{ .cpu_arch = .x86_64, .os_tag = .linux },
+        .{ .cpu_arch = .x86_64, .os_tag = .macos },
         .{ .cpu_arch = .aarch64, .os_tag = .macos },
         // .{ .cpu_arch = .x86_64, .os_tag = .windows },
         // Note: Dawn does not yet support linux aarch64
@@ -46,14 +44,12 @@ pub fn build(b: *std.Build) void {
             .link_libc = true,
         });
 
-        // Add WGPU header include path (relative to this build.zig file)
         target_lib.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{dawn_platform_libs_dir_str}) });
-
-        // Link WGPU library (libwebgpu_dawn.dylib / webgpu_dawn.dll etc.)
         target_lib.linkSystemLibrary("webgpu_dawn");
 
         // The library path for the linker to find the dawn library during build
         target_lib.addLibraryPath(.{ .cwd_relative = dawn_platform_libs_dir_str });
+        target_lib.addLibraryPath(.{ .cwd_relative = "../../dawn/libs" });
 
         if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
