@@ -1,8 +1,11 @@
-#include <stdbool.h> // For bool type
+#include <stdbool.h>
 #include "webgpu.h"
-#include <stdlib.h> // For malloc, free
-#include <string.h> // For memcpy
-#include <stdint.h> // For uint64_t etc.
+#include <stdlib.h> 
+#include <string.h>
+#include <stdint.h>
+
+// NOTE: This just wraps the Dawn WebGPU C API, as bun-ffi currently doesn't support passing structs by value.
+// This is a temporary solution until bun-ffi supports passing structs by value.
 
 // --- Instance Functions ---
 
