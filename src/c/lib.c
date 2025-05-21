@@ -3,6 +3,7 @@
 #include <stdlib.h> 
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 
 // NOTE: This just wraps the Dawn WebGPU C API, as bun-ffi currently doesn't support passing structs by value.
 // This is a temporary solution until bun-ffi supports passing structs by value.
@@ -20,9 +21,14 @@ WGPU_EXPORT void zwgpuInstanceRelease(WGPUInstance instance) {
 WGPU_EXPORT uint64_t zwgpuInstanceRequestAdapter(
     WGPUInstance instance,
     const WGPURequestAdapterOptions* options,
-    WGPURequestAdapterCallbackInfo callback_info
+    const WGPURequestAdapterCallbackInfo* callback_info_ptr
 ) {
-    WGPUFuture future = wgpuInstanceRequestAdapter(instance, options, callback_info);
+    if (callback_info_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuInstanceRequestAdapter: callback_info_ptr is NULL!\n");
+        WGPUFuture dummy_future = {0};
+        return dummy_future.id;
+    }
+    WGPUFuture future = wgpuInstanceRequestAdapter(instance, options, *callback_info_ptr);
     return future.id;
 }
 
@@ -55,9 +61,14 @@ WGPU_EXPORT WGPUStatus zwgpuAdapterGetInfo(WGPUAdapter adapter, WGPUAdapterInfo*
 WGPU_EXPORT uint64_t zwgpuAdapterRequestDevice(
     WGPUAdapter adapter,
     const WGPUDeviceDescriptor* descriptor,
-    WGPURequestDeviceCallbackInfo callback_info
+    const WGPURequestDeviceCallbackInfo* callback_info_ptr
 ) {
-    WGPUFuture future = wgpuAdapterRequestDevice(adapter, descriptor, callback_info);
+    if (callback_info_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuAdapterRequestDevice: callback_info_ptr is NULL!\n");
+        WGPUFuture dummy_future = {0};
+        return dummy_future.id;
+    }
+    WGPUFuture future = wgpuAdapterRequestDevice(adapter, descriptor, *callback_info_ptr);
     return future.id;
 }
 
@@ -164,8 +175,13 @@ WGPU_EXPORT void zwgpuDevicePushErrorScope(WGPUDevice device, WGPUErrorFilter fi
     wgpuDevicePushErrorScope(device, filter);
 }
 
-WGPU_EXPORT uint64_t zwgpuDevicePopErrorScope(WGPUDevice device, WGPUPopErrorScopeCallbackInfo callback_info) {
-    WGPUFuture future = wgpuDevicePopErrorScope(device, callback_info);
+WGPU_EXPORT uint64_t zwgpuDevicePopErrorScope(WGPUDevice device, const WGPUPopErrorScopeCallbackInfo* callback_info_ptr) {
+    if (callback_info_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuDevicePopErrorScope: callback_info_ptr is NULL!\n");
+        WGPUFuture dummy_future = {0};
+        return dummy_future.id;
+    }
+    WGPUFuture future = wgpuDevicePopErrorScope(device, *callback_info_ptr);
     return future.id;
 }
 
@@ -195,8 +211,13 @@ WGPU_EXPORT void zwgpuQueueWriteTexture(WGPUQueue queue, const WGPUTexelCopyText
     wgpuQueueWriteTexture(queue, destination, data, data_size, data_layout, write_size);
 }
 
-WGPU_EXPORT uint64_t zwgpuQueueOnSubmittedWorkDone(WGPUQueue queue, WGPUQueueWorkDoneCallbackInfo callback_info) {
-    WGPUFuture future = wgpuQueueOnSubmittedWorkDone(queue, callback_info);
+WGPU_EXPORT uint64_t zwgpuQueueOnSubmittedWorkDone(WGPUQueue queue, const WGPUQueueWorkDoneCallbackInfo* callback_info_ptr) {
+    if (callback_info_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuQueueOnSubmittedWorkDone: callback_info_ptr is NULL!\n");
+        WGPUFuture dummy_future = {0};
+        return dummy_future.id;
+    }
+    WGPUFuture future = wgpuQueueOnSubmittedWorkDone(queue, *callback_info_ptr);
     return future.id;
 }
 
@@ -207,9 +228,14 @@ WGPU_EXPORT uint64_t zwgpuBufferMapAsync(
     WGPUMapMode mode,
     uint64_t offset,
     uint64_t size,
-    WGPUBufferMapCallbackInfo callback_info
+    const WGPUBufferMapCallbackInfo* callback_info_ptr
 ) {
-    WGPUFuture future = wgpuBufferMapAsync(buffer, mode, offset, size, callback_info);
+    if (callback_info_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuBufferMapAsync: callback_info_ptr is NULL!\n");
+        WGPUFuture dummy_future = {0};
+        return dummy_future.id;
+    }
+    WGPUFuture future = wgpuBufferMapAsync(buffer, mode, offset, size, *callback_info_ptr);
     return future.id;
 }
 
@@ -261,8 +287,13 @@ WGPU_EXPORT void zwgpuSamplerRelease(WGPUSampler sampler) {
 
 // --- ShaderModule Functions ---
 
-WGPU_EXPORT uint64_t zwgpuShaderModuleGetCompilationInfo(WGPUShaderModule shader_module, WGPUCompilationInfoCallbackInfo callback_info) {
-    WGPUFuture future = wgpuShaderModuleGetCompilationInfo(shader_module, callback_info);
+WGPU_EXPORT uint64_t zwgpuShaderModuleGetCompilationInfo(WGPUShaderModule shader_module, const WGPUCompilationInfoCallbackInfo* callback_info_ptr) {
+    if (callback_info_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuShaderModuleGetCompilationInfo: callback_info_ptr is NULL!\n");
+        WGPUFuture dummy_future = {0};
+        return dummy_future.id;
+    }
+    WGPUFuture future = wgpuShaderModuleGetCompilationInfo(shader_module, *callback_info_ptr);
     return future.id;
 }
 
@@ -449,26 +480,43 @@ WGPU_EXPORT void zwgpuSurfaceRelease(WGPUSurface surface) {
 // The original webgpu.h functions take the struct by value for wgpu*FreeMembers.
 // However, the Zig code passes pointers, so we'll maintain that for the C interface for consistency.
 
-WGPU_EXPORT void zwgpuAdapterInfoFreeMembers(WGPUAdapterInfo value) {
-    wgpuAdapterInfoFreeMembers(value);
+WGPU_EXPORT void zwgpuAdapterInfoFreeMembers(const WGPUAdapterInfo* value_ptr) {
+    if (value_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuAdapterInfoFreeMembers: value_ptr is NULL!\n");
+        return;
+    }
+    wgpuAdapterInfoFreeMembers(*value_ptr);
 }
 
-WGPU_EXPORT void zwgpuSurfaceCapabilitiesFreeMembers(WGPUSurfaceCapabilities value) {
-    wgpuSurfaceCapabilitiesFreeMembers(value);
+WGPU_EXPORT void zwgpuSurfaceCapabilitiesFreeMembers(const WGPUSurfaceCapabilities* value_ptr) {
+    if (value_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuSurfaceCapabilitiesFreeMembers: value_ptr is NULL!\n");
+        return;
+    }
+    wgpuSurfaceCapabilitiesFreeMembers(*value_ptr);
 }
 
 // This one is already defined and handled in zwgpuDeviceGetFeatures
-WGPU_EXPORT void zwgpuSupportedFeaturesFreeMembers(WGPUSupportedFeatures value) {
-    wgpuSupportedFeaturesFreeMembers(value);
+WGPU_EXPORT void zwgpuSupportedFeaturesFreeMembers(const WGPUSupportedFeatures* value_ptr) {
+    if (value_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuSupportedFeaturesFreeMembers: value_ptr is NULL!\n");
+        return;
+    }
+    wgpuSupportedFeaturesFreeMembers(*value_ptr);
 }
 
-
-
-
-WGPU_EXPORT void zwgpuSharedBufferMemoryEndAccessStateFreeMembers(WGPUSharedBufferMemoryEndAccessState value) {
-    wgpuSharedBufferMemoryEndAccessStateFreeMembers(value);
+WGPU_EXPORT void zwgpuSharedBufferMemoryEndAccessStateFreeMembers(const WGPUSharedBufferMemoryEndAccessState* value_ptr) {
+    if (value_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuSharedBufferMemoryEndAccessStateFreeMembers: value_ptr is NULL!\n");
+        return;
+    }
+    wgpuSharedBufferMemoryEndAccessStateFreeMembers(*value_ptr);
 }
 
-WGPU_EXPORT void zwgpuSharedTextureMemoryEndAccessStateFreeMembers(WGPUSharedTextureMemoryEndAccessState value) {
-    wgpuSharedTextureMemoryEndAccessStateFreeMembers(value);
+WGPU_EXPORT void zwgpuSharedTextureMemoryEndAccessStateFreeMembers(const WGPUSharedTextureMemoryEndAccessState* value_ptr) {
+    if (value_ptr == NULL) {
+        printf("[C WRAPPER ERROR] zwgpuSharedTextureMemoryEndAccessStateFreeMembers: value_ptr is NULL!\n");
+        return;
+    }
+    wgpuSharedTextureMemoryEndAccessStateFreeMembers(*value_ptr);
 } 
