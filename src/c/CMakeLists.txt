@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(WebGPUWrapperC LANGUAGES C)
+project(WebGPUWrapperC LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
@@ -72,7 +72,7 @@ if(APPLE) # macOS (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lc++")
 
 elseif(UNIX AND NOT APPLE) # Linux
-    target_link_libraries(webgpu_wrapper PRIVATE pthread dl m)
+    target_link_libraries(webgpu_wrapper PRIVATE pthread dl m stdc++)
 
 elseif(WIN32) # Windows
     target_link_libraries(webgpu_wrapper PRIVATE
@@ -113,4 +113,4 @@ install(TARGETS webgpu_wrapper
 
 message(STATUS "Configured 'webgpu_wrapper' for target: ${TARGET_ARCH_OS_SUBDIR}")
 message(STATUS "Output artifacts will be placed in: ${FINAL_OUTPUT_DIR}")
-message(STATUS "Installation path prefix for 'webgpu_wrapper': lib/${TARGET_ARCH_OS_SUBDIR}") 
+message(STATUS "Installation path prefix for 'webgpu_wrapper': lib/${TARGET_ARCH_OS_SUBDIR}")
