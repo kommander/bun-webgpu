@@ -72,7 +72,7 @@ if(APPLE) # macOS (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lc++")
 
 elseif(UNIX AND NOT APPLE) # Linux
-    target_link_libraries(webgpu_wrapper PUBLIC pthread dl m stdc++ "-Wl,--no-as-needed" vulkan "-Wl,--as-needed")
+    target_link_libraries(webgpu_wrapper PUBLIC pthread dl m stdc++)
 
 elseif(WIN32) # Windows
     target_link_libraries(webgpu_wrapper PRIVATE

@@ -74,7 +74,7 @@ type FieldDefType<Def> =
   Def extends 'cstring' | 'char*' ? string | null : // Strings can be null
   Def extends EnumDef<infer E> ? keyof E : // Enums map to their keys
   Def extends StructDef<infer S> ? S : // Structs map to their inferred type
-  Def extends ObjectPointerDef<infer T> ? T | null : 
+  Def extends ObjectPointerDef<infer T> ? T | null :
   Def extends readonly [infer InnerDef] ? // Array check
     InnerDef extends PrimitiveType ? Iterable<PrimitiveToTSType<InnerDef>> :
     InnerDef extends EnumDef<infer E> ? Iterable<keyof E> :
@@ -180,7 +180,7 @@ interface StructDef<OutputType, InputType = OutputType> {
   size: number;
   align: number;
   pack(obj: InputType): ArrayBuffer;
-  packInto(obj: InputType, view: DataView, offset: number): void; 
+  packInto(obj: InputType, view: DataView, offset: number): void;
   unpack(buf: ArrayBuffer | SharedArrayBuffer): OutputType;
   describe(): { name: string; offset: number; size: number; align: number; optional: boolean }[];
 }
@@ -232,8 +232,8 @@ function primitivePackers(type: PrimitiveType) {
       break;
     case 'pointer':
       pack = (view: DataView, off: number, val: bigint | number) => {
-        pointerSize === 8 
-          ? view.setBigUint64(off, val ? BigInt(val) : 0n, true) 
+        pointerSize === 8
+          ? view.setBigUint64(off, val ? BigInt(val) : 0n, true)
           : view.setUint32(off, val ? Number(val) : 0, true);
       };
       unpack = (view: DataView, off: number): bigint => {
@@ -368,7 +368,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     } else if (isObjectPointerDef(typeOrStruct)) {
       size = pointerSize;
       align = pointerSize;
-      
+
       pack = (view, off, value: PointyObject | null) => {
           const ptrValue = value?.ptr ?? null;
           // @ts-ignore
@@ -389,7 +389,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       const [def] = typeOrStruct;
       size = pointerSize; // Arrays are always represented by a pointer to the data
       align = pointerSize;
-      
+
       if (isEnum(def)) {
         // Packing an array of enums
         const elemSize = def.type === 'u32' ? 4 : 8;
@@ -453,7 +453,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
               pointerPacker(view, off, null);
               return;
           }
-        
+
           const packedView = packObjectArray(val);
           pointerPacker(view, off, ptr(packedView.buffer));
         }
@@ -469,7 +469,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     }
 
     offset = alignOffset(offset, align);
-    
+
     if (options.unpackTransform) {
       const originalUnpack = unpack;
       unpack = (view, off) => options.unpackTransform!(originalUnpack(view, off));
@@ -496,20 +496,20 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       const originalPack = pack;
       pack = (view, off, val, obj) => originalPack(view, off, obj[options.lengthOf!] ? obj[options.lengthOf!].length : 0, obj);
     }
-    
+
     // LAYOUT FIELD
-    const layoutField: StructLayoutField = { 
-      name, 
-      offset, 
-      size, 
-      align, 
-      optional: !!options.optional || !!options.lengthOf || options.default !== undefined, 
-      default: options.default, 
-      pack, 
-      unpack 
+    const layoutField: StructLayoutField = {
+      name,
+      offset,
+      size,
+      align,
+      optional: !!options.optional || !!options.lengthOf || options.default !== undefined,
+      default: options.default,
+      pack,
+      unpack
     };
     layout.push(layoutField);
-    
+
     if (options.lengthOf) {
       lengthOfFields[options.lengthOf] = layoutField; // Map: arrayFieldName -> lengthFieldLayout
     }
@@ -533,12 +533,12 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       throw new Error(`lengthOf field not found for array field ${requester.name}`);
     }
     const elemSize = def.type === 'u32' ? 4 : 8;
-    
+
     requester.unpack = (view, off) => {
       const result = [];
       const length = lengthOfField.unpack(view, lengthOfField.offset);
       const ptrAddress = pointerUnpacker(view, off);
-      
+
       if (ptrAddress === 0n && length > 0) {
         throw new Error(`Array field ${requester.name} has null pointer but length ${length}.`);
       }
@@ -549,16 +549,15 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         return [];
       }
 
-      const bunPointer = ptr(ptrAddress);
-      const buffer = toArrayBuffer(bunPointer, 0, length * elemSize);
+      const buffer = toArrayBuffer(ptrAddress, 0, length * elemSize);
       const bufferView = new DataView(buffer);
-      
+
       for (let i = 0; i < length; i++) {
         result.push(def.from(bufferView.getUint32(i * elemSize, true)));
       }
       return result;
     }
-    
+
   }
 
   const totalSize = alignOffset(offset, maxAlign);
@@ -576,7 +575,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       }
       const buf = new ArrayBuffer(totalSize);
       const view = new DataView(buf);
-      
+
       for (const field of layout) {
         const value = (mappedObj as any)[field.name] ?? field.default;
         if (!field.optional && value === undefined) {
