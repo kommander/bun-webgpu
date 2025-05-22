@@ -549,7 +549,9 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         return [];
       }
 
-      const buffer = toArrayBuffer(ptrAddress, 0, length * elemSize);
+            console.log('ptr', ptrAddress)
+      const buffer = toArrayBuffer(Number(ptrAddress), 0, length * elemSize);
+    console.log("buf", buffer)
       const bufferView = new DataView(buffer);
 
       for (let i = 0; i < length; i++) {

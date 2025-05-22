@@ -1,7 +1,7 @@
 
 import { JSCallback, type Pointer, ptr } from "bun:ffi";
-import { 
-    BufferUsageFlags, 
+import {
+    BufferUsageFlags,
 } from ".";
 import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
@@ -36,7 +36,7 @@ export type DeviceErrorCallback = (this: GPUDevice, ev: GPUUncapturedErrorEvent)
 export class DeviceTicker {
     private _waiting: number = 0;
     private _ticking = false;
-    
+
     constructor(public readonly devicePtr: Pointer, private lib: typeof FFI_SYMBOLS) {}
 
     register() {
@@ -131,7 +131,7 @@ export class GPUDeviceImpl implements GPUDevice {
         this.lib.wgpuDeviceTick(this.devicePtr);
         return undefined;
     }
-    
+
     addEventListener<K extends keyof __GPUDeviceEventMap>(type: K, listener: (this: GPUDevice, ev: __GPUDeviceEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
         fatalError('addEventListener not implemented', type, listener, options);
     }
@@ -177,16 +177,19 @@ export class GPUDeviceImpl implements GPUDevice {
         if (this._features === null) {
             let supportedFeaturesStructPtr: Pointer | null = null;
             try {
-                const { buffer: structBuffer } = allocStruct(WGPUSupportedFeaturesStruct);
-                const supportedFeaturesStructPtr = ptr(structBuffer);
-
-                this.lib.wgpuDeviceGetFeatures(this.devicePtr, supportedFeaturesStructPtr);
-
-                const supportedFeaturesData = WGPUSupportedFeaturesStruct.unpack(structBuffer);
+                const featuresStructBuffer = new ArrayBuffer(16);
+                const featuresBuffer = new ArrayBuffer(256);
+                const featuresView = new DataView(featuresStructBuffer);
+                const featuresPtr = ptr(featuresBuffer);
+                featuresView.setBigUint64(8, BigInt(featuresPtr), true);
+                console.log('1', featuresStructBuffer);
+                this.lib.wgpuDeviceGetFeatures(this.devicePtr, ptr(featuresStructBuffer));
+                console.log('2', featuresStructBuffer);
+                const supportedFeaturesData = WGPUSupportedFeaturesStruct.unpack(featuresStructBuffer);
                 const features = supportedFeaturesData.features;
                 const supportedFeatures = new Set<string>(features);
 
-                this._features = Object.freeze(supportedFeatures);  
+                this._features = Object.freeze(supportedFeatures);
             } catch (e) {
                 console.error("Error getting device features via wgpuDeviceGetFeatures:", e);
                 this._features = Object.freeze(new Set<string>()); // Set empty on error
@@ -215,12 +218,12 @@ export class GPUDeviceImpl implements GPUDevice {
                 limitsStructPtr = ptr(structBuffer);
 
                 const status = this.lib.wgpuDeviceGetLimits(this.devicePtr, limitsStructPtr);
-                
+
                 if (status !== 1) { // WGPUStatus_Success = 1 (assuming, needs verification or enum import)
                      console.error(`wgpuDeviceGetLimits failed with status: ${status}`);
                      return DEFAULT_SUPPORTED_LIMITS;
                 }
-                
+
                 const jsLimits = WGPULimitsStruct.unpack(structBuffer);
 
                 // Freeze and cast the final limits object
@@ -282,11 +285,11 @@ export class GPUDeviceImpl implements GPUDevice {
                 this.devicePtr,
                 ptr(packedDescriptor)
             );
-            
+
             if (!bufferPtr) {
                 fatalError("Failed to create buffer");
             }
-            
+
             return new GPUBufferImpl(bufferPtr, this.lib, descriptor, this.instanceTicker);
         } catch (e) {
             fatalError("Error creating buffer:", e);
@@ -301,23 +304,23 @@ export class GPUDeviceImpl implements GPUDevice {
         } else {
             size = { width: size.width || 1, height: size.height || 1, depthOrArrayLayers: size.depthOrArrayLayers || 1 }
         }
-        
+
         const packedDescriptor = WGPUTextureDescriptorStruct.pack({
             ...descriptor,
             size,
         });
-        
+
         try {
             // Call the WebGPU API directly
             const texturePtr = this.lib.wgpuDeviceCreateTexture(
                 this.devicePtr,
                 ptr(packedDescriptor)
             );
-            
+
             if (!texturePtr) {
                 fatalError("Failed to create texture");
             }
-            
+
             // Get dimension and size details
             let width, height, depthOrArrayLayers;
             if (Symbol.iterator in descriptor.size) {
@@ -333,11 +336,11 @@ export class GPUDeviceImpl implements GPUDevice {
                 height = sizeDict.height || 1;
                 depthOrArrayLayers = sizeDict.depthOrArrayLayers || 1;
             }
-            
+
             const dimension = descriptor.dimension || '2d';
             const mipLevelCount = descriptor.mipLevelCount || 1;
             const sampleCount = descriptor.sampleCount || 1;
-            
+
             return new GPUTextureImpl(
                 texturePtr,
                 this.lib,
@@ -358,7 +361,7 @@ export class GPUDeviceImpl implements GPUDevice {
     createSampler(descriptor?: GPUSamplerDescriptor): GPUSampler {
         // Use default descriptor if none provided
         const samplerDescriptor = descriptor || {};
-        
+
         // Pack the sampler descriptor
         const packedDescriptor = WGPUSamplerDescriptorStruct.pack(samplerDescriptor);
 
@@ -368,11 +371,11 @@ export class GPUDeviceImpl implements GPUDevice {
                 this.devicePtr,
                 ptr(packedDescriptor)
             );
-            
+
             if (!samplerPtr) {
                 fatalError("Failed to create sampler");
             }
-            
+
             return new GPUSamplerImpl(
                 samplerPtr,
                 this.lib,
@@ -391,10 +394,10 @@ export class GPUDeviceImpl implements GPUDevice {
         if (!descriptor.entries) { // || Array.from(descriptor.entries).length === 0) {
             fatalError('createBindGroupLayout: descriptor.entries is missing');
         }
-        
+
         const packedDescriptorBuffer = WGPUBindGroupLayoutDescriptorStruct.pack(descriptor);
         const packedDescriptorPtr = ptr(packedDescriptorBuffer);
-        
+
         const layoutPtr = this.lib.wgpuDeviceCreateBindGroupLayout(
             this.devicePtr,
             packedDescriptorPtr
@@ -412,7 +415,7 @@ export class GPUDeviceImpl implements GPUDevice {
             label: descriptor.label,
             bindGroupLayouts: bgls
         });
-     
+
         const layoutPtr = this.lib.wgpuDeviceCreatePipelineLayout(
             this.devicePtr,
             ptr(descriptorBuffer)
@@ -441,16 +444,16 @@ export class GPUDeviceImpl implements GPUDevice {
             nextInChain: ptr(codeStruct),
             label: descriptor.label
         });
-        
+
         const modulePtr = this.lib.wgpuDeviceCreateShaderModule(
             this.devicePtr,
             ptr(packedDescriptor)
         );
-        
+
         if (!modulePtr) {
             fatalError("Failed to create shader module (FFI returned null)");
         }
-        
+
         return new GPUShaderModuleImpl(modulePtr, this.lib, descriptor.label || 'no-label');
     }
 
@@ -458,7 +461,7 @@ export class GPUDeviceImpl implements GPUDevice {
         if (!this.devicePtr) {
             fatalError("createBindGroup: Device pointer is null");
         }
-        
+
         const entries = Array.from(descriptor.entries).map((e) => {
             if (isBufferBinding(e.resource)) {
                 return {
@@ -559,7 +562,7 @@ export class GPUDeviceImpl implements GPUDevice {
 
         const layoutForPacking = (descriptor.layout && descriptor.layout !== "auto")
             ? descriptor.layout
-            : null;   
+            : null;
 
         const packedPipelineDescriptor = WGPURenderPipelineDescriptorStruct.pack({
             ...descriptor,
@@ -567,7 +570,7 @@ export class GPUDeviceImpl implements GPUDevice {
             vertex,
             layout: layoutForPacking
         });
-    
+
         let pipelinePtr: Pointer | null = null;
         pipelinePtr = this.lib.wgpuDeviceCreateRenderPipeline(
             this.devicePtr,
@@ -576,7 +579,7 @@ export class GPUDeviceImpl implements GPUDevice {
         if (!pipelinePtr) {
             fatalError("Failed to create render pipeline (FFI returned null)");
         }
-        
+
         return new GPURenderPipelineImpl(pipelinePtr, this.lib, descriptor.label);
     }
 
@@ -603,9 +606,9 @@ export class GPUDeviceImpl implements GPUDevice {
 
     createQuerySet(descriptor: GPUQuerySetDescriptor): GPUQuerySet {
         const packedDescriptor = WGPUQuerySetDescriptorStruct.pack(descriptor);
-    
+
         let querySetPtr: Pointer | null = null;
-        
+
         querySetPtr = FFI_SYMBOLS.wgpuDeviceCreateQuerySet(
             this.devicePtr,
             ptr(packedDescriptor)
@@ -614,7 +617,7 @@ export class GPUDeviceImpl implements GPUDevice {
             fatalError("Failed to create query set (FFI returned null)");
         }
 
-        return new GPUQuerySetImpl(querySetPtr, FFI_SYMBOLS, descriptor.type, descriptor.count, descriptor.label);     
+        return new GPUQuerySetImpl(querySetPtr, FFI_SYMBOLS, descriptor.type, descriptor.count, descriptor.label);
     }
 }
 

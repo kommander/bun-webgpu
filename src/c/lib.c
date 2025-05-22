@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include "webgpu.h"
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -151,24 +151,15 @@ WGPU_EXPORT void zwgpuDeviceGetFeatures(WGPUDevice device, WGPUSupportedFeatures
     wgpuDeviceGetFeatures(device, &temp_dawn_features_struct);
 
     if (temp_dawn_features_struct.featureCount > 0 && temp_dawn_features_struct.features != NULL) {
-        WGPUFeatureName* arena_features_array = (WGPUFeatureName*)malloc(sizeof(WGPUFeatureName) * temp_dawn_features_struct.featureCount);
-        if (arena_features_array == NULL) {
-            js_features_struct_ptr->featureCount = 0;
-            js_features_struct_ptr->features = NULL;
-            wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct); // Free the features array allocated by wgpuDeviceGetFeatures
-            return;
-        }
-
-        memcpy(arena_features_array, temp_dawn_features_struct.features, sizeof(WGPUFeatureName) * temp_dawn_features_struct.featureCount);
+        memcpy((void *)js_features_struct_ptr->features, temp_dawn_features_struct.features, sizeof(WGPUFeatureName) * temp_dawn_features_struct.featureCount);
 
         js_features_struct_ptr->featureCount = temp_dawn_features_struct.featureCount;
-        js_features_struct_ptr->features = arena_features_array; // JS now points to malloc'd memory!
     } else {
         js_features_struct_ptr->featureCount = 0;
         js_features_struct_ptr->features = NULL;
     }
 
-    wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct); // Free the features array allocated by wgpuDeviceGetFeatures
+    wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct);
 }
 
 WGPU_EXPORT void zwgpuDevicePushErrorScope(WGPUDevice device, WGPUErrorFilter filter) {
@@ -519,4 +510,4 @@ WGPU_EXPORT void zwgpuSharedTextureMemoryEndAccessStateFreeMembers(const WGPUSha
         return;
     }
     wgpuSharedTextureMemoryEndAccessStateFreeMembers(*value_ptr);
-} 
+}
