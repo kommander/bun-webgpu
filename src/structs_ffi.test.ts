@@ -638,5 +638,74 @@ describe("Structs FFI", () => {
             expect(entriesView.getUint32(entryBaseOffset + textureOffset + 4, true)).toBe(2); // default viewDimension = 2d
             expect(entriesView.getUint32(entryBaseOffset + textureOffset + 8, true)).toBe(0); // default multisampled = false
         });
+
+        it("should handle enum defaults in empty sub-structs (reproducing GPUDevice issue)", () => {
+            // Create enums exactly like the real ones
+            const SampleTypeEnum = defineEnum({
+                "binding-not-used": 0,
+                undefined: 1,
+                float: 2,
+                "unfilterable-float": 3,
+                depth: 4,
+                sint: 5,
+                uint: 6,
+            });
+
+            const ViewDimensionEnum = defineEnum({
+                "undefined": 0,
+                "1d": 1,
+                "2d": 2,
+                "2d-array": 3,
+                cube: 4,
+                "cube-array": 5,
+                "3d": 6,
+            });
+
+            // Create struct with enum defaults (like WGPUTextureBindingLayoutStruct)
+            const TextureLayoutStruct = defineStruct([
+                ['nextInChain', 'pointer', { optional: true }],
+                ['sampleType', SampleTypeEnum, { default: 'float' }], // Should become 2
+                ['viewDimension', ViewDimensionEnum, { default: '2d' }], // Should become 2
+                ['multisampled', 'bool_u32', { default: false }],
+            ] as const);
+
+            // Create parent struct (like WGPUBindGroupLayoutEntryStruct)
+            const EntryStruct = defineStruct([
+                ['binding', 'u32'],
+                ['visibility', 'u64'],
+                ['texture', TextureLayoutStruct, { optional: true }], // This is the problematic field
+            ] as const);
+
+            // Test input with empty texture object (like GPUDevice test)
+            const input = {
+                binding: 2,
+                visibility: 0x4n,
+                texture: {} // Empty object - should get enum defaults applied!
+            };
+
+            const packed = EntryStruct.pack(input);
+            
+            // Get field offsets
+            const layout = EntryStruct.describe();
+            const textureOffset = layout.find(f => f.name === 'texture')?.offset ?? 0;
+            
+            const view = new DataView(packed);
+            
+            // Check that enum defaults were applied correctly
+            const sampleType = view.getUint32(textureOffset + 8, true); // After nextInChain pointer
+            const viewDimension = view.getUint32(textureOffset + 12, true); // After sampleType
+            const multisampled = view.getUint32(textureOffset + 16, true); // After viewDimension
+            
+            console.log('=== ENUM DEFAULT TEST ===');
+            console.log('texture offset:', textureOffset);
+            console.log('sampleType (should be 2):', sampleType);
+            console.log('viewDimension (should be 2):', viewDimension);
+            console.log('multisampled (should be 0):', multisampled);
+            
+            // These should be the enum values, not zeros!
+            expect(sampleType).toBe(2); // 'float' enum value
+            expect(viewDimension).toBe(2); // '2d' enum value  
+            expect(multisampled).toBe(0); // false
+        });
     });
 }); 
