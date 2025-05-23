@@ -639,7 +639,7 @@ describe("Structs FFI", () => {
             expect(entriesView.getUint32(entryBaseOffset + textureOffset + 8, true)).toBe(0); // default multisampled = false
         });
 
-        it("should handle enum defaults in empty sub-structs (reproducing GPUDevice issue)", () => {
+      it("should handle enum defaults in empty sub-structs (reproducing GPUDevice issue)", () => {
             // Create enums exactly like the real ones
             const SampleTypeEnum = defineEnum({
                 "binding-not-used": 0,
@@ -706,6 +706,50 @@ describe("Structs FFI", () => {
             expect(sampleType).toBe(2); // 'float' enum value
             expect(viewDimension).toBe(2); // '2d' enum value  
             expect(multisampled).toBe(0); // false
+        });
+    });
+
+    describe("empty object defaults", () => {
+        it("should apply defaults when packing empty objects", () => {
+            const SamplerStruct = defineStruct([
+                ['type', 'u32', { default: 2 }] // filtering = 2
+            ] as const);
+
+            // Test packing with empty object vs undefined
+            const emptyObjectPacked = SamplerStruct.pack({});
+            
+            const emptyView = new DataView(emptyObjectPacked);
+            
+            console.log('Empty object packed type value:', emptyView.getUint32(0, true));
+            
+            // Empty object should apply the default value of 2
+            expect(emptyView.getUint32(0, true)).toBe(2);
+        });
+
+        it("should handle nested struct with empty object", () => {
+            const SamplerStruct = defineStruct([
+                ['type', 'u32', { default: 2 }]
+            ] as const);
+            
+            const EntryStruct = defineStruct([
+                ['binding', 'u32'],
+                ['sampler', SamplerStruct, { optional: true }]
+            ] as const);
+
+            // This mimics the GPUDevice scenario: sampler: {}
+            const packed = EntryStruct.pack({
+                binding: 1,
+                sampler: {} // Empty object - should get defaults
+            });
+            
+            const view = new DataView(packed);
+            const binding = view.getUint32(0, true);
+            const samplerType = view.getUint32(4, true); // sampler.type after binding field
+            
+            console.log('Nested - binding:', binding, 'samplerType:', samplerType);
+            
+            expect(binding).toBe(1);
+            expect(samplerType).toBe(2); // Should have default applied
         });
     });
 }); 
