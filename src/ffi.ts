@@ -124,8 +124,8 @@ function _loadLibrary() {
         returns: FFIType.void,
       },
       zwgpuAdapterGetFeatures: { // Added for getting adapter features
-        args: [FFIType.pointer], // adapter: WGPUAdapter
-        returns: FFIType.u64,    // returns WGPUFeatureFlags (uint64_t)
+        args: [FFIType.pointer, FFIType.pointer], // adapter: WGPUAdapter, features: *WGPUSupportedFeatures
+        returns: FFIType.void,
       },
       zwgpuAdapterGetLimits: {
         args: [FFIType.pointer, FFIType.pointer], // adapter: WGPUAdapter, limits: *mut WGPULimits
