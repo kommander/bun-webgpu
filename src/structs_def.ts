@@ -671,6 +671,7 @@ export const WGPUBindGroupLayoutEntryStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['binding', 'u32'],
     ['visibility', 'u64'],
+    ['_alignment0', 'u64', { default: 0, condition: () => process.platform === 'linux' }],
     ['buffer', WGPUBufferBindingLayoutStruct, { optional: true }],
     ['sampler', WGPUSamplerBindingLayoutStruct, { optional: true }],
     ['texture', WGPUTextureBindingLayoutStruct, { optional: true }],

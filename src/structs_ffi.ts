@@ -87,6 +87,7 @@ type IsOptional<Options extends StructFieldOptions | undefined> =
   Options extends { optional: true } ? true :
   Options extends { default: any } ? true :
   Options extends { lengthOf: string } ? true : // lengthOf implies the field is derived/optional input
+  Options extends { condition: () => boolean } ? true : // condition implies the field might not exist
   false;
 
 // Constructs the TS object type from the struct field definitions
@@ -154,6 +155,7 @@ interface StructFieldOptions {
   lengthOf?: string,
   asPointer?: boolean,
   default?: any,
+  condition?: () => boolean,
 };
 
 type StructField =
@@ -283,6 +285,10 @@ export function defineStruct<const Fields extends readonly StructField[], const 
   const lengthOfRequested: { requester: StructLayoutField, def: EnumDef<any> | PrimitiveType }[] = [];
 
   for (const [name, typeOrStruct, options = {}] of fields) {
+    if (options.condition && !options.condition()) {
+      continue;
+    }
+
     let size = 0, align = 0;
     let pack: (view: DataView, offset: number, value: any, obj: any) => void;
     let unpack: (view: DataView, offset: number) => any;
