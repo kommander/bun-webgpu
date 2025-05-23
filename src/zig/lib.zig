@@ -66,8 +66,30 @@ pub export fn zwgpuAdapterCreateDevice(adapter: c.WGPUAdapter, descriptor: ?*con
     return c.wgpuAdapterCreateDevice(adapter, descriptor);
 }
 
-pub export fn zwgpuAdapterGetFeatures(adapter: c.WGPUAdapter, features: *c.WGPUSupportedFeatures) void {
-    c.wgpuAdapterGetFeatures(adapter, features);
+// Note: Same Linux issue as with device features - Dawn frees the features array prematurely
+pub export fn zwgpuAdapterGetFeatures(adapter: c.WGPUAdapter, js_features_struct_ptr: *c.WGPUSupportedFeatures) void {
+    var temp_dawn_features_struct: c.WGPUSupportedFeatures = undefined;
+    c.wgpuAdapterGetFeatures(adapter, &temp_dawn_features_struct);
+
+    if (temp_dawn_features_struct.featureCount > 0 and temp_dawn_features_struct.features != null) {
+        const arena_features_array = arena_allocator.alloc(c.WGPUFeatureName, temp_dawn_features_struct.featureCount) catch {
+            js_features_struct_ptr.featureCount = 0;
+            js_features_struct_ptr.features = null;
+            c.wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct);
+            return;
+        };
+
+        const dawn_features_slice = temp_dawn_features_struct.features[0..temp_dawn_features_struct.featureCount];
+        @memcpy(arena_features_array, dawn_features_slice);
+
+        js_features_struct_ptr.featureCount = temp_dawn_features_struct.featureCount;
+        js_features_struct_ptr.features = arena_features_array.ptr; // JS now points to arena!
+    } else {
+        js_features_struct_ptr.featureCount = 0;
+        js_features_struct_ptr.features = null;
+    }
+
+    c.wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct);
 }
 
 pub export fn zwgpuAdapterGetLimits(adapter: c.WGPUAdapter, limits: *c.WGPULimits) c.WGPUStatus {

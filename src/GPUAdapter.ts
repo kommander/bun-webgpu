@@ -2,7 +2,7 @@
 import { type Pointer, FFIType, JSCallback, ptr, toArrayBuffer } from "bun:ffi";
 import type { FFI_SYMBOLS } from "./ffi";
 import { GPUDeviceImpl } from "./GPUDevice";
-import { WGPUCallbackInfoStruct, WGPUCallbackMode, WGPUDeviceDescriptorStruct, WGPUErrorType, type WGPUUncapturedErrorCallbackInfo, WGPULimitsStruct, defaultLimitsForPacking } from "./structs_def";
+import { WGPUCallbackInfoStruct, WGPUCallbackMode, WGPUDeviceDescriptorStruct, WGPUErrorType, type WGPUUncapturedErrorCallbackInfo, WGPULimitsStruct, WGPUSupportedFeaturesStruct } from "./structs_def";
 import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
 import { WGPUFeatureNameDef } from "./structs_def";
@@ -65,9 +65,9 @@ export class GPUAdapterImpl implements GPUAdapter {
     private _destroyed = false;
     private _devices: Map<number, GPUDeviceImpl> = new Map();
     private globalJSErrorCallbackHandle: JSCallback | null = null;
-    
+
     constructor(
-      public readonly adapterPtr: Pointer, 
+      public readonly adapterPtr: Pointer,
       private instancePtr: Pointer,
       private lib: typeof FFI_SYMBOLS,
       private instanceTicker: InstanceTicker,
@@ -80,33 +80,27 @@ export class GPUAdapterImpl implements GPUAdapter {
 
     get features(): GPUSupportedFeatures {
         if (this._destroyed) {
-            // console.warn("Accessing features on destroyed GPUAdapter"); // Optional: for debugging
+            console.warn("Accessing features on destroyed GPUAdapter");
             return Object.freeze(new Set<GPUFeatureName>());
         }
         if (this._features === null) {
              try {
-                 const featureMask = this.lib.wgpuAdapterGetFeatures(this.adapterPtr);
+                 const { buffer: featuresBuffer } = allocStruct(WGPUSupportedFeaturesStruct);
+                 const featuresPtr = ptr(featuresBuffer);
+                 this.lib.wgpuAdapterGetFeatures(this.adapterPtr, featuresPtr);
                  const supportedFeatures = new Set<GPUFeatureName>();
-                 const maskBigInt = BigInt(featureMask);
- 
-                 for (let i = 0; i < BIT_INDEX_TO_FEATURE_NAME.length; i++) {
-                     // Check if the i-th bit is set
-                     if ((maskBigInt & (1n << BigInt(i))) !== 0n) {
-                         const featureName = BIT_INDEX_TO_FEATURE_NAME[i];
-                         if (featureName) {
-                             supportedFeatures.add(featureName);
-                         } else {
-                              console.warn(`GPUAdapter.features: Unmapped feature bit set at index ${i}`);
-                         }
+
+                 const unpacked = WGPUSupportedFeaturesStruct.unpack(featuresBuffer);
+                 if (unpacked.features && unpacked.featureCount > 0) {
+                     for (const feature of unpacked.features) {
+                         supportedFeatures.add(feature as GPUFeatureName);
                      }
                  }
                  this._features = Object.freeze(supportedFeatures);
- 
+
              } catch (e) {
                   console.error("Error calling adapterGetFeatures FFI function:", e);
-                  // Return a new frozen empty set to avoid modifying a shared mutable object
-                  // if this getter is called again after an error.
-                  return Object.freeze(new Set<GPUFeatureName>()); 
+                  return Object.freeze(new Set<GPUFeatureName>());
              }
         }
 
@@ -125,15 +119,15 @@ export class GPUAdapterImpl implements GPUAdapter {
                 limitsStructPtr = ptr(structBuffer);
 
                 const status = this.lib.wgpuAdapterGetLimits(this.adapterPtr, limitsStructPtr);
-                
+
                 if (status !== 1) { // WGPUStatus_Success = 1
                     console.error(`wgpuAdapterGetLimits failed with status: ${status}`);
                     this._limits = DEFAULT_ADAPTER_LIMITS; // Cache default on failure
                     return this._limits;
                 }
-                
+
                 const jsLimits = WGPULimitsStruct.unpack(structBuffer);
-                
+
                 this._limits = Object.freeze({
                     __brand: "GPUSupportedLimits" as const,
                     ...jsLimits,
@@ -158,7 +152,7 @@ export class GPUAdapterImpl implements GPUAdapter {
     private handleUncapturedError(devicePtr: Pointer, typeInt: number, messagePtr: Pointer | null, _unknown: number, userdata1: Pointer | null, userdata2: Pointer | null) {
         const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : undefined;
         const typeName = Object.keys(WGPUErrorType).find(key => WGPUErrorType[key as keyof typeof WGPUErrorType] === typeInt) || 'Unknown';
-        
+
         if (userdata1) {
             try {
                 const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
@@ -190,11 +184,11 @@ export class GPUAdapterImpl implements GPUAdapter {
       if (!this.adapterPtr) {
           return Promise.reject(new Error("Adapter pointer is null"));
       }
-      
+
       return new Promise((resolve, reject) => {
           let packedDescriptorPtr: Pointer | null = null;
           let jsCallback: JSCallback | null = null;
-          
+
           try {
               // --- 1. Pack Descriptor ---
               const deviceId = ++deviceCount;
@@ -213,12 +207,12 @@ export class GPUAdapterImpl implements GPUAdapter {
                   ) => {
                       this.handleUncapturedError(devicePtr, typeInt, messagePtr, messageSize, userdata1, userdata2);
                   },
-                  { 
+                  {
                     // NOTE: The message is a WGPUStringView, which is a struct with a pointer and a size.
                     // FFI cannot represent this directly, so it is passed in two arguments a pointer+size.
                     // At least is seems to be the size of the message, but I'm not sure.
-                    args: [FFIType.pointer, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ], 
-                    returns: FFIType.void 
+                    args: [FFIType.pointer, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ],
+                    returns: FFIType.void
                   }
               );
               this.globalJSErrorCallbackHandle = uncapturedErrorCallback;
@@ -235,9 +229,9 @@ export class GPUAdapterImpl implements GPUAdapter {
                     console.log('=== DEVICE LOST ===', devicePtr, reason, messagePtr, userdata1, userdata2);
                     // this.handleDeviceLost(devicePtr, typeInt, messagePtr, userdata1, userdata2);
                 },
-                { 
-                  args: [FFIType.pointer, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ], 
-                  returns: FFIType.void 
+                {
+                  args: [FFIType.pointer, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ],
+                  returns: FFIType.void
                 }
               );
 
@@ -249,7 +243,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                 fatalError("Failed to create deviceLostCallback");
               }
 
-              const fullDescriptor: GPUDeviceDescriptor & { 
+              const fullDescriptor: GPUDeviceDescriptor & {
                 uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo,
                 deviceLostCallbackInfo: ReturnType<typeof WGPUCallbackInfoStruct.unpack>,
                 defaultQueue: GPUQueueDescriptor,
@@ -273,12 +267,12 @@ export class GPUAdapterImpl implements GPUAdapter {
               }
               const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor);
               packedDescriptorPtr = ptr(descBuffer);
-              
+
               // --- 2. Create JSCallback ---
               const callbackFn = (status: number, devicePtr: Pointer | null, messagePtr: Pointer | null, messageSize: number, userdata1: Pointer | null, userdata2: Pointer | null) => {
                   this.instanceTicker.unregister();
                   const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
-                  
+
                   if (status === RequestDeviceStatus.Success) {
                       if (devicePtr) {
                           const device = new GPUDeviceImpl(devicePtr, this.lib, this.instanceTicker);
@@ -298,8 +292,8 @@ export class GPUAdapterImpl implements GPUAdapter {
                   }
               };
 
-              jsCallback = new JSCallback(callbackFn, { 
-                args: [FFIType.u32, FFIType.pointer, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ], returns: FFIType.void 
+              jsCallback = new JSCallback(callbackFn, {
+                args: [FFIType.u32, FFIType.pointer, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ], returns: FFIType.void
               });
 
               if (!jsCallback?.ptr) {
@@ -334,15 +328,15 @@ export class GPUAdapterImpl implements GPUAdapter {
           }
       });
     }
-  
+
     destroy(): undefined {
       if (this._destroyed) return;
-      
+
       this._destroyed = true;
       this._features = null; // Clear cache
       this._limits = null;   // Clear cache
       // this._info = null;     // Clear cache
-      
+
       try {
           this.lib.wgpuAdapterRelease(this.adapterPtr);
       } catch(e) {
