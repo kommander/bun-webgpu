@@ -236,10 +236,11 @@ function primitivePackers(type: PrimitiveType) {
           ? view.setBigUint64(off, val ? BigInt(val) : 0n, true)
           : view.setUint32(off, val ? Number(val) : 0, true);
       };
-      unpack = (view: DataView, off: number): bigint => {
-        return pointerSize === 8
+      unpack = (view: DataView, off: number): number => {
+        const bint = pointerSize === 8
           ? view.getBigUint64(off, true)
           : BigInt(view.getUint32(off, true));
+        return Number(bint)
       }
       break;
     default:
@@ -549,9 +550,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         return [];
       }
 
-            console.log('ptr', ptrAddress)
-      const buffer = toArrayBuffer(Number(ptrAddress), 0, length * elemSize);
-    console.log("buf", buffer)
+      const buffer = toArrayBuffer(ptrAddress, 0, length * elemSize);
       const bufferView = new DataView(buffer);
 
       for (let i = 0; i < length; i++) {
