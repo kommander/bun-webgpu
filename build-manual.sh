@@ -35,9 +35,3 @@ g++ -shared \
     -lm \
     -lpthread \
     -ldl
-
-echo "Build complete!"
-echo "Testing dependency linking:"
-ldd src/lib/x86_64-linux/libwebgpu_wrapper.so
-
-echo "Cleaned up temporary files."

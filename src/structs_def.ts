@@ -1,4 +1,4 @@
-import { FFIType, type Pointer } from "bun:ffi";
+import { type Pointer } from "bun:ffi";
 import { fatalError } from "./utils/error";
 import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
 
