@@ -41,9 +41,6 @@ pub fn build(b: *std.Build) void {
         if (arch == .aarch64 and os == .linux) {
             std.log.warn("Building for aarch64-linux. Note: Dawn support for this target might be experimental or incomplete.", .{});
         }
-        if (arch == .x86_64 and os == .windows) {
-            std.log.warn("Building for x86_64-windows. This target is typically excluded by default but allowed if specified.", .{});
-        }
 
         single_target_storage[0] = .{ .cpu_arch = arch, .os_tag = os };
         targets_to_build_slice = &single_target_storage;
@@ -82,7 +79,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path(root_source_path),
             .target = if (target.result.os.tag == .windows) b.resolveTargetQuery(.{ .cpu_arch = .x86_64, .os_tag = .windows, .abi = .msvc }) else target,
             .optimize = optimize,
-            .link_libc = if (target.result.os.tag == .windows) false else true,
+            .link_libc = true,
         });
 
         target_lib.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include", .{dawn_platform_libs_dir_str}) });
