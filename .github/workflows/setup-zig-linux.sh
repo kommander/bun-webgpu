@@ -11,8 +11,8 @@ echo "Downloading Zig ${ZIG_VERSION}..."
 curl -L -o "${ZIG_ARCHIVE}" "${ZIG_URL}"
 
 echo "Extracting Zig..."
-sudo mkdir -p "${ZIG_DIR}"
-sudo tar -xJf "${ZIG_ARCHIVE}" -C "${ZIG_DIR}" --strip-components=1
+mkdir -p "${ZIG_DIR}"
+tar -xJf "${ZIG_ARCHIVE}" -C "${ZIG_DIR}" --strip-components=1
 
 echo "Adding Zig to PATH..."
 echo "${ZIG_DIR}" >> $GITHUB_PATH
