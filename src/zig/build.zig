@@ -109,6 +109,13 @@ pub fn build(b: *std.Build) void {
             target_lib.linkSystemLibrary("d3d12");
             target_lib.linkSystemLibrary("dxgi");
             target_lib.linkSystemLibrary("dxguid");
+
+            // Try adding the MSVC library path for static libraries that contain initialization code
+            const msvc_lib_path_str = b.fmt("{s}/Lib/{s}/x64", .{ sdk_path, sdk_version });
+            target_lib.addLibraryPath(.{ .cwd_relative = msvc_lib_path_str });
+
+            // Link only the CRT import libraries for DLL runtime
+            target_lib.linkSystemLibrary("msvcrt");
         } else if (target.result.os.tag == .macos) {
             target_lib.linkLibCpp();
             target_lib.linkFramework("Foundation");
