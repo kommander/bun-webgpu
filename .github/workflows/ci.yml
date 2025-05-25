@@ -128,8 +128,7 @@ jobs:
         apt update && \
         apt install -y \
           libvulkan1 mesa-vulkan-drivers vulkan-tools \
-        && export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
-        && vulkaninfo | grep -i 'driverName'
+        && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
     - name: Install Vulkan support (Many-Linux)
       if: matrix.package_name == 'many-linux-x86_64'
@@ -147,8 +146,7 @@ jobs:
           libXcomposite \
           libXdamage \
           libXext \
-        && export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
-        && vulkaninfo | grep -i 'driverName'
+        && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
     - name: Run Example
       run: |
