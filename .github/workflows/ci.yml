@@ -91,10 +91,15 @@ jobs:
       run: |
         bun run build:linux
 
+    - name: Run Example
+      run: |
+        bun run src/examples/triangle.ts
+      
     - name: Package
       run: |
         cmake -E make_directory bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
         cmake -E copy src/lib/${{ matrix.target }}/${{ matrix.lib_name }} bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}/
+        cmake -E copy triangle.png bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}/
         cmake -E tar cvzf bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
 
     - name: Upload artifacts
