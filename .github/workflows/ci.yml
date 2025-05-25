@@ -63,7 +63,13 @@ jobs:
       with:
         winsdk-build-version: ${{ env.WIN10_SDK_BUILD_VERSION }}
 
+    - name: Setup Zig (Custom for Linux x86_64)
+      if: matrix.package_name == 'linux-x86_64'
+      run: |
+        ./setup-zig-linux.sh
+
     - uses: mlugg/setup-zig@v2
+      if: matrix.package_name != 'linux-x86_64'
       with:
         version: ${{ matrix.os == 'windows-latest' && 'master' || '0.14.0' }}
         cache-key: ${{ matrix.os }}-${{ matrix.package_name }}-${{ matrix.build_type }}
