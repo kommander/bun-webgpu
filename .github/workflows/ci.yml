@@ -67,6 +67,7 @@ jobs:
       with:
         version: ${{ matrix.os == 'windows-latest' && 'master' || '0.14.0' }}
         cache-key: ${{ matrix.os }}-${{ matrix.package_name }}-${{ matrix.build_type }}
+        use-cache: false
     
     - uses: oven-sh/setup-bun@v2
       with:
