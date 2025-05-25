@@ -69,7 +69,7 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
         TZ: Etc/UTC
       run: |
-        apt update && apt install -y --no-install-recommends curl xz-utils unzip build-essential cmake
+        apt update && apt install -y curl xz-utils unzip build-essential cmake
         ./.github/workflows/setup-zig-linux.sh
 
     - uses: mlugg/setup-zig@v2
