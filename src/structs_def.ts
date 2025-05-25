@@ -124,11 +124,11 @@ export const WGPUCompareFunction = defineEnum({
 export const WGPUStringView = defineStruct([
     ['char', 'char*'],
     ['size', 'u64'],
-], { 
+], {
     mapValue: (v: string) => ({
         char: v,
         size: Buffer.byteLength(v),
-    }) 
+    })
 });
 
 export function pointerValue(ptr: Pointer | null): bigint {
@@ -244,7 +244,7 @@ export const WGPUFeatureNameDef = defineEnum({
 
 export const WGPUTextureFormat = defineEnum({
   // Unsupported formats, setting to undefined (0)
-  rgb10a2uint: 0x00000000,  
+  rgb10a2uint: 0x00000000,
 
   // Basic formats
   r8unorm: 0x00000001,           // r8_unorm
@@ -264,7 +264,7 @@ export const WGPUTextureFormat = defineEnum({
   rg16uint: 0x0000000f,          // rg16_uint
   rg16sint: 0x00000010,          // rg16_sint
   rg16float: 0x00000011,         // rg16_float
-  
+
   // RGBA formats
   rgba8unorm: 0x00000012,          // rgba8_unorm
   "rgba8unorm-srgb": 0x00000013,   // rgba8_unorm_srgb
@@ -277,7 +277,7 @@ export const WGPUTextureFormat = defineEnum({
   rgb10a2unorm: 0x00000019,        // rgb10_a2_unorm
   rg11b10ufloat: 0x0000001a,       // rg11_b10_ufloat
   rgb9e5ufloat: 0x0000001b,        // rgb9_e5_ufloat
-  
+
   // High precision formats
   rg32float: 0x0000001c,         // rg32_float
   rg32uint: 0x0000001d,          // rg32_uint
@@ -288,7 +288,7 @@ export const WGPUTextureFormat = defineEnum({
   rgba32float: 0x00000022,       // rgba32_float
   rgba32uint: 0x00000023,        // rgba32_uint
   rgba32sint: 0x00000024,        // rgba32_sint
-  
+
   // Depth/stencil formats
   stencil8: 0x00000025,           // stencil8
   depth16unorm: 0x00000026,       // depth16_unorm
@@ -296,7 +296,7 @@ export const WGPUTextureFormat = defineEnum({
   "depth24plus-stencil8": 0x00000028, // depth24_plus_stencil8
   depth32float: 0x00000029,       // depth32_float
   "depth32float-stencil8": 0x0000002a, // depth32_float_stencil8
-  
+
   // BC compressed formats
   "bc1-rgba-unorm": 0x0000002b,      // bc1_rgba_unorm
   "bc1-rgba-unorm-srgb": 0x0000002c, // bc1_rgba_unorm_srgb
@@ -312,7 +312,7 @@ export const WGPUTextureFormat = defineEnum({
   "bc6h-rgb-float": 0x00000036,      // bc6_hrgb_float
   "bc7-rgba-unorm": 0x00000037,      // bc7_rgba_unorm
   "bc7-rgba-unorm-srgb": 0x00000038, // bc7_rgba_unorm_srgb
-  
+
   // ETC2/EAC compressed formats
   "etc2-rgb8unorm": 0x00000039,        // etc2_rgb8_unorm
   "etc2-rgb8unorm-srgb": 0x0000003a,   // etc2_rgb8_unorm_srgb
@@ -324,7 +324,7 @@ export const WGPUTextureFormat = defineEnum({
   "eac-r11snorm": 0x00000040,          // eacr11_snorm
   "eac-rg11unorm": 0x00000041,         // eacrg11_unorm
   "eac-rg11snorm": 0x00000042,         // eacrg11_snorm
-  
+
   // ASTC compressed formats
   "astc-4x4-unorm": 0x00000043,        // astc4x4_unorm
   "astc-4x4-unorm-srgb": 0x00000044,   // astc4x4_unorm_srgb
@@ -354,7 +354,7 @@ export const WGPUTextureFormat = defineEnum({
   "astc-12x10-unorm-srgb": 0x0000005c, // astc12x10_unorm_srgb
   "astc-12x12-unorm": 0x0000005d,      // astc12x12_unorm
   "astc-12x12-unorm-srgb": 0x0000005e, // astc12x12_unorm_srgb
-  
+
   // YUV formats
   // Does not exist in GPUTextureFormat
   // "r8bg8biplanar420unorm": 0x0000005f, // r8_bg8_biplanar420_unorm
@@ -444,7 +444,7 @@ export const WGPULimitsStruct = defineStruct([
     ['maxStorageTexturesInVertexStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxStorageBuffersInFragmentStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxStorageTexturesInFragmentStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-], { 
+], {
     default: {
         ...defaultLimitsForPacking,
     }
@@ -671,7 +671,10 @@ export const WGPUBindGroupLayoutEntryStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['binding', 'u32'],
     ['visibility', 'u64'],
-    ['_alignment0', 'u64', { default: 0, condition: () => process.platform === 'linux' }],
+    // Weird
+    // Using the CI build this manual alignment is not necessary,
+    // but for a local build it is. Need to check the gcc/g++ versions and what causes the mismatch.
+    // ['_alignment0', 'u64', { default: 0, condition: () => process.platform === 'linux' }],
     ['buffer', WGPUBufferBindingLayoutStruct, { optional: true }],
     ['sampler', WGPUSamplerBindingLayoutStruct, { optional: true }],
     ['texture', WGPUTextureBindingLayoutStruct, { optional: true }],
@@ -681,7 +684,7 @@ export const WGPUBindGroupLayoutEntryStruct = defineStruct([
 export const WGPUBindGroupLayoutDescriptorStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['label', WGPUStringView, { optional: true }],
-    ['entryCount', 'u64', { lengthOf: 'entries' }], 
+    ['entryCount', 'u64', { lengthOf: 'entries' }],
     ['entries', [WGPUBindGroupLayoutEntryStruct]],
 ]);
 
@@ -899,9 +902,9 @@ export const WGPUVertexStateStruct = defineStruct([
     ['module', objectPtr<GPUShaderModule>()],
     ['entryPoint', WGPUStringView, { default: 'main' }],
     ['constantCount', 'u64', { lengthOf: 'constants' }],
-    ['constants', [WGPUConstantEntryStruct], { optional: true }], 
+    ['constants', [WGPUConstantEntryStruct], { optional: true }],
     ['bufferCount', 'u64', { lengthOf: 'buffers' }],
-    ['buffers', [WGPUVertexBufferLayoutStruct], { optional: true }] 
+    ['buffers', [WGPUVertexBufferLayoutStruct], { optional: true }]
 ]);
 
 export const WGPUPrimitiveStateStruct = defineStruct([
@@ -910,7 +913,7 @@ export const WGPUPrimitiveStateStruct = defineStruct([
     ['stripIndexFormat', WGPUIndexFormat, { default: 'undefined' }], // Defaults to Undefined (0)
     ['frontFace', WGPUFrontFace, { default: 'ccw' }],
     ['cullMode', WGPUCullMode, { default: 'none' }],
-    ['unclippedDepth', WGPUBool, { optional: true }] 
+    ['unclippedDepth', WGPUBool, { optional: true }]
 ]);
 
 export const WGPUStencilFaceStateStruct = defineStruct([
@@ -964,9 +967,9 @@ export const WGPUFragmentStateStruct = defineStruct([
     ['module', objectPtr<GPUShaderModule>()],
     ['entryPoint', WGPUStringView, { default: 'main' }],
     ['constantCount', 'u64', { lengthOf: 'constants' }],
-    ['constants', [WGPUConstantEntryStruct], { optional: true }], 
+    ['constants', [WGPUConstantEntryStruct], { optional: true }],
     ['targetCount', 'u64', { lengthOf: 'targets' }],
-    ['targets', [WGPUColorTargetStateStruct]] 
+    ['targets', [WGPUColorTargetStateStruct]]
 ]);
 
 // -- Finally, the Render Pipeline Descriptor --
@@ -1023,7 +1026,7 @@ export const WGPUColorStruct = defineStruct([
     ['g', 'f64'],
     ['b', 'f64'],
     ['a', 'f64'],
-], { 
+], {
     default: { r: 0, g: 0, b: 0, a: 0 },
     mapValue: (v?: GPUColor) => {
         if (!v) return null; // Handle null case explicitly
