@@ -20,7 +20,4 @@ echo "${ZIG_DIR}" >> $GITHUB_PATH
 echo "Cleaning up..."
 rm "${ZIG_ARCHIVE}"
 
-echo "Validating Zig installation..."
-zig version
-
 echo "Zig setup completed successfully!"
