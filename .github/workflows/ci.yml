@@ -21,27 +21,36 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest, macos-13]
+        package_name: [windows-x86_64, many-linux-x86_64, macos-aarch64, macos-x86_64, linux-x86_64]
         build_type: [Release]
         include:
           - os: macos-latest
+            package_name: macos-aarch64
             target: aarch64-macos
             lib_name: libwebgpu_wrapper.dylib
             container: null
           - os: macos-13
+            package_name: macos-x86_64
             target: x86_64-macos
             lib_name: libwebgpu_wrapper.dylib
             container: null
           - os: windows-latest
+            package_name: windows-x86_64
             target: x86_64-windows
             lib_name: webgpu_wrapper.dll
             container: null
           - os: ubuntu-latest
+            package_name: many-linux-x86_64
             lib_name: libwebgpu_wrapper.so
             target: x86_64-linux
             container: dockcross/manylinux_2_28-x64:latest
+          - os: ubuntu-latest
+            package_name: linux-x86_64
+            lib_name: libwebgpu_wrapper.so
+            target: x86_64-linux
+            container: null
 
-    name: Build-${{ matrix.os }}-${{ matrix.build_type }}
+    name: Build-${{ matrix.package_name }}-${{ matrix.build_type }}
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     
@@ -86,8 +95,13 @@ jobs:
       run: |
         bun run build:prod -Dtarget=${{ matrix.target }}
 
+    - name: Build Binaries (Many-Linux)
+      if: matrix.package_name == 'many-linux-x86_64'
+      run: |
+        bun run build:prod -Dtarget=${{ matrix.target }}
+
     - name: Build Binaries (Linux)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.package_name == 'linux-x86_64'
       run: |
         bun run build:linux
 
@@ -97,13 +111,13 @@ jobs:
       
     - name: Package
       run: |
-        cmake -E make_directory bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
-        cmake -E copy src/lib/${{ matrix.target }}/${{ matrix.lib_name }} bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}/
-        cmake -E copy triangle.png bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}/
-        cmake -E tar cvzf bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
+        cmake -E make_directory bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
+        cmake -E copy src/lib/${{ matrix.target }}/${{ matrix.lib_name }} bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}/
+        cmake -E copy triangle.png bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}/
+        cmake -E tar cvzf bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}.tar.gz bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}
-        path: bun-webgpu-binaries-${{ github.sha }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz
+        name: bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
+        path: bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}.tar.gz

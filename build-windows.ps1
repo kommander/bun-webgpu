@@ -46,6 +46,41 @@ try {
     # Move the object file to temp directory for linking
     Move-Item webgpu_wrapper.obj "$TempDir\"
 
+    # Generate .def file from object file symbols
+    Write-Host "Generating module definition file from object symbols..."
+    $objFile = "$TempDir\webgpu_wrapper.obj"
+    $defFile = "$TempDir\webgpu_wrapper.def"
+    
+    # Use dumpbin to extract symbols and create .def file
+    $dumpbinExe = Split-Path $linkExe | Join-Path -ChildPath "dumpbin.exe"
+    if (-not (Test-Path $dumpbinExe)) {
+        # Fallback: look for dumpbin in the same directory structure
+        $vcToolsDir = Split-Path (Split-Path (Split-Path $linkExe))
+        $dumpbinExe = Get-ChildItem -Path $vcToolsDir -Recurse -Name "dumpbin.exe" | Select-Object -First 1
+        if ($dumpbinExe) {
+            $dumpbinExe = Join-Path $vcToolsDir $dumpbinExe
+        } else {
+            throw "Could not find dumpbin.exe"
+        }
+    }
+    
+    Write-Host "Using dumpbin: $dumpbinExe"
+    
+    # Extract symbols from object file
+    $symbols = & "$dumpbinExe" /SYMBOLS "$objFile" | Where-Object { 
+        $_ -match "External.*zwgpu" 
+    } | ForEach-Object {
+        if ($_ -match "\|\s+(\w+)") {
+            $matches[1]
+        }
+    } | Sort-Object -Unique
+    
+    # Create .def file
+    "EXPORTS" | Out-File -FilePath $defFile -Encoding ASCII
+    $symbols | Out-File -FilePath $defFile -Append -Encoding ASCII
+    
+    Write-Host "Generated .def file with $($symbols.Count) symbols"
+
     # Ensure the output directory exists
     New-Item -ItemType Directory -Path "src\lib\x86_64-windows" -Force | Out-Null
 
@@ -54,6 +89,7 @@ try {
     & "$linkExe" /DLL `
         /OUT:src\lib\x86_64-windows\webgpu_wrapper.dll `
         /IMPLIB:src\lib\x86_64-windows\webgpu_wrapper.lib `
+        /DEF:"$defFile" `
         "$TempDir\webgpu_wrapper.obj" `
         "dawn\libs\x86_64-windows\webgpu_dawn.lib" `
         user32.lib kernel32.lib gdi32.lib ole32.lib uuid.lib `
