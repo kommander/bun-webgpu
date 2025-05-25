@@ -2,6 +2,27 @@
 
 Write-Host "Building WebGPU wrapper manually for Windows..."
 
+# Find Visual Studio installation and MSVC tools
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+    $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if ($vsPath) {
+        $msvcPath = Get-ChildItem -Path "$vsPath\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+        $linkExe = "$($msvcPath.FullName)\bin\Hostx64\x64\link.exe"
+        Write-Host "Found MSVC linker at: $linkExe"
+    }
+}
+
+# Fallback to searching PATH for link.exe specifically
+if (-not $linkExe -or -not (Test-Path $linkExe)) {
+    $linkExe = Get-Command "link.exe" -ErrorAction SilentlyContinue | Where-Object { $_.Source -like "*Microsoft*" -or $_.Source -like "*VC*" } | Select-Object -First 1 -ExpandProperty Source
+    if ($linkExe) {
+        Write-Host "Found MSVC linker in PATH at: $linkExe"
+    } else {
+        throw "Could not find MSVC link.exe. Please ensure Visual Studio Build Tools are installed."
+    }
+}
+
 # Create temporary directory for build artifacts
 $TempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
 Write-Host "Using temporary directory: $TempDir"
@@ -29,7 +50,8 @@ try {
     New-Item -ItemType Directory -Path "src\lib\x86_64-windows" -Force | Out-Null
 
     # Link everything into a shared library using MSVC linker
-    & link.exe /DLL `
+    Write-Host "Linking with: $linkExe"
+    & "$linkExe" /DLL `
         /OUT:src\lib\x86_64-windows\webgpu_wrapper.dll `
         /IMPLIB:src\lib\x86_64-windows\webgpu_wrapper.lib `
         "$TempDir\webgpu_wrapper.obj" `
