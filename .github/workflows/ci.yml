@@ -122,6 +122,13 @@ jobs:
       run: |
         ldd src/lib/${{ matrix.target }}/${{ matrix.lib_name }}
 
+    - name: Install Vulkan support
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        apt update && \
+        apt install -y \
+          libvulkan1 mesa-vulkan-drivers vulkan-tools
+
     - name: Run Example
       run: |
         bun run src/examples/triangle.ts
