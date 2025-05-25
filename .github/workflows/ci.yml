@@ -66,6 +66,7 @@ jobs:
     - uses: mlugg/setup-zig@v2
       with:
         version: ${{ matrix.os == 'windows-latest' && 'master' || '0.14.0' }}
+        cache-key: ${{ matrix.os }}-${{ matrix.package_name }}-${{ matrix.build_type }}
     
     - uses: oven-sh/setup-bun@v2
       with:
@@ -98,7 +99,7 @@ jobs:
     - name: Build Binaries (Many-Linux)
       if: matrix.package_name == 'many-linux-x86_64'
       run: |
-        bun run build:prod -Dtarget=${{ matrix.target }}
+        bun run build:linux
 
     - name: Build Binaries (Linux)
       if: matrix.package_name == 'linux-x86_64'
