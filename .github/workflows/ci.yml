@@ -48,7 +48,7 @@ jobs:
             package_name: linux-x86_64
             lib_name: libwebgpu_wrapper.so
             target: x86_64-linux
-            container: null
+            container: ubuntu:20.04
 
     name: Build-${{ matrix.package_name }}-${{ matrix.build_type }}
     runs-on: ${{ matrix.os }}
@@ -104,6 +104,11 @@ jobs:
       if: matrix.package_name == 'linux-x86_64'
       run: |
         bun run build:linux
+
+    - name: Debug
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        ldd src/lib/${{ matrix.target }}/${{ matrix.lib_name }}
 
     - name: Run Example
       run: |
