@@ -58,7 +58,7 @@ try {
         "dawn\libs\x86_64-windows\webgpu_dawn.lib" `
         user32.lib kernel32.lib gdi32.lib ole32.lib uuid.lib `
         d3d11.lib d3d12.lib dxgi.lib dxguid.lib `
-        msvcrt.lib vcruntime.lib ucrt.lib `
+        msvcrt.lib vcruntime.lib ucrt.lib ntdll.lib `
         /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64" `
         /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" `
         /MACHINE:X64 `
