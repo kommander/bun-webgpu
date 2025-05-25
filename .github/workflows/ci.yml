@@ -74,12 +74,17 @@ jobs:
       run: |
         bun run dawn/download_artifacts.ts -p ${{ matrix.os }} -b ${{ matrix.build_type }}
 
-    - name: Build Binaries (no linux)
-      if: matrix.os != 'ubuntu-latest'
+    - name: Build Binaries (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        bun run build:windows
+
+    - name: Build Binaries (macOS)
+      if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
       run: |
         bun run build:prod -Dtarget=${{ matrix.target }}
 
-    - name: Build Binaries (linux)
+    - name: Build Binaries (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: |
         bun run build:linux

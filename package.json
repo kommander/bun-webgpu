@@ -9,7 +9,8 @@
     "test": "bun test",
     "build:dev": "cd src/zig && zig build -Doptimize=Debug",
     "build:prod": "cd src/zig && zig build -Doptimize=ReleaseFast",
-    "build:linux": "./build-manual.sh",
+    "build:linux": "./build-linux.sh",
+    "build:windows": "pwsh build-windows.ps1",
     "build:cmake:dev": "mkdir -p src/c/build && cmake -S src/c -B src/c/build -DCMAKE_BUILD_TYPE=Debug && cmake --build src/c/build",
     "build:cmake:prod": "mkdir -p src/c/build && cmake -S src/c -B src/c/build -DCMAKE_BUILD_TYPE=Release && cmake --build src/c/build"
   },
