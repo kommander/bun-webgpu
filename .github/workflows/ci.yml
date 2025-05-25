@@ -63,10 +63,10 @@ jobs:
       with:
         winsdk-build-version: ${{ env.WIN10_SDK_BUILD_VERSION }}
 
-    - name: Setup Zig (Custom for Linux x86_64)
+    - name: Setup Dependencies (Custom for Linux x86_64)
       if: matrix.package_name == 'linux-x86_64'
       run: |
-        apt update && apt install -y curl xz-utils
+        apt update && apt install -y curl xz-utils unzip
         ./.github/workflows/setup-zig-linux.sh
 
     - uses: mlugg/setup-zig@v2
