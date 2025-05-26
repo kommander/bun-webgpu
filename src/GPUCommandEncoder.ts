@@ -203,7 +203,7 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
         if (!commandBufferPtr) {
             fatalError("wgpuCommandEncoderFinish returned null.");
         }
-        this._destroyed = true; // Mark encoder as consumed
+        this._destroy();
         return new GPUCommandBufferImpl(commandBufferPtr, this.lib, descriptor?.label);
     }
 
@@ -222,7 +222,10 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
         console.warn('insertDebugMarker not implemented', this.encoderPtr, markerLabel);
     }
 
-    destroy(): undefined {
+    /**
+     * Note: Command encoders are destroyed automatically when finished.
+     */
+    _destroy(): undefined {
         if (this._destroyed) return;
         this._destroyed = true;
         try {

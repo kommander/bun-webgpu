@@ -26,7 +26,10 @@ export class GPUQueueImpl implements GPUQueue {
         if (!commandBuffersArray || commandBuffersArray.length === 0) { console.warn("queueSubmit: no command buffers provided"); return; }
         const handleView = packObjectArray(commandBuffersArray)
         try { 
-            this.lib.wgpuQueueSubmit(this.queuePtr, commandBuffersArray.length, ptr(handleView.buffer)); 
+            this.lib.wgpuQueueSubmit(this.queuePtr, commandBuffersArray.length, ptr(handleView.buffer));
+            for (const commandBuffer of commandBuffersArray) {
+                commandBuffer._destroy();
+            }
         } catch(e) { 
             console.error("FFI Error: queueSubmit", e); 
         }

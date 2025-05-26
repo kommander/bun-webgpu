@@ -18,12 +18,12 @@ declare global {
 
     interface GPUCommandBuffer {
         readonly ptr: Pointer;
-        destroy(): undefined;
+        _destroy(): undefined;
     }
 
     interface GPUCommandEncoder {
         readonly ptr: Pointer;
-        destroy(): undefined;
+        _destroy(): undefined;
     }
 
     interface GPUSampler {

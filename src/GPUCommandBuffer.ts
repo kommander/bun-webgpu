@@ -11,7 +11,10 @@ export class GPUCommandBufferImpl implements GPUCommandBuffer {
         this.label = label || 'Unnamed Command Buffer';
     }
 
-    destroy(): undefined {
+    /**
+     * Note: Command buffers are destroyed by the queue when submitted.
+     */
+    _destroy(): undefined {
       try { 
         this.lib.wgpuCommandBufferRelease(this.bufferPtr); 
       } catch(e) { 
