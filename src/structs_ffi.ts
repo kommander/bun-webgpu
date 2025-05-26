@@ -50,6 +50,9 @@ interface ObjectPointerDef<T extends PointyObject> {
   __type: 'objectPointer';
 }
 
+/**
+ * Type helper for creating object pointers for structs.
+ */
 export function objectPtr<T extends PointyObject>(): ObjectPointerDef<T> {
   return {
       __type: 'objectPointer',
@@ -144,7 +147,6 @@ export function defineEnum<T extends Record<string, number>>(mapping: T, base: E
 }
 
 function isEnum<T extends Record<string, number>>(type: any): type is EnumDef<T> {
-  // Check for __type property first to avoid errors on non-objects
   return typeof type === 'object' && type.__type === 'enum';
 }
 
@@ -387,6 +389,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
           }
       };
       // Unpacking returns the raw pointer value, not the class instance
+      // TODO: objectPtr could take a reconstructor function to reconstruct the object from the pointer
       unpack = (view, off) => {
            return pointerUnpacker(view, off);
       };
