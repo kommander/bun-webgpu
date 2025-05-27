@@ -167,7 +167,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
         queue.submit([commandBuffer!]);
         await queue!.onSubmittedWorkDone();
 
-        // For REPRODUCTION purposes just mapAsync
+        // For memory-leak REPRODUCTION purposes just mapAsync
         await readbackBuffer!.mapAsync(MapModeFlags.READ, 0, readbackBufferSize);
         // const mappedData = readbackBuffer!.getMappedRange(0, readbackBufferSize);
 
@@ -202,7 +202,6 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       console.log("Example Cleanup...");
       // Cleanup resources (order matters roughly reverse of creation/use)
       if (readbackBuffer) readbackBuffer.destroy();
-      if (commandBuffer) commandBuffer.destroy();
       // CommandEncoder is consumed by finish
       // RenderPassEncoder is consumed by end
       if (renderTargetView) renderTargetView.destroy();

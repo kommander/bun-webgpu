@@ -173,7 +173,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       // 6. Save to PNG using Sharp
       console.log(`Attempting to save ${width}x${height} texture to ${filename}...`);
       try {
-          await sharp(Buffer.from(mappedData), { // Use Buffer.from to copy
+          await sharp(Buffer.from(mappedData), {
               raw: {
                   width: width,
                   height: height,
@@ -229,18 +229,13 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       }
       readbackBuffer2!.unmap();
       readbackBuffer2.destroy(); // Clean up second buffer immediately
-      commandBuffer2.destroy(); // Clean up second command buffer
       // --- END SECOND COPY TEST ---
 
   } catch (e) {
       console.error("Error in Triangle to PNG Example:", e);
   } finally {
       console.log("Example Cleanup...");
-      // Cleanup resources (order matters roughly reverse of creation/use)
       if (readbackBuffer) readbackBuffer.destroy();
-      if (commandBuffer) commandBuffer.destroy();
-      // CommandEncoder is consumed by finish
-      // RenderPassEncoder is consumed by end
       if (renderTargetView) renderTargetView.destroy();
       if (renderTargetTexture) renderTargetTexture.destroy();
       if (pipeline) pipeline.destroy();
@@ -257,5 +252,4 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
   }
 }
 
-// --- Call the example --- 
-runTriangleToPngExample(); // Uncomment to run
+runTriangleToPngExample();
