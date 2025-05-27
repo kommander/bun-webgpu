@@ -38,6 +38,7 @@ export class GPUQueueImpl implements GPUQueue {
     onSubmittedWorkDone(): Promise<undefined> {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
+                this.instanceTicker.unregister();
                 console.error("Queue onSubmittedWorkDone timed out");
             }, 500);
             const callback = new JSCallback(
