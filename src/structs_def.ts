@@ -122,12 +122,12 @@ export const WGPUCompareFunction = defineEnum({
 });
 
 export const WGPUStringView = defineStruct([
-    ['char', 'char*'],
-    ['size', 'u64'],
+    ['data', 'char*'],
+    ['length', 'u64'],
 ], {
     mapValue: (v: string) => ({
-        char: v,
-        size: Buffer.byteLength(v),
+        data: v,
+        length: Buffer.byteLength(v),
     })
 });
 
@@ -147,8 +147,12 @@ export const PowerPreference = defineEnum({
 
 export const WGPURequestAdapterOptionsStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
+    // TODO: Need to add featureLevel enum
+    ['featureLevel', 'u32', { optional: true }],
     ['powerPreference', PowerPreference, { optional: true }],
     ['forceFallbackAdapter', WGPUBool, { optional: true }],
+    // TODO: Need to add backendType enum
+    ['backendType', 'u32', { optional: true }],
     ['compatibleSurface', 'pointer', { optional: true }],
 ]);
 
@@ -493,7 +497,7 @@ export const WGPUDeviceDescriptorStruct = defineStruct([
 export const WGPUBufferDescriptorStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['label', WGPUStringView, { optional: true }],
-    ['usage', 'u32'],
+    ['usage', 'u64'],
     ['size', 'u64'],
     ['mappedAtCreation', WGPUBool, { default: false }],
 ]);
@@ -711,7 +715,7 @@ export const WGPUPipelineLayoutDescriptorStruct = defineStruct([
     ['label', WGPUStringView, { optional: true }],
     ['bindGroupLayoutCount', 'u64', { lengthOf: 'bindGroupLayouts' }],
     ['bindGroupLayouts', ['pointer']],
-    ['immediateDataRangeByteSize', 'u32', { default: 0 }]
+    ['immediateSize', 'u32', { default: 0 }]
 ]);
 
 // Pack shader module descriptor
@@ -1055,7 +1059,6 @@ export const WGPURenderPassColorAttachmentStruct = defineStruct([
     ['loadOp', WGPULoadOp],
     ['storeOp', WGPUStoreOp],
     ['clearValue', WGPUColorStruct, { default: { r: 0, g: 0, b: 0, a: 0 } }],
-    ['label', WGPUStringView, { optional: true }],
 ]);
 
 
