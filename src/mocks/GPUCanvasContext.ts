@@ -78,12 +78,14 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
   }
 
   private createTextures(): undefined {
-		if (this._currentTexture) {
-      this._currentTexture.destroy();
-    }
-		if (this._nextTexture) {
-			this._nextTexture.destroy();
-		}
+		const currentTexture = this._currentTexture;
+		const nextTexture = this._nextTexture;
+		
+		// defer destruction of textures as async methods might be using them
+		setTimeout(() => {
+			currentTexture?.destroy();
+			nextTexture?.destroy();
+		}, 1000);
 
     this._currentTexture = this.createRenderTexture(this.width, this.height);
 		this._nextTexture = this.createRenderTexture(this.width, this.height);
