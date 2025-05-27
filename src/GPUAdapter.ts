@@ -91,7 +91,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                  const supportedFeatures = new Set<GPUFeatureName>();
 
                  const unpacked = WGPUSupportedFeaturesStruct.unpack(featuresBuffer);
-                 if (unpacked.features && unpacked.featureCount > 0) {
+                 if (unpacked.features && unpacked.featureCount && unpacked.featureCount > 0) {
                      for (const feature of unpacked.features) {
                          supportedFeatures.add(feature as GPUFeatureName);
                      }
