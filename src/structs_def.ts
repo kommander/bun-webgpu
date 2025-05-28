@@ -145,14 +145,32 @@ export const PowerPreference = defineEnum({
     'high-performance': 2,
 });
 
+export const WGPUBackendType = defineEnum({
+    Undefined: 0x00000000,
+    Null: 0x00000001,
+    WebGPU: 0x00000002,
+    D3D11: 0x00000003,
+    D3D12: 0x00000004,
+    Metal: 0x00000005,
+    Vulkan: 0x00000006,
+    OpenGL: 0x00000007,
+    OpenGLES: 0x00000008,
+    Force32: 0x7FFFFFFF
+});
+
+export const WGPUFeatureLevel = defineEnum({
+    undefined: 0x00000000,
+    compatibility: 0x00000001,
+    core: 0x00000002,
+    force32: 0x7FFFFFFF
+});
+
 export const WGPURequestAdapterOptionsStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
-    // TODO: Need to add featureLevel enum
-    ['featureLevel', 'u32', { optional: true }],
+    ['featureLevel', WGPUFeatureLevel, { optional: true }],
     ['powerPreference', PowerPreference, { optional: true }],
     ['forceFallbackAdapter', WGPUBool, { optional: true }],
-    // TODO: Need to add backendType enum
-    ['backendType', 'u32', { optional: true }],
+    ['backendType', WGPUBackendType, { optional: true }],
     ['compatibleSurface', 'pointer', { optional: true }],
 ]);
 

@@ -68,7 +68,7 @@ export class GPUImpl implements GPU {
     throw new Error("Not implemented");
   }
 
-  requestAdapter(options?: GPURequestAdapterOptions): Promise<GPUAdapter | null> {
+  requestAdapter(options?: GPURequestAdapterOptions & { featureLevel?: 'core' | 'compatibility' }): Promise<GPUAdapter | null> {
     if (this._destroyed) {
       return Promise.reject(new Error("GPU instance has been destroyed"));
     }
@@ -76,16 +76,13 @@ export class GPUImpl implements GPU {
     return new Promise((resolve, reject) => {
         let packedOptionsPtr: Pointer | null = null;
         let jsCallback: JSCallback | null = null;
-        let callbackInfoBuffer: ArrayBuffer | null = null;
-
+        
         try {
-            // --- 1. Pack Options Struct ---
             if (options) {
                 const buffer = WGPURequestAdapterOptionsStruct.pack(options); 
                 packedOptionsPtr = ptr(buffer);
             }
 
-            // --- 2. Create JSCallback ---
             const callbackFn = (status: number, adapterPtr: Pointer | null, messagePtr: Pointer | null, messageSize: number, userdata1: Pointer | null, userdata2: Pointer | null) => {
                 this._ticker.unregister();
                 const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
@@ -109,7 +106,6 @@ export class GPUImpl implements GPU {
                 } else {
                     console.warn("requestAdapter C-Callback: jsCallback handle was null, couldn't close.");
                 }
-                callbackInfoBuffer = null;
             };
 
             jsCallback = new JSCallback(callbackFn, { 
@@ -120,7 +116,6 @@ export class GPUImpl implements GPU {
                 fatalError("Failed to create JSCallback");
             }
 
-            // --- 3. Pack CallbackInfo Struct ---
             const buffer = WGPUCallbackInfoStruct.pack({
                 nextInChain: null,
                 mode: "AllowProcessEvents",
@@ -131,7 +126,6 @@ export class GPUImpl implements GPU {
 
             const packedCallbackInfoPtr = ptr(buffer);
 
-            // --- 4. Call FFI ---
             this.lib.wgpuInstanceRequestAdapter(
                 this.instancePtr,
                 packedOptionsPtr,

@@ -521,7 +521,6 @@ fn mapCallback(status: c.WGPUMapAsyncStatus, message: c.WGPUStringView, userdata
     _ = userdata2;
     if (status == c.WGPUMapAsyncStatus_Success) {
         g_map_ready = true;
-        std.debug.print("Buffer mapped successfully\n", .{});
     } else {
         std.debug.print("Failed to map buffer: status={}\n", .{status});
         if (message.data != null) {
