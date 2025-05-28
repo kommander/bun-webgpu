@@ -7,6 +7,8 @@ declare global {
     }
 
     interface GPUDevice {
+        readonly ptr: Pointer;
+        readonly queuePtr: Pointer;
         tick(): undefined;
     }
 

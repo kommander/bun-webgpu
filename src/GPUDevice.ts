@@ -102,7 +102,8 @@ const DEFAULT_SUPPORTED_LIMITS: GPUSupportedLimits = Object.freeze({
 });
 
 export class GPUDeviceImpl implements GPUDevice {
-    private queuePtr: Pointer | null = null;
+    readonly ptr: Pointer;
+    readonly queuePtr: Pointer;
     private _queue: GPUQueue | null = null;
     private _userUncapturedErrorCallback: DeviceErrorCallback | null = null;
     private _ticker: DeviceTicker;
@@ -115,10 +116,13 @@ export class GPUDeviceImpl implements GPUDevice {
     label: string = '';
 
     constructor(public readonly devicePtr: Pointer, private lib: typeof FFI_SYMBOLS, private instanceTicker: InstanceTicker) {
-      this.queuePtr = this.lib.wgpuDeviceGetQueue(this.devicePtr);
-      if (!this.queuePtr) {
+      this.ptr = devicePtr;
+      const queuePtr = this.lib.wgpuDeviceGetQueue(this.devicePtr);
+      if (!queuePtr) {
         fatalError("Failed to get device queue");
       }
+      this.queuePtr = queuePtr;
+
       // TODO: When are device ticks still needed?
       this._ticker = new DeviceTicker(this.devicePtr, this.lib);
       this._queue = new GPUQueueImpl(this.queuePtr, this.lib, this.instanceTicker);

@@ -1142,3 +1142,18 @@ export const WGPUQuerySetDescriptorStruct = defineStruct([
     ['type', WGPUQueryType],
     ['count', 'u32'],
 ]);
+
+// --- Workaround Structs ---
+
+export const ZWGPUWorkaroundCopyTextureAndMapStruct = defineStruct([
+    ['device', 'pointer'],
+    ['queue', 'pointer'],
+    ['instance', 'pointer'],
+    ['render_texture', 'pointer'],
+    ['readback_buffer', 'pointer'],
+    ['bytes_per_row', 'u32'],
+    ['width', 'u32'],
+    ['height', 'u32'],
+    ['output_buffer', 'pointer'],
+    ['buffer_size', 'u64'],
+]);
