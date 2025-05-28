@@ -63,19 +63,22 @@ export class GPUBufferImpl implements GPUBuffer {
           const callback = new JSCallback(
               (status: number, messagePtr: Pointer | null, messageSize: number, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
                 this.instanceTicker.unregister();
-                callback.close(); 
                 this._pendingMap = null;
                 
-                  if (status === BufferMapAsyncStatus.Success) {
-                      this._mapState = 'mapped';
-                      resolve(undefined);
-                  } else {
-                      this._mapState = 'unmapped';
-                      console.error('WGPU Buffer Map Error', status);
-                      const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
-                      const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
-                      reject(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
-                  }
+                if (status === BufferMapAsyncStatus.Success) {
+                    this._mapState = 'mapped';
+                    resolve(undefined);
+                } else {
+                    this._mapState = 'unmapped';
+                    console.error('WGPU Buffer Map Error', status);
+                    const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
+                    const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
+                    reject(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
+                }
+
+                queueMicrotask(() => {
+                  callback.close(); 
+                });
               },
               {
                   args: [FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
