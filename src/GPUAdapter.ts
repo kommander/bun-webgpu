@@ -210,7 +210,6 @@ export class GPUAdapterImpl implements GPUAdapter {
                   {
                     // NOTE: The message is a WGPUStringView, which is a struct with a pointer and a size.
                     // FFI cannot represent this directly, so it is passed in two arguments a pointer+size.
-                    // At least is seems to be the size of the message, but I'm not sure.
                     args: [FFIType.pointer, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ],
                     returns: FFIType.void
                   }
@@ -312,14 +311,12 @@ export class GPUAdapterImpl implements GPUAdapter {
               const packedCallbackInfoPtr = ptr(buffer);
 
               // --- 4. Call FFI ---
-              // Ignore future ID, rely on callback
               this.lib.wgpuAdapterRequestDevice(
                   this.adapterPtr,
-                  packedDescriptorPtr, // Pass packed descriptor or null
+                  packedDescriptorPtr,
                   packedCallbackInfoPtr
               );
 
-              // Process events to trigger callback
               this.instanceTicker.register();
           } catch (e) {
               console.error("Error during requestDevice setup or FFI call:", e);
@@ -333,9 +330,8 @@ export class GPUAdapterImpl implements GPUAdapter {
       if (this._destroyed) return;
 
       this._destroyed = true;
-      this._features = null; // Clear cache
-      this._limits = null;   // Clear cache
-      // this._info = null;     // Clear cache
+      this._features = null;
+      this._limits = null;
 
       try {
           this.lib.wgpuAdapterRelease(this.adapterPtr);

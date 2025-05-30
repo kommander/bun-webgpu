@@ -185,10 +185,10 @@ export class GPUDeviceImpl implements GPUDevice {
                 const featuresBuffer = new ArrayBuffer(256);
                 const featuresView = new DataView(featuresStructBuffer);
                 const featuresPtr = ptr(featuresBuffer);
+                
                 featuresView.setBigUint64(8, BigInt(featuresPtr), true);
-                console.log('1', featuresStructBuffer);
                 this.lib.wgpuDeviceGetFeatures(this.devicePtr, ptr(featuresStructBuffer));
-                console.log('2', featuresStructBuffer);
+                
                 const supportedFeaturesData = WGPUSupportedFeaturesStruct.unpack(featuresStructBuffer);
                 const features = supportedFeaturesData.features;
                 const supportedFeatures = new Set<string>(features);
@@ -230,12 +230,11 @@ export class GPUDeviceImpl implements GPUDevice {
 
                 const jsLimits = WGPULimitsStruct.unpack(structBuffer);
 
-                // Freeze and cast the final limits object
                 this._limits = Object.freeze(jsLimits as unknown as GPUSupportedLimits);
 
             } catch (e) {
                 console.error("Error calling wgpuDeviceGetLimits or unpacking struct:", e);
-                limitsStructPtr = null; // Ensure pointer is nullified
+                limitsStructPtr = null;
                 return DEFAULT_SUPPORTED_LIMITS;
             }
         }
@@ -315,7 +314,6 @@ export class GPUDeviceImpl implements GPUDevice {
         });
 
         try {
-            // Call the WebGPU API directly
             const texturePtr = this.lib.wgpuDeviceCreateTexture(
                 this.devicePtr,
                 ptr(packedDescriptor)
@@ -325,7 +323,6 @@ export class GPUDeviceImpl implements GPUDevice {
                 fatalError("Failed to create texture");
             }
 
-            // Get dimension and size details
             let width, height, depthOrArrayLayers;
             if (Symbol.iterator in descriptor.size) {
                 // It's an Iterable<number>
@@ -363,14 +360,10 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     createSampler(descriptor?: GPUSamplerDescriptor): GPUSampler {
-        // Use default descriptor if none provided
         const samplerDescriptor = descriptor || {};
-
-        // Pack the sampler descriptor
         const packedDescriptor = WGPUSamplerDescriptorStruct.pack(samplerDescriptor);
 
         try {
-            // Call the WebGPU API directly
             const samplerPtr = this.lib.wgpuDeviceCreateSampler(
                 this.devicePtr,
                 ptr(packedDescriptor)
@@ -497,7 +490,7 @@ export class GPUDeviceImpl implements GPUDevice {
             if (!groupPtr) {
                 fatalError("Failed to create bind group (FFI returned null)");
             }
-            return new GPUBindGroupImpl(groupPtr, this.lib, descriptor.label); // Pass lib to BindGroup constructor
+            return new GPUBindGroupImpl(groupPtr, this.lib, descriptor.label);
         } catch (e) {
             fatalError("Error calling deviceCreateBindGroupFromBuffer FFI function:", e);
         }
