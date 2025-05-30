@@ -1,5 +1,5 @@
 
-import { JSCallback, type Pointer, ptr } from "bun:ffi";
+import { type Pointer, ptr } from "bun:ffi";
 import {
     BufferUsageFlags,
 } from ".";
