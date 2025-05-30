@@ -1,5 +1,5 @@
 import { FFIType, JSCallback, ptr, toArrayBuffer, type Pointer } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 import { BufferUsageFlags } from ".";
 import { fatalError } from "./utils/error";
 import { WGPUCallbackInfoStruct } from "./structs_def";
@@ -26,7 +26,7 @@ export class GPUBufferImpl implements GPUBuffer {
 
     constructor(
       public readonly bufferPtr: Pointer, 
-      private lib: typeof FFI_SYMBOLS, 
+      private lib: FFISymbols, 
       descriptor: GPUBufferDescriptor,
       private instanceTicker: InstanceTicker
     ) {

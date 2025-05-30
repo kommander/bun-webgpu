@@ -1,5 +1,5 @@
 import { type Pointer, ptr } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 import { GPUComputePassEncoderImpl } from "./GPUComputePassEncoder";
 import { GPURenderPassEncoderImpl } from "./GPURenderPassEncoder";
 import { GPUCommandBufferImpl } from "./GPUCommandBuffer";
@@ -22,7 +22,7 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
     readonly ptr: Pointer;
     private _destroyed = false; // Track destruction
 
-    constructor(public readonly encoderPtr: Pointer, private lib: typeof FFI_SYMBOLS) {
+    constructor(public readonly encoderPtr: Pointer, private lib: FFISymbols) {
         this.ptr = encoderPtr;
     }
 

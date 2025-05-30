@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 /// <reference types="../index.d.ts" />
 import { type Pointer } from "bun:ffi";
-import { FFI_SYMBOLS } from "./ffi";
+import { loadLibrary, type FFISymbols } from "./ffi";
 import { GPUImpl } from "./GPU";
 
 export * from "./mocks/GPUCanvasContext";
@@ -42,18 +42,19 @@ export const MapModeFlags = {
     WRITE: 1 << 1,
 } as const;
 
-function createInstance(): Pointer | null {
+function createInstance(lib: FFISymbols): Pointer | null {
     try { 
-      return FFI_SYMBOLS.wgpuCreateInstance(null); 
+      return lib.wgpuCreateInstance(null); 
     } catch(e) { 
       console.error("FFI Error: createInstance", e); return null; 
     }
 }
 
-export function createGPUInstance(): GPUImpl {
-    const instancePtr = createInstance();
+export function createGPUInstance(libPath?: string): GPUImpl {
+    const lib = loadLibrary(libPath);
+    const instancePtr = createInstance(lib);
     if (!instancePtr) {
         throw new Error("Failed to create GPU instance");
     }
-    return new GPUImpl(instancePtr, FFI_SYMBOLS);
+    return new GPUImpl(instancePtr, lib);
 }

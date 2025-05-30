@@ -1,13 +1,13 @@
 import { type Pointer } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 
 export class GPUBindGroupLayoutImpl implements GPUBindGroupLayout {
     __brand: "GPUBindGroupLayout" = "GPUBindGroupLayout";
     label: string;
     readonly ptr: Pointer;
-    private lib: typeof FFI_SYMBOLS;
+    private lib: FFISymbols;
 
-    constructor(ptr: Pointer, lib: typeof FFI_SYMBOLS, label?: string) {
+    constructor(ptr: Pointer, lib: FFISymbols, label?: string) {
         this.ptr = ptr;
         this.lib = lib;
         this.label = label || '';

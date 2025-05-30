@@ -1,12 +1,12 @@
 import { type Pointer, ptr } from "bun:ffi";
-import { FFI_SYMBOLS } from "./ffi";
+import { type FFISymbols } from "./ffi";
 
 export class GPUComputePassEncoderImpl implements GPUComputePassEncoder {
   __brand: "GPUComputePassEncoder" = "GPUComputePassEncoder";
-  private lib: typeof FFI_SYMBOLS;
+  private lib: FFISymbols;
   label: string = '';
 
-  constructor(public ptr: Pointer, lib: typeof FFI_SYMBOLS) {
+  constructor(public ptr: Pointer, lib: FFISymbols) {
     this.lib = lib;
   }
 

@@ -1,5 +1,5 @@
 import type { Pointer } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 import { fatalError } from "./utils/error";
 
 export class GPURenderPipelineImpl implements GPURenderPipeline {
@@ -7,7 +7,7 @@ export class GPURenderPipelineImpl implements GPURenderPipeline {
     label: string;
     readonly ptr: Pointer;
 
-    constructor(ptr: Pointer, private lib: typeof FFI_SYMBOLS, label?: string) {
+    constructor(ptr: Pointer, private lib: FFISymbols, label?: string) {
         this.ptr = ptr;
         this.label = label || '';
     }

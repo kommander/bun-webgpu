@@ -1,11 +1,11 @@
 import { type Pointer } from "bun:ffi";
-import { FFI_SYMBOLS } from "./ffi";
+import { type FFISymbols } from "./ffi";
 
 export class GPUQuerySetImpl implements GPUQuerySet {
     __brand: "GPUQuerySet" = "GPUQuerySet";
     label: string;
 
-    constructor(public readonly ptr: Pointer, private lib: typeof FFI_SYMBOLS, public readonly type: GPUQueryType, public readonly count: number, label?: string) {
+    constructor(public readonly ptr: Pointer, private lib: FFISymbols, public readonly type: GPUQueryType, public readonly count: number, label?: string) {
         this.label = label || '';
     }
 

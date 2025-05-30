@@ -1,5 +1,5 @@
 import { FFIType, JSCallback, type Pointer, ptr } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 import { fatalError } from "./utils/error";
 import { packObjectArray } from "./structs_ffi";
 import { normalizeGPUExtent3DStrict, WGPUCallbackInfoStruct, WGPUExtent3DStruct, WGPUTexelCopyBufferLayoutStruct, WGPUTexelCopyTextureInfoStruct } from "./structs_def";
@@ -19,7 +19,7 @@ export class GPUQueueImpl implements GPUQueue {
     __brand: "GPUQueue" = "GPUQueue";
     label: string = 'Main Device Queue';
 
-    constructor(public readonly queuePtr: Pointer, private lib: typeof FFI_SYMBOLS, private instanceTicker: InstanceTicker) {}
+    constructor(public readonly queuePtr: Pointer, private lib: FFISymbols, private instanceTicker: InstanceTicker) {}
 
     submit(commandBuffers: Iterable<GPUCommandBuffer>): undefined {
         const commandBuffersArray = Array.from(commandBuffers);

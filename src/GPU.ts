@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 import { JSCallback, toArrayBuffer, type Pointer, ptr, FFIType } from "bun:ffi";
-import { FFI_SYMBOLS } from "./ffi";
+import { type FFISymbols } from "./ffi";
 import { GPUAdapterImpl } from "./GPUAdapter";
 import { 
   WGPUCallbackMode, 
@@ -22,7 +22,7 @@ export class InstanceTicker {
   private _waiting: number = 0;
   private _ticking = false;
   
-  constructor(public readonly instancePtr: Pointer, private lib: typeof FFI_SYMBOLS) {}
+  constructor(public readonly instancePtr: Pointer, private lib: FFISymbols) {}
 
   register() {
       this._waiting++;
@@ -55,7 +55,7 @@ export class GPUImpl implements GPU {
   private _destroyed = false;
   private _ticker: InstanceTicker;
 
-  constructor(private instancePtr: Pointer, private lib: typeof FFI_SYMBOLS) {
+  constructor(private instancePtr: Pointer, private lib: FFISymbols) {
     this._ticker = new InstanceTicker(instancePtr, lib);
   }
 

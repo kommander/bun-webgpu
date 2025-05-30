@@ -242,8 +242,6 @@ describe("bun-webgpu FFI Wrapper", () => {
             } finally {
                  console.log("MapWrite Test: Cleaning up...");
                  // Release resources in reverse order-ish
-                 if (commandBuffer) commandBuffer.destroy();
-                 if (commandEncoder) commandEncoder.destroy();
                  if (dummyDstBuffer) dummyDstBuffer.destroy();
                  if (mappableBuffer) mappableBuffer.destroy();
             }
@@ -313,8 +311,6 @@ describe("bun-webgpu FFI Wrapper", () => {
 
             } finally {
                  console.log("MapRead Test: Cleaning up...");
-                 if (commandBuffer) commandBuffer.destroy();
-                 if (commandEncoder) commandEncoder.destroy();
                  if (readableBuffer) readableBuffer.destroy();
             }
         });
@@ -498,8 +494,6 @@ describe("bun-webgpu FFI Wrapper", () => {
 
             } finally {
                 console.log("Clear Test: Cleaning up...");
-                if (commandBuffer) commandBuffer.destroy();
-                if (commandEncoder) commandEncoder.destroy();
                 if (readbackBuffer) readbackBuffer.destroy();
                 if (testBuffer) testBuffer.destroy();
             }
@@ -659,8 +653,6 @@ describe("bun-webgpu FFI Wrapper", () => {
 
             } finally {
                 console.log("CopyB2B Test: Cleaning up...");
-                if (commandBuffer) commandBuffer.destroy();
-                if (commandEncoder) commandEncoder.destroy();
                 if (readbackBuffer) readbackBuffer.destroy();
                 if (dstBuffer) dstBuffer.destroy();
                 if (srcBuffer) srcBuffer.destroy();
@@ -1002,8 +994,6 @@ describe("bun-webgpu FFI Wrapper", () => {
             } finally {
                 // Release resources
                 if (passEncoder) passEncoder.destroy();
-                if (commandBuffer) commandBuffer.destroy();
-                if (encoder) encoder.destroy();
                 if (view) view.destroy();
                 if (texture) texture.destroy();
             }
@@ -1205,8 +1195,6 @@ describe("bun-webgpu FFI Wrapper", () => {
                  console.log("Draw Test: Cleaning up...");
                  // Release in reverse order of typical use
                  if (passEncoder) passEncoder.destroy();
-                 if (commandBuffer) commandBuffer.destroy();
-                 if (commandEncoder) commandEncoder.destroy();
                  if (renderTargetView) renderTargetView.destroy();
                  if (renderTargetTexture) renderTargetTexture.destroy();
                  if (pipeline) pipeline.destroy();
@@ -1284,8 +1272,6 @@ describe("bun-webgpu FFI Wrapper", () => {
 
             } finally {
                 console.log("WriteBuffer Test: Cleaning up...");
-                if (commandBuffer) commandBuffer.destroy();
-                if (commandEncoder) commandEncoder.destroy();
                 if (readbackBuffer) readbackBuffer.destroy();
                 if (targetBuffer) targetBuffer.destroy();
             }
@@ -1409,8 +1395,6 @@ describe("bun-webgpu FFI Wrapper", () => {
 
             } finally {
                 console.log("WriteTexture Test: Cleaning up...");
-                if (commandBuffer) commandBuffer.destroy();
-                if (commandEncoder) commandEncoder.destroy();
                 if (readbackBuffer) readbackBuffer.destroy();
                 if (targetTexture) targetTexture.destroy();
             }
@@ -1529,8 +1513,6 @@ describe("bun-webgpu FFI Wrapper", () => {
 
             } finally {
                 console.log("CopyT2T Test: Cleaning up...");
-                if (commandBuffer) commandBuffer.destroy();
-                if (commandEncoder) commandEncoder.destroy();
                 if (readbackBuffer) readbackBuffer.destroy();
                 if (dstTexture) dstTexture.destroy();
                 if (srcTexture) srcTexture.destroy();
@@ -1667,8 +1649,6 @@ describe("bun-webgpu FFI Wrapper", () => {
             } finally {
                 console.log("Compute Test: Cleaning up...");
                 // Release in reverse order
-                if (commandBuffer) commandBuffer.destroy();
-                if (commandEncoder) commandEncoder.destroy(); // Should be null if finished correctly
                 if (bindGroup) bindGroup.destroy();
                 if (pipeline) pipeline.destroy();
                 if (pll) pll.destroy();
@@ -1809,8 +1789,6 @@ describe("bun-webgpu FFI Wrapper", () => {
             } finally {
                 console.log("Indirect Test: Cleaning up...");
                 // Release in reverse order
-                if (commandBuffer) commandBuffer.destroy();
-                if (commandEncoder) commandEncoder.destroy(); // Should be null
                 if (bindGroup) bindGroup.destroy();
                 if (pipeline) pipeline.destroy();
                 if (pll) pll.destroy();

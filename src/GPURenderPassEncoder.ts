@@ -1,5 +1,5 @@
 import { type Pointer, ptr } from "bun:ffi";
-import { FFI_SYMBOLS } from "./ffi";
+import { type FFISymbols } from "./ffi";
 import { fatalError } from "./utils/error";
 import { WGPU_WHOLE_SIZE } from "./structs_def";
 
@@ -11,9 +11,9 @@ const IndexFormat: Record<GPUIndexFormat, number> = { // NEW
 export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   __brand: "GPURenderPassEncoder" = "GPURenderPassEncoder";
   label: string = '';
-  private lib: typeof FFI_SYMBOLS;
+  private lib: FFISymbols;
 
-  constructor(public ptr: Pointer, lib: typeof FFI_SYMBOLS) {
+  constructor(public ptr: Pointer, lib: FFISymbols) {
     this.lib = lib;
   }
 

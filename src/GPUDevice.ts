@@ -6,7 +6,7 @@ import {
 import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
-import { FFI_SYMBOLS } from "./ffi";
+import { type FFISymbols } from "./ffi";
 import { GPUQueueImpl } from "./GPUQueue";
 import { GPUCommandEncoderImpl } from "./GPUCommandEncoder";
 import { GPUTextureImpl } from "./GPUTexture";
@@ -37,7 +37,7 @@ export class DeviceTicker {
     private _waiting: number = 0;
     private _ticking = false;
 
-    constructor(public readonly devicePtr: Pointer, private lib: typeof FFI_SYMBOLS) {}
+    constructor(public readonly devicePtr: Pointer, private lib: FFISymbols) {}
 
     register() {
         this._waiting++;
@@ -115,7 +115,7 @@ export class GPUDeviceImpl implements GPUDevice {
     __brand: "GPUDevice" = "GPUDevice";
     label: string = '';
 
-    constructor(public readonly devicePtr: Pointer, private lib: typeof FFI_SYMBOLS, private instanceTicker: InstanceTicker) {
+    constructor(public readonly devicePtr: Pointer, private lib: FFISymbols, private instanceTicker: InstanceTicker) {
       this.ptr = devicePtr;
       const queuePtr = this.lib.wgpuDeviceGetQueue(this.devicePtr);
       if (!queuePtr) {
@@ -606,7 +606,7 @@ export class GPUDeviceImpl implements GPUDevice {
 
         let querySetPtr: Pointer | null = null;
 
-        querySetPtr = FFI_SYMBOLS.wgpuDeviceCreateQuerySet(
+        querySetPtr = this.lib.wgpuDeviceCreateQuerySet(
             this.devicePtr,
             ptr(packedDescriptor)
         );
@@ -614,7 +614,7 @@ export class GPUDeviceImpl implements GPUDevice {
             fatalError("Failed to create query set (FFI returned null)");
         }
 
-        return new GPUQuerySetImpl(querySetPtr, FFI_SYMBOLS, descriptor.type, descriptor.count, descriptor.label);
+        return new GPUQuerySetImpl(querySetPtr, this.lib, descriptor.type, descriptor.count, descriptor.label);
     }
 }
 

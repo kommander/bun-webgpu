@@ -1,5 +1,5 @@
 import { type Pointer } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 
 export class GPUTextureViewImpl implements GPUTextureView {
     __brand: "GPUTextureView" = "GPUTextureView";
@@ -8,7 +8,7 @@ export class GPUTextureViewImpl implements GPUTextureView {
 
     constructor(
         public readonly viewPtr: Pointer, 
-        private lib: typeof FFI_SYMBOLS,
+        private lib: FFISymbols,
         label?: string
     ) {
         this.ptr = viewPtr;

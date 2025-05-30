@@ -579,9 +579,16 @@ pub export fn _zwgpuCopyTextureAndMap(workaround: *ZWGPUWorkaroundCopyTextureAnd
     };
     _ = zwgpuBufferMapAsync(workaround.readback_buffer, c.WGPUMapMode_Read, 0, workaround.buffer_size, &map_callback_info);
 
+    var i: u32 = 0;
     while (!g_map_ready) {
+        i += 1;
         zwgpuInstanceProcessEvents(workaround.instance);
         std.time.sleep(10000);
+        if (i > 100) {
+            // std.debug.print("Map not ready after 100 iterations\n", .{});
+            zwgpuBufferUnmap(workaround.readback_buffer);
+            return;
+        }
     }
 
     const mapped_range = zwgpuBufferGetConstMappedRange(workaround.readback_buffer, 0, workaround.buffer_size);

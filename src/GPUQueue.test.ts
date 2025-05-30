@@ -1,7 +1,6 @@
 import { expect, describe, it, beforeAll, afterAll } from "bun:test";
 import { 
     createGPUInstance, 
-    BufferUsageFlags, 
     TextureUsageFlags 
 } from "./index"; // Assuming index exports necessary types/enums
 import type { GPUImpl } from "./GPU";

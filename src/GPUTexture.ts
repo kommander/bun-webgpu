@@ -1,5 +1,5 @@
 import { ptr, type Pointer } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 import { GPUTextureViewImpl } from "./GPUTextureView";
 import { fatalError } from "./utils/error";
 import { WGPUTextureViewDescriptorStruct } from "./structs_def";
@@ -11,7 +11,7 @@ export class GPUTextureImpl implements GPUTexture {
 
     constructor(
         public readonly texturePtr: Pointer, 
-        private lib: typeof FFI_SYMBOLS,
+        private lib: FFISymbols,
         private _width: number,
         private _height: number,
         private _depthOrArrayLayers: number,

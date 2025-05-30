@@ -1,5 +1,5 @@
 import { type Pointer } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 
 export class GPUSamplerImpl implements GPUSampler {
     __brand: "GPUSampler" = "GPUSampler";
@@ -8,7 +8,7 @@ export class GPUSamplerImpl implements GPUSampler {
 
     constructor(
         public readonly samplerPtr: Pointer, 
-        private lib: typeof FFI_SYMBOLS,
+        private lib: FFISymbols,
         label?: string
     ) {
         this.ptr = samplerPtr;

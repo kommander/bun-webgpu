@@ -36,9 +36,9 @@ function getPlatformTarget(): string {
   return `${zigArch}-${zigPlatform}`;
 }
 
-function findLibrary(): string {
+function findLibrary(libPath?: string): string {
   const target = getPlatformTarget();
-  const libDir = DEFAULT_PATH;
+  const libDir = libPath || DEFAULT_PATH;
 
   // First try target-specific directory
   const [arch, osName] = target.split('-');
@@ -53,11 +53,11 @@ function findLibrary(): string {
   throw new Error(`Could not find dawn library for platform: ${target} at ${targetLibPath}`);
 }
 
-function _loadLibrary() {
-    const libPath = findLibrary();
+function _loadLibrary(libPath?: string) {
+    const resolvedPath = findLibrary(libPath);
     
     // Define the FFI interface based on webgpu.h functions
-    const { symbols } = dlopen(libPath, {
+    const { symbols } = dlopen(resolvedPath, {
       // --- Core API Functions ---
       zwgpuCreateInstance: {
         args: [FFIType.pointer], // descriptor: *const WGPUInstanceDescriptor (nullable)
@@ -636,8 +636,6 @@ function _loadLibrary() {
     return symbols;
 }
 
-const rawSymbols = _loadLibrary();
-
 type StripZWPrefix<KeyType extends string> =
   KeyType extends `zw${infer Rest}` ? `w${Rest}` : KeyType;
 
@@ -646,18 +644,23 @@ type TransformedSymbolKeys<T extends object> = {
 };
 
 // The type of the final normalizedSymbols object
-type NormalizedSymbolsType = TransformedSymbolKeys<typeof rawSymbols>;
+type NormalizedSymbolsType = TransformedSymbolKeys<ReturnType<typeof _loadLibrary>>;
 
-const normalizedSymbols = Object.keys(rawSymbols).reduce(
-  (acc, key) => {
-    const newKey = key.replace(/^zw/, 'w') as keyof NormalizedSymbolsType; // Assert the new key type
-    (acc as any)[newKey] = (rawSymbols as Record<string, any>)[key];
-    return acc;
-  },
-  {} as NormalizedSymbolsType // Crucially, type the initial accumulator
-);
+export function loadLibrary(libPath?: string) {
+  const rawSymbols = _loadLibrary();
+  const normalizedSymbols = Object.keys(rawSymbols).reduce(
+    (acc, key) => {
+      const newKey = key.replace(/^zw/, 'w') as keyof NormalizedSymbolsType; // Assert the new key type
+      (acc as any)[newKey] = (rawSymbols as Record<string, any>)[key];
+      return acc;
+    },
+    {} as NormalizedSymbolsType // Crucially, type the initial accumulator
+  );
+  const FFI_SYMBOLS = process.env.DEBUG === 'true' || process.env.TRACE_WEBGPU === 'true' ? convertToDebugSymbols(normalizedSymbols) : normalizedSymbols; 
+  return FFI_SYMBOLS;
+}
 
-export const FFI_SYMBOLS = process.env.DEBUG === 'true' || process.env.TRACE_WEBGPU === 'true' ? convertToDebugSymbols(normalizedSymbols) : normalizedSymbols; 
+export type FFISymbols = ReturnType<typeof loadLibrary>;
 
 function convertToDebugSymbols<T extends Record<string, any>>(symbols: T): T {
     const debugSymbols: Record<string, any> = {};

@@ -1,6 +1,6 @@
 /// <reference types="../index.d.ts" />
 import { type Pointer, FFIType, JSCallback, ptr, toArrayBuffer } from "bun:ffi";
-import type { FFI_SYMBOLS } from "./ffi";
+import type { FFISymbols } from "./ffi";
 import { GPUDeviceImpl } from "./GPUDevice";
 import { WGPUCallbackInfoStruct, WGPUCallbackMode, WGPUDeviceDescriptorStruct, WGPUErrorType, type WGPUUncapturedErrorCallbackInfo, WGPULimitsStruct, WGPUSupportedFeaturesStruct } from "./structs_def";
 import { fatalError } from "./utils/error";
@@ -69,7 +69,7 @@ export class GPUAdapterImpl implements GPUAdapter {
     constructor(
       public readonly adapterPtr: Pointer,
       private instancePtr: Pointer,
-      private lib: typeof FFI_SYMBOLS,
+      private lib: FFISymbols,
       private instanceTicker: InstanceTicker,
     ) {}
 
