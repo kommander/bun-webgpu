@@ -584,7 +584,7 @@ pub export fn _zwgpuCopyTextureAndMap(workaround: *ZWGPUWorkaroundCopyTextureAnd
         i += 1;
         zwgpuInstanceProcessEvents(workaround.instance);
         std.time.sleep(10000);
-        if (i > 100) {
+        if (i > 2000) {
             // std.debug.print("Map not ready after 100 iterations\n", .{});
             zwgpuBufferUnmap(workaround.readback_buffer);
             return;
