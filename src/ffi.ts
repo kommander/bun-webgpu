@@ -36,9 +36,9 @@ function getPlatformTarget(): string {
   return `${zigArch}-${zigPlatform}`;
 }
 
-function findLibrary(libPath?: string): string {
+function findLibrary(): string {
   const target = getPlatformTarget();
-  const libDir = libPath || DEFAULT_PATH;
+  const libDir = DEFAULT_PATH;
 
   // First try target-specific directory
   const [arch, osName] = target.split('-');
@@ -54,7 +54,7 @@ function findLibrary(libPath?: string): string {
 }
 
 function _loadLibrary(libPath?: string) {
-    const resolvedPath = findLibrary(libPath);
+    const resolvedPath = libPath || findLibrary();
     
     // Define the FFI interface based on webgpu.h functions
     const { symbols } = dlopen(resolvedPath, {
@@ -647,7 +647,7 @@ type TransformedSymbolKeys<T extends object> = {
 type NormalizedSymbolsType = TransformedSymbolKeys<ReturnType<typeof _loadLibrary>>;
 
 export function loadLibrary(libPath?: string) {
-  const rawSymbols = _loadLibrary();
+  const rawSymbols = _loadLibrary(libPath);
   const normalizedSymbols = Object.keys(rawSymbols).reduce(
     (acc, key) => {
       const newKey = key.replace(/^zw/, 'w') as keyof NormalizedSymbolsType; // Assert the new key type

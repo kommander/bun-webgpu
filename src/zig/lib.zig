@@ -579,6 +579,7 @@ pub export fn _zwgpuCopyTextureAndMap(workaround: *ZWGPUWorkaroundCopyTextureAnd
     };
     _ = zwgpuBufferMapAsync(workaround.readback_buffer, c.WGPUMapMode_Read, 0, workaround.buffer_size, &map_callback_info);
 
+    // TODO: Fix this blocking loop (or the FFI mapAsync memory leak)
     var i: u32 = 0;
     while (!g_map_ready) {
         i += 1;
