@@ -54,12 +54,10 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       if (!gpu || !adapter || !device || !queue) {
            throw new Error("Example setup failed: Could not get WGPU context.");
       }
-      // @ts-ignore testing
-      queuePtr = queue.queuePtr;
+      queuePtr = queue.ptr;
       if (!queuePtr) {
         throw new Error("Example setup failed: Could not get WGPU context.");
       }
-      // Setup error handler for debugging
       device.onuncapturederror = (ev) => {
           console.error("[Example] Uncaptured Error: Type={}, Message={}", ev.error.message);
       };

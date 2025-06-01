@@ -98,9 +98,7 @@ export class GPUQueueImpl implements GPUQueue {
         byteOffsetInData = 0;
         byteLengthInData = data.byteLength;
             
-        // Calculate the final offset within the underlying ArrayBuffer
         const finalByteOffset = byteOffsetInData + bufferOffset;
-        // Calculate the final size to write
         const finalSize = byteLengthInData;
     
         if (finalSize <= 0) {
@@ -111,7 +109,6 @@ export class GPUQueueImpl implements GPUQueue {
             fatalError("queueWriteBuffer: dataOffset + dataSize exceeds underlying ArrayBuffer bounds.");
         }
     
-        // Get a pointer to the relevant part of the ArrayBuffer
         const dataPtr = ptr(arrayBuffer, finalByteOffset);
     
         try {
@@ -162,7 +159,6 @@ export class GPUQueueImpl implements GPUQueue {
             return;
         }
 
-        // Get pointer to the start of the data in the underlying buffer
         const dataPtr = ptr(arrayBuffer, byteOffsetInData);
         const packedDestination = WGPUTexelCopyTextureInfoStruct.pack(destination);
         const normalizedWriteSize = normalizeGPUExtent3DStrict(writeSize);
@@ -184,14 +180,13 @@ export class GPUQueueImpl implements GPUQueue {
                 this.ptr,
                 ptr(packedDestination),
                 dataPtr,
-                BigInt(byteLengthInData), // Pass the actual size of the data view/buffer
+                BigInt(byteLengthInData),
                 ptr(packedLayout),
-                ptr(packedWriteSize) // Pass pointer to packed writeSize
+                ptr(packedWriteSize)
             );
         } catch (e) {
             console.error("FFI Error: queueWriteTexture", e);
         }        
-        // Let keepAlive go out of scope naturally after FFI call completes
     }
 
     copyBufferToBuffer(source: GPUTexelCopyBufferInfo, destination: GPUTexelCopyBufferInfo, size: number): undefined {
