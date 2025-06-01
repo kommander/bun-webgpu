@@ -1,4 +1,3 @@
-import sharp from 'sharp'; 
 import { type Pointer } from "bun:ffi";
 import { 
   createGPUInstance, 

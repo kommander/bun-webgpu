@@ -19,6 +19,9 @@ export class GPUBufferImpl implements GPUBuffer {
     private _descriptor: GPUBufferDescriptor;
     private _mapState: GPUBufferMapState = 'unmapped';
     private _pendingMap: Promise<undefined> | null = null;
+    private _mapCallback: JSCallback;
+    private _mapCallbackResolve: ((value: undefined) => void) | null = null;
+    private _mapCallbackReject: ((reason?: any) => void) | null = null;
 
     __brand: "GPUBuffer" = "GPUBuffer";
     label: string = '';
@@ -34,6 +37,30 @@ export class GPUBufferImpl implements GPUBuffer {
       this._size = descriptor.size;
       this._descriptor = descriptor;
       this._mapState = descriptor.mappedAtCreation ? 'mapped' : 'unmapped';
+      this._mapCallback = new JSCallback(
+        (status: number, messagePtr: Pointer | null, messageSize: number, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
+          this.instanceTicker.unregister();
+          this._pendingMap = null;
+          
+          if (status === BufferMapAsyncStatus.Success) {
+              this._mapState = 'mapped';
+              this._mapCallbackResolve?.(undefined);
+          } else {
+              this._mapState = 'unmapped';
+              console.error('WGPU Buffer Map Error', status);
+              const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
+              const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr, 0, messageSize)).toString() : null;
+              this._mapCallbackReject?.(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
+          }
+
+          this._mapCallbackResolve = null;
+          this._mapCallbackReject = null;
+        },
+        {
+            args: [FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
+            returns: FFIType.void,
+        }
+      );
     }
 
     get size(): GPUSize64 {
@@ -50,6 +77,7 @@ export class GPUBufferImpl implements GPUBuffer {
 
     mapAsync(mode: GPUMapModeFlags, offset?: GPUSize64, size?: GPUSize64): Promise<undefined> {
       if (this._pendingMap) {
+        // TODO: Should throw an error?
         return this._pendingMap;
       }
 
@@ -60,40 +88,16 @@ export class GPUBufferImpl implements GPUBuffer {
           const mapOffset = BigInt(offset ?? 0);
           const mapSize = BigInt(size ?? this._size);
 
-          const callback = new JSCallback(
-              (status: number, messagePtr: Pointer | null, messageSize: number, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
-                this.instanceTicker.unregister();
-                this._pendingMap = null;
-                
-                if (status === BufferMapAsyncStatus.Success) {
-                    this._mapState = 'mapped';
-                    resolve(undefined);
-                } else {
-                    this._mapState = 'unmapped';
-                    console.error('WGPU Buffer Map Error', status);
-                    const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
-                    const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
-                    reject(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
-                }
+          this._mapCallbackResolve = resolve;
+          this._mapCallbackReject = reject;
 
-                queueMicrotask(() => {
-                  callback.close(); 
-                });
-              },
-              {
-                  args: [FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
-                  returns: FFIType.void,
-              }
-          );
-
-          if (!callback || !callback.ptr) {
-            this._pendingMap = null;
+          if (!this._mapCallback.ptr) {
             fatalError('Could not create buffer map callback');
           }
 
           const callbackInfo = WGPUCallbackInfoStruct.pack({
             mode: 'AllowProcessEvents',
-            callback: callback.ptr,
+            callback: this._mapCallback.ptr,
           });
 
           try {
@@ -201,6 +205,7 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     destroy(): undefined {
+      this._mapCallback.close();
       try {
         this.lib.wgpuBufferDestroy(this.bufferPtr);
       } catch (e) {

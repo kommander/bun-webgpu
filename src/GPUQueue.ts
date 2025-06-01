@@ -2,7 +2,13 @@ import { FFIType, JSCallback, type Pointer, ptr } from "bun:ffi";
 import type { FFISymbols } from "./ffi";
 import { fatalError } from "./utils/error";
 import { packObjectArray } from "./structs_ffi";
-import { normalizeGPUExtent3DStrict, WGPUCallbackInfoStruct, WGPUExtent3DStruct, WGPUTexelCopyBufferLayoutStruct, WGPUTexelCopyTextureInfoStruct } from "./structs_def";
+import { 
+    normalizeGPUExtent3DStrict, 
+    WGPUCallbackInfoStruct, 
+    WGPUExtent3DStruct, 
+    WGPUTexelCopyBufferLayoutStruct, 
+    WGPUTexelCopyTextureInfoStruct
+} from "./structs_def";
 import { InstanceTicker } from "./GPU";
 
 // Type alias for buffer sources compatible with bun:ffi ptr()
@@ -18,15 +24,37 @@ export const QueueWorkDoneStatus = {
 export class GPUQueueImpl implements GPUQueue {
     __brand: "GPUQueue" = "GPUQueue";
     label: string = 'Main Device Queue';
-
-    constructor(public readonly queuePtr: Pointer, private lib: FFISymbols, private instanceTicker: InstanceTicker) {}
+    private _onSubmittedWorkDoneCallback: JSCallback;
+    private _onSubmittedWorkDoneResolves: ((value: undefined) => void)[] = [];
+    private _onSubmittedWorkDoneRejects: ((reason?: any) => void)[] = [];
+    
+    constructor(public readonly ptr: Pointer, private lib: FFISymbols, private instanceTicker: InstanceTicker) {
+        this._onSubmittedWorkDoneCallback = new JSCallback(
+            (status: number, _userdata1: Pointer | null, _userdata2: Pointer | null) => {
+                this.instanceTicker.unregister();
+                if (status === QueueWorkDoneStatus.Success) {
+                    this._onSubmittedWorkDoneResolves.forEach(r => r(undefined));
+                } else {
+                    const statusName = Object.keys(QueueWorkDoneStatus).find(key => QueueWorkDoneStatus[key as keyof typeof QueueWorkDoneStatus] === status) || 'Unknown Status';
+                    const error = new Error(`Queue work done failed with status: ${statusName}(${status})`);
+                    this._onSubmittedWorkDoneRejects.forEach(r => r(error));
+                }
+                this._onSubmittedWorkDoneResolves = [];
+                this._onSubmittedWorkDoneRejects = [];
+            },
+            {
+                args: [FFIType.u32, FFIType.pointer, FFIType.pointer],
+                returns: FFIType.void,
+            }
+        )
+    }
 
     submit(commandBuffers: Iterable<GPUCommandBuffer>): undefined {
         const commandBuffersArray = Array.from(commandBuffers);
         if (!commandBuffersArray || commandBuffersArray.length === 0) { console.warn("queueSubmit: no command buffers provided"); return; }
         const handleView = packObjectArray(commandBuffersArray)
         try { 
-            this.lib.wgpuQueueSubmit(this.queuePtr, commandBuffersArray.length, ptr(handleView.buffer));
+            this.lib.wgpuQueueSubmit(this.ptr, commandBuffersArray.length, ptr(handleView.buffer));
             for (const commandBuffer of commandBuffersArray) {
                 commandBuffer._destroy();
             }
@@ -37,40 +65,21 @@ export class GPUQueueImpl implements GPUQueue {
 
     onSubmittedWorkDone(): Promise<undefined> {
         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                this.instanceTicker.unregister();
-                console.error("Queue onSubmittedWorkDone timed out");
-            }, 500);
-            const callback = new JSCallback(
-                (status: number, _userdata1: Pointer | null, _userdata2: Pointer | null) => {
-                    clearTimeout(timeout);
-                    this.instanceTicker.unregister();
-                    if (status === QueueWorkDoneStatus.Success) {
-                        resolve(undefined);
-                    } else {
-                        const statusName = Object.keys(QueueWorkDoneStatus).find(key => QueueWorkDoneStatus[key as keyof typeof QueueWorkDoneStatus] === status) || 'Unknown Status';
-                        reject(new Error(`Queue work done failed with status: ${statusName}(${status})`));
-                    }
-                    callback.close(); 
-                },
-                {
-                    args: [FFIType.u32, FFIType.pointer, FFIType.pointer],
-                    returns: FFIType.void,
-                }
-            );
-
-            if (!callback || !callback.ptr) {
+            if (!this._onSubmittedWorkDoneCallback.ptr) {
                 fatalError('Could not create queue done callback')
             }
 
+            this._onSubmittedWorkDoneResolves.push(resolve);
+            this._onSubmittedWorkDoneRejects.push(reject);
+
             const callbackInfo = WGPUCallbackInfoStruct.pack({
                 mode: 'AllowProcessEvents',
-                callback: callback.ptr,
+                callback: this._onSubmittedWorkDoneCallback.ptr,
             });
     
             try {
                 this.lib.wgpuQueueOnSubmittedWorkDone(
-                    this.queuePtr,
+                    this.ptr,
                     ptr(callbackInfo),
                 );
                 this.instanceTicker.register();
@@ -107,7 +116,7 @@ export class GPUQueueImpl implements GPUQueue {
     
         try {
             this.lib.wgpuQueueWriteBuffer(
-                this.queuePtr,
+                this.ptr,
                 buffer.ptr,
                 BigInt(bufferOffset),
                 dataPtr,
@@ -124,7 +133,7 @@ export class GPUQueueImpl implements GPUQueue {
         dataLayout: GPUTexelCopyBufferLayout,
         writeSize: GPUExtent3DStrict
     ): undefined {
-        if (!this.queuePtr) {
+        if (!this.ptr) {
             console.warn("queueWriteTexture: null queue pointer");
             return;
         }
@@ -172,7 +181,7 @@ export class GPUQueueImpl implements GPUQueue {
 
         try {
             this.lib.wgpuQueueWriteTexture(
-                this.queuePtr,
+                this.ptr,
                 ptr(packedDestination),
                 dataPtr,
                 BigInt(byteLengthInData), // Pass the actual size of the data view/buffer
@@ -186,14 +195,19 @@ export class GPUQueueImpl implements GPUQueue {
     }
 
     copyBufferToBuffer(source: GPUTexelCopyBufferInfo, destination: GPUTexelCopyBufferInfo, size: number): undefined {
-        fatalError('copyBufferToBuffer not implemented', this.queuePtr, source, destination, size);
+        fatalError('copyBufferToBuffer not implemented', this.ptr, source, destination, size);
     }
 
     copyBufferToTexture(source: GPUTexelCopyBufferInfo, destination: GPUTexelCopyTextureInfo, size: GPUExtent3D): undefined {
-        fatalError('copyBufferToTexture not implemented', this.queuePtr, source, destination, size);
+        fatalError('copyBufferToTexture not implemented', this.ptr, source, destination, size);
     }
 
     copyExternalImageToTexture(source: GPUCopyExternalImageSourceInfo, destination: GPUCopyExternalImageDestInfo, copySize: GPUExtent3DStrict): undefined {
-        fatalError('copyExternalImageToTexture not implemented', this.queuePtr, source, destination, copySize);
+        fatalError('copyExternalImageToTexture not implemented', this.ptr, source, destination, copySize);
+    }
+
+    destroy(): undefined {
+        this._onSubmittedWorkDoneCallback.close();
+        this.lib.wgpuQueueRelease(this.ptr);
     }
 }

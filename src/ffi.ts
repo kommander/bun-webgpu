@@ -626,12 +626,6 @@ function _loadLibrary(libPath?: string) {
 
       // NOTE: This is not exhaustive. Many more functions exist in webgpu.h
       // Add more bindings here as needed, following the patterns above.
-
-      // --- Workaround Functions ---
-      _zwgpuCopyTextureAndMap: {
-        args: [FFIType.pointer], // workaround: *ZWGPUWorkaroundCopyTextureAndMap
-        returns: FFIType.void,
-      },
     });
     return symbols;
 }

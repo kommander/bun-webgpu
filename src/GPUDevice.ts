@@ -258,6 +258,8 @@ export class GPUDeviceImpl implements GPUDevice {
         // Invalidate caches
         this._features = null;
         this._limits = null;
+        this._queue?.destroy();
+        this._queue = null;
 
         try { this.lib.wgpuDeviceRelease(this.devicePtr); } catch(e) { console.error("FFI Error: deviceRelease", e); }
         return undefined;

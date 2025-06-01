@@ -3,10 +3,8 @@ import { JSCallback, toArrayBuffer, type Pointer, ptr, FFIType } from "bun:ffi";
 import { type FFISymbols } from "./ffi";
 import { GPUAdapterImpl } from "./GPUAdapter";
 import { 
-  WGPUCallbackMode, 
   WGPUCallbackInfoStruct, 
   WGPURequestAdapterOptionsStruct,
-  ZWGPUWorkaroundCopyTextureAndMapStruct,
 } from "./structs_def";
 import { fatalError } from "./utils/error";
 
@@ -149,45 +147,6 @@ export class GPUImpl implements GPU {
         console.error("FFI Error: wgpuInstanceRelease", e);
     }
     return undefined;
-  }
-
-  // Workaround method for copying texture data and mapping it to a buffer
-  // Doing the same thing via JS methods leaks massive amounts of memory (apparently GPU memory)
-  // Unclear why this is happening, but it's a massive leak.
-  copyTextureAndMap(options: {
-    devicePtr: Pointer;
-    queuePtr: Pointer;
-    renderTexturePtr: Pointer;
-    readbackBufferPtr: Pointer;
-    bytesPerRow: number;
-    width: number;
-    height: number;
-    outputBuffer: Pointer;
-    bufferSize: number;
-  }): void {
-    if (this._destroyed) {
-      throw new Error("GPU instance has been destroyed");
-    }
-
-    try {
-      const workaroundStruct = ZWGPUWorkaroundCopyTextureAndMapStruct.pack({
-        device: options.devicePtr,
-        queue: options.queuePtr,
-        instance: this.instancePtr,
-        render_texture: options.renderTexturePtr,
-        readback_buffer: options.readbackBufferPtr,
-        bytes_per_row: options.bytesPerRow,
-        width: options.width,
-        height: options.height,
-        output_buffer: options.outputBuffer,
-        buffer_size: options.bufferSize,
-      });
-
-      this.lib._zwgpuCopyTextureAndMap(ptr(workaroundStruct));
-    } catch (e) {
-      console.error("Error in copyTextureAndMap:", e);
-      throw e;
-    }
   }
 }
 

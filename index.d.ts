@@ -12,6 +12,11 @@ declare global {
         tick(): undefined;
     }
 
+    interface GPUQueue {
+        readonly ptr: Pointer;
+        destroy(): undefined;
+    }
+
     interface GPURequestAdapterOptions {
        featureLevel?: 'core' | 'compatibility';
     }
