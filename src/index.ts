@@ -23,3 +23,22 @@ export function createGPUInstance(libPath?: string): GPUImpl {
     }
     return new GPUImpl(instancePtr, lib);
 }
+
+export async function globals({ libPath }: { libPath?: string } = {}) {
+  if (!navigator.gpu) {
+    const gpuInstance = createGPUInstance(libPath);
+    global.navigator = {
+      ...(global.navigator ?? {}),
+      gpu: gpuInstance,
+    };
+  }
+}
+
+export async function createWebGPUDevice() {
+  const adapter = await navigator.gpu.requestAdapter();
+  const device = await adapter?.requestDevice();
+  if (!device) {
+    throw new Error('Failed to create WebGPU device');
+  }
+  return device;
+}

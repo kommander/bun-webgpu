@@ -12,10 +12,11 @@ TBD
 
 *   **Bun**: Ensure you have BunJS installed. (https://bun.sh)
 *   **Zig**: The native components of this library are written in Zig. Ensure Zig is installed and available in your PATH. (https://ziglang.org/learn/getting-started/)
-*   **Pre-built Dawn Libraries**: This project relies on pre-built Dawn libraries. Instructions for downloading these are in a separate README.
-    *   See [packages/bun-webgpu/dawn/README.md](./dawn/README.md) for details on how to download the required Dawn shared libraries using the provided script. The script will place them in `packages/bun-webgpu/dawn/libs/`.
+*   **Pre-built Dawn Libraries**: This project relies on pre-built Dawn libraries.
+    *   See [packages/bun-webgpu/dawn/README.md](./dawn/README.md) for details on how to download the required Dawn shared libraries.
+    * Basically just run `bun run ./dawn/download_artifacts.ts`
 
-### Building the FFI Library
+### Building the FFI Liberary
 
 The `package.json` includes scripts to build the native library components.
 
