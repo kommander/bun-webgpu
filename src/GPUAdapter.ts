@@ -2,11 +2,18 @@
 import { type Pointer, FFIType, JSCallback, ptr, toArrayBuffer } from "bun:ffi";
 import type { FFISymbols } from "./ffi";
 import { GPUDeviceImpl } from "./GPUDevice";
-import { WGPUCallbackInfoStruct, WGPUCallbackMode, WGPUDeviceDescriptorStruct, WGPUErrorType, type WGPUUncapturedErrorCallbackInfo, WGPULimitsStruct, WGPUSupportedFeaturesStruct } from "./structs_def";
+import { 
+    WGPUCallbackInfoStruct, 
+    WGPUDeviceDescriptorStruct, 
+    WGPUErrorType, 
+    type WGPUUncapturedErrorCallbackInfo, 
+    WGPULimitsStruct, 
+    WGPUSupportedFeaturesStruct 
+} from "./structs_def";
 import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
-import { WGPUFeatureNameDef } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
+import { DEFAULT_SUPPORTED_LIMITS } from "./common";
 
 const RequestDeviceStatus = {
   Success: 1,
@@ -15,48 +22,7 @@ const RequestDeviceStatus = {
   Unknown: 4,
 } as const;
 
-// This assumes WGPUFeatureNameDef values are contiguous or at least correctly ordered for bitmasking.
-const BIT_INDEX_TO_FEATURE_NAME = Object.entries(WGPUFeatureNameDef.enum)
-    .sort(([, aVal], [, bVal]) => (aVal as number) - (bVal as number))
-    .map(([name]) => name as GPUFeatureName);
-
 let deviceCount = 0;
-
-const DEFAULT_ADAPTER_LIMITS: GPUSupportedLimits = Object.freeze({
-    __brand: "GPUSupportedLimits" as const,
-    maxTextureDimension1D: 0,
-    maxTextureDimension2D: 0,
-    maxTextureDimension3D: 0,
-    maxTextureArrayLayers: 0,
-    maxBindGroups: 0,
-    maxBindGroupsPlusVertexBuffers: 0,
-    maxBindingsPerBindGroup: 0,
-    maxDynamicUniformBuffersPerPipelineLayout: 0,
-    maxDynamicStorageBuffersPerPipelineLayout: 0,
-    maxSampledTexturesPerShaderStage: 0,
-    maxSamplersPerShaderStage: 0,
-    maxStorageBuffersPerShaderStage: 0,
-    maxStorageTexturesPerShaderStage: 0,
-    maxUniformBuffersPerShaderStage: 0,
-    maxUniformBufferBindingSize: 0,
-    maxStorageBufferBindingSize: 0,
-    minUniformBufferOffsetAlignment: 0,
-    minStorageBufferOffsetAlignment: 0,
-    maxVertexBuffers: 0,
-    maxBufferSize: 0,
-    maxVertexAttributes: 0,
-    maxVertexBufferArrayStride: 0,
-    maxInterStageShaderComponents: 0,
-    maxInterStageShaderVariables: 0,
-    maxColorAttachments: 0,
-    maxColorAttachmentBytesPerSample: 0,
-    maxComputeWorkgroupStorageSize: 0,
-    maxComputeInvocationsPerWorkgroup: 0,
-    maxComputeWorkgroupSizeX: 0,
-    maxComputeWorkgroupSizeY: 0,
-    maxComputeWorkgroupSizeZ: 0,
-    maxComputeWorkgroupsPerDimension: 0,
-});
 
 export class GPUAdapterImpl implements GPUAdapter {
     __brand: "GPUAdapter" = "GPUAdapter";
@@ -64,7 +30,6 @@ export class GPUAdapterImpl implements GPUAdapter {
     private _limits: GPUSupportedLimits | null = null;
     private _destroyed = false;
     private _devices: Map<number, GPUDeviceImpl> = new Map();
-    private globalJSErrorCallbackHandle: JSCallback | null = null;
 
     constructor(
       public readonly adapterPtr: Pointer,
@@ -85,18 +50,22 @@ export class GPUAdapterImpl implements GPUAdapter {
         }
         if (this._features === null) {
              try {
-                 const { buffer: featuresBuffer } = allocStruct(WGPUSupportedFeaturesStruct);
-                 const featuresPtr = ptr(featuresBuffer);
-                 this.lib.wgpuAdapterGetFeatures(this.adapterPtr, featuresPtr);
-                 const supportedFeatures = new Set<GPUFeatureName>();
+                const featuresStructBuffer = new ArrayBuffer(16);
+                const featuresBuffer = new ArrayBuffer(256);
+                const featuresView = new DataView(featuresStructBuffer);
+                const featuresPtr = ptr(featuresBuffer);
+                
+                featuresView.setBigUint64(8, BigInt(featuresPtr), true);
+                this.lib.wgpuAdapterGetFeatures(this.adapterPtr, featuresPtr);
+                const supportedFeatures = new Set<GPUFeatureName>();
 
-                 const unpacked = WGPUSupportedFeaturesStruct.unpack(featuresBuffer);
-                 if (unpacked.features && unpacked.featureCount && unpacked.featureCount > 0) {
-                     for (const feature of unpacked.features) {
-                         supportedFeatures.add(feature as GPUFeatureName);
-                     }
-                 }
-                 this._features = Object.freeze(supportedFeatures);
+                const unpacked = WGPUSupportedFeaturesStruct.unpack(featuresBuffer);
+                if (unpacked.features && unpacked.featureCount && unpacked.featureCount > 0) {
+                    for (const feature of unpacked.features) {
+                        supportedFeatures.add(feature as GPUFeatureName);
+                    }
+                }
+                this._features = Object.freeze(supportedFeatures);
 
              } catch (e) {
                   console.error("Error calling adapterGetFeatures FFI function:", e);
@@ -110,7 +79,7 @@ export class GPUAdapterImpl implements GPUAdapter {
     get limits(): GPUSupportedLimits {
         if (this._destroyed) {
             console.warn("Accessing limits on destroyed GPUAdapter");
-            return DEFAULT_ADAPTER_LIMITS;
+            return DEFAULT_SUPPORTED_LIMITS;
         }
         if (this._limits === null) {
             let limitsStructPtr: Pointer | null = null;
@@ -122,7 +91,7 @@ export class GPUAdapterImpl implements GPUAdapter {
 
                 if (status !== 1) { // WGPUStatus_Success = 1
                     console.error(`wgpuAdapterGetLimits failed with status: ${status}`);
-                    this._limits = DEFAULT_ADAPTER_LIMITS; // Cache default on failure
+                    this._limits = DEFAULT_SUPPORTED_LIMITS; // Cache default on failure
                     return this._limits;
                 }
 
@@ -138,7 +107,7 @@ export class GPUAdapterImpl implements GPUAdapter {
 
             } catch (e) {
                 console.error("Error calling wgpuAdapterGetLimits or unpacking struct:", e);
-                this._limits = DEFAULT_ADAPTER_LIMITS; // Cache default on error
+                this._limits = DEFAULT_SUPPORTED_LIMITS; // Cache default on error
             }
         }
         return this._limits;
@@ -214,8 +183,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                     returns: FFIType.void
                   }
               );
-              this.globalJSErrorCallbackHandle = uncapturedErrorCallback;
-
+              
               const deviceLostCallback = new JSCallback(
                 (
                     devicePtr: Pointer | null,

@@ -5,9 +5,6 @@ const c = @cImport({
     @cInclude("dawn/webgpu.h");
 });
 
-var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-const arena_allocator = arena.allocator();
-
 // --- Instance Functions ---
 
 pub export fn zwgpuCreateInstance(descriptor: ?*const c.WGPUInstanceDescriptor) c.WGPUInstance {
@@ -72,18 +69,11 @@ pub export fn zwgpuAdapterGetFeatures(adapter: c.WGPUAdapter, js_features_struct
     c.wgpuAdapterGetFeatures(adapter, &temp_dawn_features_struct);
 
     if (temp_dawn_features_struct.featureCount > 0 and temp_dawn_features_struct.features != null) {
-        const arena_features_array = arena_allocator.alloc(c.WGPUFeatureName, temp_dawn_features_struct.featureCount) catch {
-            js_features_struct_ptr.featureCount = 0;
-            js_features_struct_ptr.features = null;
-            c.wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct);
-            return;
-        };
-
         const dawn_features_slice = temp_dawn_features_struct.features[0..temp_dawn_features_struct.featureCount];
-        @memcpy(arena_features_array, dawn_features_slice);
 
         js_features_struct_ptr.featureCount = temp_dawn_features_struct.featureCount;
-        js_features_struct_ptr.features = arena_features_array.ptr; // JS now points to arena!
+        const mutable_features: [*]c.WGPUFeatureName = @ptrCast(@constCast(js_features_struct_ptr.features));
+        @memcpy(mutable_features[0..temp_dawn_features_struct.featureCount], dawn_features_slice);
     } else {
         js_features_struct_ptr.featureCount = 0;
         js_features_struct_ptr.features = null;
@@ -160,24 +150,17 @@ pub export fn zwgpuDeviceHasFeature(device: c.WGPUDevice, feature: c.WGPUFeature
 
 // Note: On linux the u32 features array allocated by dawn is freed again when leaving the boundary,
 // even though it should be kept until freed via wgpuSupportedFeaturesFreeMembers,
-// that is why we copy it to the zig heap.
+// that is why we copy it to the js heap.
 pub export fn zwgpuDeviceGetFeatures(device: c.WGPUDevice, js_features_struct_ptr: *c.WGPUSupportedFeatures) void {
     var temp_dawn_features_struct: c.WGPUSupportedFeatures = undefined;
     c.wgpuDeviceGetFeatures(device, &temp_dawn_features_struct);
 
     if (temp_dawn_features_struct.featureCount > 0 and temp_dawn_features_struct.features != null) {
-        const arena_features_array = arena_allocator.alloc(c.WGPUFeatureName, temp_dawn_features_struct.featureCount) catch {
-            js_features_struct_ptr.featureCount = 0;
-            js_features_struct_ptr.features = null;
-            c.wgpuSupportedFeaturesFreeMembers(temp_dawn_features_struct);
-            return;
-        };
-
         const dawn_features_slice = temp_dawn_features_struct.features[0..temp_dawn_features_struct.featureCount];
-        @memcpy(arena_features_array, dawn_features_slice);
 
         js_features_struct_ptr.featureCount = temp_dawn_features_struct.featureCount;
-        js_features_struct_ptr.features = arena_features_array.ptr; // JS now points to arena!
+        const mutable_features: [*]c.WGPUFeatureName = @ptrCast(@constCast(js_features_struct_ptr.features));
+        @memcpy(mutable_features[0..temp_dawn_features_struct.featureCount], dawn_features_slice);
     } else {
         js_features_struct_ptr.featureCount = 0;
         js_features_struct_ptr.features = null;

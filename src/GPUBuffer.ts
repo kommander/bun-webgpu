@@ -1,6 +1,6 @@
 import { FFIType, JSCallback, ptr, toArrayBuffer, type Pointer } from "bun:ffi";
 import type { FFISymbols } from "./ffi";
-import { BufferUsageFlags } from ".";
+import { BufferUsageFlags } from "./common";
 import { fatalError } from "./utils/error";
 import { WGPUCallbackInfoStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";

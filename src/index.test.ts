@@ -1,12 +1,9 @@
 import { expect, describe, it, beforeAll, afterAll } from "bun:test";
 import { type Pointer } from "bun:ffi";
 import {
-    BufferUsageFlags,
-    MapModeFlags,
-    TextureUsageFlags,
-    ShaderStage,
     createGPUInstance,
 } from "./index";
+import { BufferUsageFlags, MapModeFlags, TextureUsageFlags, ShaderStage } from "./common";
 import type { GPUImpl } from "./GPU";
 
 // Global variables for the test suite

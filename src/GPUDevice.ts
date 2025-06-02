@@ -1,8 +1,6 @@
 
 import { type Pointer, ptr } from "bun:ffi";
-import {
-    BufferUsageFlags,
-} from ".";
+import { BufferUsageFlags, DEFAULT_SUPPORTED_LIMITS } from "./common";
 import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
@@ -64,42 +62,6 @@ export class DeviceTicker {
         });
     }
 }
-
-const DEFAULT_SUPPORTED_LIMITS: GPUSupportedLimits = Object.freeze({
-    __brand: "GPUSupportedLimits",
-    maxTextureDimension1D: 0,
-    maxTextureDimension2D: 0,
-    maxTextureDimension3D: 0,
-    maxTextureArrayLayers: 0,
-    maxBindGroups: 0,
-    maxBindGroupsPlusVertexBuffers: 0,
-    maxBindingsPerBindGroup: 0,
-    maxDynamicUniformBuffersPerPipelineLayout: 0,
-    maxDynamicStorageBuffersPerPipelineLayout: 0,
-    maxSampledTexturesPerShaderStage: 0,
-    maxSamplersPerShaderStage: 0,
-    maxStorageBuffersPerShaderStage: 0,
-    maxStorageTexturesPerShaderStage: 0,
-    maxUniformBuffersPerShaderStage: 0,
-    maxUniformBufferBindingSize: 0,
-    maxStorageBufferBindingSize: 0,
-    minUniformBufferOffsetAlignment: 0,
-    minStorageBufferOffsetAlignment: 0,
-    maxVertexBuffers: 0,
-    maxBufferSize: 0,
-    maxVertexAttributes: 0,
-    maxVertexBufferArrayStride: 0,
-    maxInterStageShaderComponents: 0,
-    maxInterStageShaderVariables: 0, // Match TS type, even if C struct differs slightly
-    maxColorAttachments: 0,
-    maxColorAttachmentBytesPerSample: 0,
-    maxComputeWorkgroupStorageSize: 0,
-    maxComputeInvocationsPerWorkgroup: 0,
-    maxComputeWorkgroupSizeX: 0,
-    maxComputeWorkgroupSizeY: 0,
-    maxComputeWorkgroupSizeZ: 0,
-    maxComputeWorkgroupsPerDimension: 0,
-});
 
 export class GPUDeviceImpl implements GPUDevice {
     readonly ptr: Pointer;

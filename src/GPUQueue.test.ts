@@ -1,9 +1,9 @@
 import { expect, describe, it, beforeAll, afterAll } from "bun:test";
 import { 
     createGPUInstance, 
-    TextureUsageFlags 
-} from "./index"; // Assuming index exports necessary types/enums
+} from "./index";
 import type { GPUImpl } from "./GPU";
+import { TextureUsageFlags } from "./common";
 
 // Global variables for the test suite
 let gpu: GPUImpl | null = null;

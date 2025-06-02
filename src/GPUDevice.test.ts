@@ -1,9 +1,9 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
 import { 
     createGPUInstance, 
-    ShaderStage 
-} from "./index"; // Assuming index exports necessary types/enums
+} from "./index";
 import type { GPUImpl } from "./GPU";
+import { ShaderStage } from "./common";
 
 // Global variables for the test suite
 let gpu: GPUImpl | null = null;
