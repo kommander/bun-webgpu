@@ -1,5 +1,6 @@
 import type { Pointer } from "bun:ffi";
 import type { FFISymbols } from "./ffi";
+import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout";
 
 export class GPUComputePipelineImpl implements GPUComputePipeline {
     __brand: "GPUComputePipeline" = "GPUComputePipeline";
@@ -12,8 +13,11 @@ export class GPUComputePipelineImpl implements GPUComputePipeline {
     }
 
     getBindGroupLayout(index: number): GPUBindGroupLayout {
-        console.error('getBindGroupLayout', this.ptr, index);
-        throw new Error("Not implemented");
+        const bindGroupLayoutPtr = this.lib.wgpuComputePipelineGetBindGroupLayout(this.ptr, index);
+        if (!bindGroupLayoutPtr) {
+            throw new Error(`Failed to get bind group layout for index ${index}. Pointer is null.`);
+        }
+        return new GPUBindGroupLayoutImpl(bindGroupLayoutPtr, this.lib);
     }
 
     destroy(): undefined {
@@ -22,5 +26,6 @@ export class GPUComputePipelineImpl implements GPUComputePipeline {
         } catch (e) {
             console.error("FFI Error: computePipelineRelease", e);
         }
+        return undefined;
     }
 }

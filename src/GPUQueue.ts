@@ -90,26 +90,19 @@ export class GPUQueueImpl implements GPUQueue {
     }
     
     writeBuffer(buffer: GPUBuffer, bufferOffset: number, data: ArrayBuffer): undefined {
-        let arrayBuffer: ArrayBuffer;
-        let byteOffsetInData: number;
-        let byteLengthInData: number;
-    
-        arrayBuffer = data;
-        byteOffsetInData = 0;
-        byteLengthInData = data.byteLength;
-            
+        const byteOffsetInData = 0;    
         const finalByteOffset = byteOffsetInData + bufferOffset;
-        const finalSize = byteLengthInData;
+        const finalSize = data.byteLength;
     
         if (finalSize <= 0) {
             console.warn("queueWriteBuffer: Calculated dataSize is 0 or negative, nothing to write.");
             return;
         }
-        if (finalByteOffset + finalSize > arrayBuffer.byteLength) {
+        if (finalByteOffset + finalSize > data.byteLength) {
             fatalError("queueWriteBuffer: dataOffset + dataSize exceeds underlying ArrayBuffer bounds.");
         }
     
-        const dataPtr = ptr(arrayBuffer, finalByteOffset);
+        const dataPtr = ptr(data, finalByteOffset);
     
         try {
             this.lib.wgpuQueueWriteBuffer(

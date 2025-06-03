@@ -319,6 +319,10 @@ pub export fn zwgpuComputePipelineRelease(compute_pipeline: c.WGPUComputePipelin
     c.wgpuComputePipelineRelease(compute_pipeline);
 }
 
+pub export fn zwgpuComputePipelineGetBindGroupLayout(compute_pipeline: c.WGPUComputePipeline, group_index: u32) c.WGPUBindGroupLayout {
+    return c.wgpuComputePipelineGetBindGroupLayout(compute_pipeline, group_index);
+}
+
 // --- CommandEncoder Functions ---
 
 pub export fn zwgpuCommandEncoderBeginRenderPass(encoder: c.WGPUCommandEncoder, descriptor: *const c.WGPURenderPassDescriptor) c.WGPURenderPassEncoder {
