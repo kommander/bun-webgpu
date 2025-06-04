@@ -89,21 +89,72 @@ export class GPUQueueImpl implements GPUQueue {
         });
     }
     
-    writeBuffer(buffer: GPUBuffer, bufferOffset: number, data: ArrayBuffer): undefined {
-        const byteOffsetInData = 0;    
-        const finalByteOffset = byteOffsetInData + bufferOffset;
-        const finalSize = data.byteLength;
-    
+    writeBuffer(
+        buffer: GPUBuffer, 
+        bufferOffset: number, 
+        data: PtrSource, 
+        dataOffset?: number, 
+        size?: number
+    ): undefined {
+        let arrayBuffer: ArrayBuffer;
+        let byteOffsetInData: number;
+        let byteLengthInData: number;
+        let bytesPerElement: number = 1;
+
+        if (data instanceof ArrayBuffer) {
+            arrayBuffer = data;
+            byteOffsetInData = 0;
+            byteLengthInData = data.byteLength;
+            bytesPerElement = 1;
+        } else if (ArrayBuffer.isView(data)) {
+            if (!(data.buffer instanceof ArrayBuffer)) {
+                fatalError("queueWriteBuffer: Data view's underlying buffer is not an ArrayBuffer.");
+            }
+            arrayBuffer = data.buffer;
+            byteOffsetInData = data.byteOffset;
+            byteLengthInData = data.byteLength;
+            
+            if ('BYTES_PER_ELEMENT' in data && typeof data.BYTES_PER_ELEMENT === 'number') {
+                bytesPerElement = data.BYTES_PER_ELEMENT;
+            }
+        } else {
+            fatalError("queueWriteBuffer: Invalid data type. Must be ArrayBuffer or ArrayBufferView.");
+        }
+
+        const dataOffsetElements = dataOffset ?? 0;
+        if (dataOffsetElements > Math.floor(byteLengthInData / bytesPerElement)) {
+            fatalError("queueWriteBuffer: dataOffset is larger than data's element count.");
+        }
+
+        const dataOffsetBytes = dataOffsetElements * bytesPerElement;
+        const finalDataOffset = byteOffsetInData + dataOffsetBytes;
+        const remainingDataSize = byteLengthInData - dataOffsetBytes;
+
+        let finalSize: number;
+        if (size !== undefined) {
+            if (size > Number.MAX_SAFE_INTEGER / bytesPerElement) {
+                fatalError("queueWriteBuffer: size overflows.");
+            }
+            finalSize = size * bytesPerElement;
+        } else {
+            finalSize = remainingDataSize;
+        }
+
+        if (finalSize > remainingDataSize) {
+            fatalError("queueWriteBuffer: size + dataOffset is larger than data's size.");
+        }
+
         if (finalSize <= 0) {
             console.warn("queueWriteBuffer: Calculated dataSize is 0 or negative, nothing to write.");
             return;
         }
-        if (finalByteOffset + finalSize > data.byteLength) {
-            fatalError("queueWriteBuffer: dataOffset + dataSize exceeds underlying ArrayBuffer bounds.");
+
+        if (finalSize % 4 !== 0) {
+            fatalError("queueWriteBuffer: size is not a multiple of 4 bytes.");
         }
-    
-        const dataPtr = ptr(data, finalByteOffset);
-    
+
+        const dataPtr = ptr(arrayBuffer, finalDataOffset);
+
         try {
             this.lib.wgpuQueueWriteBuffer(
                 this.ptr,
@@ -124,8 +175,7 @@ export class GPUQueueImpl implements GPUQueue {
         writeSize: GPUExtent3DStrict
     ): undefined {
         if (!this.ptr) {
-            console.warn("queueWriteTexture: null queue pointer");
-            return;
+            fatalError("queueWriteTexture: Invalid queue pointer");
         }
 
         let arrayBuffer: ArrayBuffer;
@@ -163,7 +213,7 @@ export class GPUQueueImpl implements GPUQueue {
              rowsPerImage: dataLayout.rowsPerImage ?? normalizedWriteSize.height, 
         };
         if (!layoutForPacking.bytesPerRow) {
-            fatalError("queueWriteTexture: dataLayout.bytesPerRow is not set.");
+            fatalError("queueWriteTexture: dataLayout.bytesPerRow is required.");
         }
         const packedLayout = WGPUTexelCopyBufferLayoutStruct.pack(layoutForPacking);
         const packedWriteSize = WGPUExtent3DStruct.pack(normalizedWriteSize);
