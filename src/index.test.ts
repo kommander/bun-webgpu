@@ -3,7 +3,7 @@ import { type Pointer } from "bun:ffi";
 import {
     createGPUInstance,
 } from "./index";
-import { BufferUsageFlags, MapModeFlags, TextureUsageFlags, ShaderStage } from "./common";
+import { BufferUsageFlags, MapModeFlags, TextureUsageFlags, GPUShaderStage } from "./common";
 import type { GPUImpl } from "./GPU";
 
 // Global variables for the test suite
@@ -777,7 +777,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                      entries: [
                          { // Minimal buffer entry (standard descriptor)
                              binding: 0,
-                             visibility: ShaderStage.VERTEX,
+                             visibility: GPUShaderStage.VERTEX,
                              buffer: { type: "uniform" } 
                          }
                      ]
@@ -798,7 +798,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                  // 1. Create a BGL first
                  bgl = device!.createBindGroupLayout({ // Use device method
                      label: "Test BGL for PLL",
-                     entries: [{ binding: 0, visibility: ShaderStage.VERTEX, buffer: { type: "uniform" } }]
+                     entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }]
                  });
                  expect(bgl).not.toBeNull();
 
@@ -828,7 +828,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 // 1. Create a BGL (using device method - assumes implementation exists)
                  bgl = device!.createBindGroupLayout({ 
                      label: "Test BGL for BG",
-                     entries: [{ binding: 0, visibility: ShaderStage.VERTEX, buffer: { type: "uniform" } }] // Standard buffer entry
+                     entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }] // Standard buffer entry
                  });
                  expect(bgl).not.toBeNull();
 
@@ -1571,7 +1571,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                     label: "Compute BGL",
                     entries: [{
                         binding: 0,
-                        visibility: ShaderStage.COMPUTE,
+                        visibility: GPUShaderStage.COMPUTE,
                         buffer: { type: "storage" }
                         // Add buffer-specific details for storage
                         // bufferDynamicOffset: false,
@@ -1720,7 +1720,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                     label: "Indirect BGL",
                     entries: [{
                         binding: 0, 
-                        visibility: ShaderStage.COMPUTE,
+                        visibility: GPUShaderStage.COMPUTE,
                         buffer: { type: "storage" }
                     }]
                 });

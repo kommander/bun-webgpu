@@ -3,7 +3,7 @@ import {
     createGPUInstance, 
 } from "./index";
 import type { GPUImpl } from "./GPU";
-import { ShaderStage } from "./common";
+import { GPUShaderStage } from "./common";
 
 // Global variables for the test suite
 let gpu: GPUImpl | null = null;
@@ -78,14 +78,14 @@ describe("GPUDevice", () => {
             const entries: GPUBindGroupLayoutEntry[] = [
                 { // Texture entry (like MeshBasicMaterial map)
                     binding: 2,
-                    visibility: ShaderStage.FRAGMENT,
+                    visibility: GPUShaderStage.FRAGMENT,
                     texture: { 
                         // Defaults: sampleType: 'float', viewDimension: '2d'
                     } 
                 },
                 { // Sampler entry (for the texture map)
                     binding: 1,
-                    visibility: ShaderStage.FRAGMENT,
+                    visibility: GPUShaderStage.FRAGMENT,
                     sampler: { 
                         // Defaults: type: 'filtering'
                     } 

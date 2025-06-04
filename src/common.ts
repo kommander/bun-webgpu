@@ -22,8 +22,7 @@ export const BufferUsageFlags = {
 } as const;
 global.GPUBufferUsage = BufferUsageFlags;
 
-export const ShaderStage = {
-  NONE: 0,
+export const GPUShaderStage: GPUShaderStage = {
   VERTEX: 1 << 0,
   FRAGMENT: 1 << 1,
   COMPUTE: 1 << 2,
