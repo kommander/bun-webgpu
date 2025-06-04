@@ -105,10 +105,14 @@ export type StructObjectType<Fields extends readonly StructField[]> = {
 
 type DefineStructReturnType<Fields extends readonly StructField[], Options extends StructDefOptions | undefined> =
     StructDef<
-        StructObjectType<Fields>, // OutputType is always the derived object type
-        Options extends { mapValue: (value: infer V) => any } // Check if mapValue exists with an inferable input type V
-            ? V // If yes, InputType is V
-            : StructObjectType<Fields> // Otherwise, InputType is the same as OutputType
+        // OutputType: if reduceValue exists, use its return type, otherwise use StructObjectType<Fields>
+        Options extends { reduceValue: (value: any) => infer R } 
+            ? R 
+            : StructObjectType<Fields>,
+        // InputType: if mapValue exists, use its input type, otherwise use StructObjectType<Fields>
+        Options extends { mapValue: (value: infer V) => any }
+            ? V 
+            : StructObjectType<Fields>
     >;
 // --- END: types ---
 
@@ -258,6 +262,7 @@ function primitivePackers(type: PrimitiveType) {
 interface StructDefOptions {
   default?: Record<string, any>; // Default values for the entire struct on unpack
   mapValue?: (value: any) => any; // Map input object before packing
+  reduceValue?: (value: any) => any; // Transform unpacked object to different type
 }
 
 const { pack: pointerPacker, unpack: pointerUnpacker } = primitivePackers('pointer');
@@ -313,7 +318,6 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       unpack = (view: DataView, off: number) => {
         // TODO: Unpack CString from pointer
         const ptrVal = pointerUnpacker(view, off);
-        // Need Bun FFI utilities to read string from pointer
         return ptrVal; // Returning pointer for now
       };
     // char* (raw string pointer, length usually external)
@@ -607,7 +611,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     },
 
     // unpack method now returns the specific inferred object type
-    unpack(buf: ArrayBuffer | SharedArrayBuffer): StructObjectType<Fields> {
+    unpack(buf: ArrayBuffer | SharedArrayBuffer): any {
       if (buf.byteLength < totalSize) {
         fatalError(`Buffer size (${buf.byteLength}) is smaller than struct size (${totalSize}) for unpacking.`);
       }
@@ -630,6 +634,12 @@ export function defineStruct<const Fields extends readonly StructField[], const 
            throw e; // Re-throw after logging context
         }
       }
+      
+      // Apply reduceValue transformation if present
+      if (structDefOptions?.reduceValue) {
+        return structDefOptions.reduceValue(result);
+      }
+      
        // Assert the final result matches the inferred type
       return result as StructObjectType<Fields>;
     },

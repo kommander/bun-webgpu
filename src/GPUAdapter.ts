@@ -8,7 +8,8 @@ import {
     WGPUErrorType, 
     type WGPUUncapturedErrorCallbackInfo, 
     WGPULimitsStruct, 
-    WGPUSupportedFeaturesStruct 
+    WGPUSupportedFeaturesStruct,
+    WGPUAdapterInfoStruct
 } from "./structs_def";
 import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
@@ -24,10 +25,19 @@ const RequestDeviceStatus = {
 
 let deviceCount = 0;
 
+const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = {
+    __brand: "GPUAdapterInfo" as const,
+    vendor: "",
+    architecture: "",
+    device: "",
+    description: "",
+};
+
 export class GPUAdapterImpl implements GPUAdapter {
     __brand: "GPUAdapter" = "GPUAdapter";
     private _features: GPUSupportedFeatures | null = null;
     private _limits: GPUSupportedLimits | null = null;
+    private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
     private _destroyed = false;
     private _devices: Map<number, GPUDeviceImpl> = new Map();
 
@@ -39,8 +49,39 @@ export class GPUAdapterImpl implements GPUAdapter {
     ) {}
 
     get info(): GPUAdapterInfo {
-        console.error('get info', this.adapterPtr);
-        throw new Error("Not implemented");
+        if (this._destroyed) {
+            return EMPTY_ADAPTER_INFO;
+        }
+
+        if (this._info === EMPTY_ADAPTER_INFO) {
+            let infoStructPtr: Pointer | null = null;
+            try {
+                const { buffer: structBuffer } = allocStruct(WGPUAdapterInfoStruct);
+                infoStructPtr = ptr(structBuffer);
+                const status = this.lib.wgpuAdapterGetInfo(this.adapterPtr, infoStructPtr);
+
+                if (status !== 1) { // WGPUStatus_Success = 1
+                    console.error(`wgpuAdapterGetInfo failed with status: ${status}`);
+                    this._info = EMPTY_ADAPTER_INFO;
+                    return this._info;
+                }
+
+                const rawInfo = WGPUAdapterInfoStruct.unpack(structBuffer);
+                this._info = Object.freeze({
+                    __brand: "GPUAdapterInfo" as const,
+                    ...rawInfo
+                });
+            } catch (e) {
+                console.error("Error calling wgpuAdapterGetInfo or unpacking struct:", e);
+                this._info = EMPTY_ADAPTER_INFO; // Cache default on error
+            } finally {
+                if (infoStructPtr) {
+                    this.lib.wgpuAdapterInfoFreeMembers(infoStructPtr);
+                }
+            }
+        }
+
+        return this._info;
     }
 
     get features(): GPUSupportedFeatures {
@@ -53,7 +94,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                 const featuresStructBuffer = new ArrayBuffer(16);
                 const featuresBuffer = new ArrayBuffer(256);
                 const featuresView = new DataView(featuresStructBuffer);
-                const featuresPtr = ptr(featuresBuffer);
+                const featuresPtr = ptr(featuresStructBuffer);
                 
                 featuresView.setBigUint64(8, BigInt(featuresPtr), true);
                 this.lib.wgpuAdapterGetFeatures(this.adapterPtr, featuresPtr);

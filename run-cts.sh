@@ -14,5 +14,10 @@ else
 fi
 cd $REPO_DIR
 pwd
-# bun "$SCRIPT_TO_RUN" "--gpu-provider=../tools/setup.ts"
-bun "$SCRIPT_TO_RUN" "--gpu-provider" "$(pwd)/../tools/setup.ts" "webgpu:*"
+
+debug_flag=$1
+if [ -z "$debug_flag" ]; then
+  debug_flag="false"
+fi
+
+DEBUG=$debug_flag bun "$SCRIPT_TO_RUN" "--gpu-provider" "$(pwd)/../tools/setup.ts" "webgpu:*"

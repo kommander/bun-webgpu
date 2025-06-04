@@ -183,6 +183,175 @@ describe("Structs FFI", () => {
             expect(unpacked.position.y).toBeCloseTo(2.0);
             expect(unpacked.scale).toBeCloseTo(3.0);
         });
+
+        it("should unpack complex nested structs with multiple levels and different types", () => {
+            const ColorEnum = defineEnum({
+                RED: 0,
+                GREEN: 1,
+                BLUE: 2
+            });
+
+            // Level 3 nested struct
+            const PositionStruct = defineStruct([
+                ['x', 'f32'],
+                ['y', 'f32'],
+                ['z', 'f32']
+            ] as const);
+
+            // Level 2 nested struct with enum and primitives
+            const MaterialStruct = defineStruct([
+                ['color', ColorEnum],
+                ['opacity', 'f32', { default: 1.0 }],
+                ['roughness', 'f32'],
+                ['metallic', 'bool_u32', { default: false }]
+            ] as const);
+
+            // Level 1 nested struct combining the above
+            const ObjectStruct = defineStruct([
+                ['id', 'u32'],
+                ['position', PositionStruct],
+                ['material', MaterialStruct],
+                ['scale', 'f32', { default: 1.0 }]
+            ] as const);
+
+            // Top level struct
+            const SceneStruct = defineStruct([
+                ['name', 'cstring'],
+                ['objectCount', 'u32'],
+                ['mainObject', ObjectStruct],
+                ['ambientLight', 'f32'],
+                ['enableShadows', 'bool_u8']
+            ] as const);
+
+            const input = {
+                name: "test-scene",
+                objectCount: 1,
+                mainObject: {
+                    id: 42,
+                    position: { x: 10.5, y: -5.2, z: 3.7 },
+                    material: {
+                        color: 'BLUE' as const,
+                        roughness: 0.8,
+                        // opacity and metallic will use defaults
+                    },
+                    // scale will use default
+                },
+                ambientLight: 0.3,
+                enableShadows: true
+            };
+
+            const packed = SceneStruct.pack(input);
+            const unpacked = SceneStruct.unpack(packed);
+
+            // Verify top level fields
+            expect(unpacked.objectCount).toBe(1);
+            expect(unpacked.ambientLight).toBeCloseTo(0.3);
+            expect(unpacked.enableShadows).toBe(true);
+
+            // Verify level 1 nested struct
+            expect(unpacked.mainObject.id).toBe(42);
+            expect(unpacked.mainObject.scale).toBeCloseTo(1.0); // default value
+
+            // Verify level 2 nested struct (position)
+            expect(unpacked.mainObject.position.x).toBeCloseTo(10.5);
+            expect(unpacked.mainObject.position.y).toBeCloseTo(-5.2);
+            expect(unpacked.mainObject.position.z).toBeCloseTo(3.7);
+
+            // Verify level 2 nested struct (material) with enum and defaults
+            expect(unpacked.mainObject.material.color).toBe('BLUE');
+            expect(unpacked.mainObject.material.roughness).toBeCloseTo(0.8);
+            expect(unpacked.mainObject.material.opacity).toBeCloseTo(1.0); // default value
+            expect(unpacked.mainObject.material.metallic).toBe(false); // default value
+        });
+
+        it("should unpack optional nested structs correctly", () => {
+            const ConfigStruct = defineStruct([
+                ['enabled', 'bool_u32', { default: false }],
+                ['timeout', 'u32', { default: 5000 }]
+            ] as const);
+
+            const ServiceStruct = defineStruct([
+                ['name', 'cstring'],
+                ['port', 'u32'],
+                ['config', ConfigStruct, { optional: true }],
+                ['fallbackPort', 'u32', { default: 8080 }]
+            ] as const);
+
+            // Test with config provided
+            const inputWithConfig = {
+                name: "test-service",
+                port: 3000,
+                config: {
+                    enabled: true,
+                    timeout: 10000
+                }
+            };
+
+            const packedWithConfig = ServiceStruct.pack(inputWithConfig);
+            const unpackedWithConfig = ServiceStruct.unpack(packedWithConfig);
+
+            expect(unpackedWithConfig.port).toBe(3000);
+            expect(unpackedWithConfig.fallbackPort).toBe(8080); // default
+            expect(unpackedWithConfig.config).toBeDefined();
+            expect(unpackedWithConfig.config!.enabled).toBe(true);
+            expect(unpackedWithConfig.config!.timeout).toBe(10000);
+
+            // Test with empty config (should get defaults)
+            const inputWithEmptyConfig = {
+                name: "test-service-2",
+                port: 4000,
+                config: {} // Empty config should get defaults
+            };
+
+            const packedWithEmptyConfig = ServiceStruct.pack(inputWithEmptyConfig);
+            const unpackedWithEmptyConfig = ServiceStruct.unpack(packedWithEmptyConfig);
+
+            expect(unpackedWithEmptyConfig.port).toBe(4000);
+            expect(unpackedWithEmptyConfig.config).toBeDefined();
+            expect(unpackedWithEmptyConfig.config!.enabled).toBe(false); // default value
+            expect(unpackedWithEmptyConfig.config!.timeout).toBe(5000); // explicit default
+        });
+
+        it("should handle nested structs with different alignments correctly", () => {
+            // Create structs with different alignment requirements
+            const SmallStruct = defineStruct([
+                ['a', 'u8'],
+                ['b', 'u8']
+            ] as const);
+
+            const LargeStruct = defineStruct([
+                ['x', 'u64'],
+                ['y', 'f64']
+            ] as const);
+
+            const MixedStruct = defineStruct([
+                ['flag', 'u8'],
+                ['small', SmallStruct], // Should be aligned properly
+                ['big', LargeStruct],   // Should force 8-byte alignment
+                ['value', 'u32']
+            ] as const);
+
+            const input = {
+                flag: 255,
+                small: { a: 10, b: 20 },
+                big: { x: 0x1234567890ABCDEFn, y: 3.14159 },
+                value: 0xDEADBEEF
+            };
+
+            const packed = MixedStruct.pack(input);
+            const unpacked = MixedStruct.unpack(packed);
+
+            // Verify all fields unpacked correctly despite alignment complexity
+            expect(unpacked.flag).toBe(255);
+            expect(unpacked.small.a).toBe(10);
+            expect(unpacked.small.b).toBe(20);
+            expect(unpacked.big.x).toBe(0x1234567890ABCDEFn);
+            expect(unpacked.big.y).toBeCloseTo(3.14159);
+            expect(unpacked.value).toBe(0xDEADBEEF);
+
+            // Verify struct has expected size (considering alignment)
+            expect(MixedStruct.size).toBeGreaterThan(1 + 2 + 16 + 4); // At least the sum of field sizes
+        });
     });
 
     describe("arrays", () => {
@@ -274,6 +443,216 @@ describe("Structs FFI", () => {
             const unpacked = TestStruct.unpack(packed);
 
             expect(unpacked.value).toBe(42);
+        });
+
+        it("should apply reduceValue transformation", () => {
+            const StringStruct = defineStruct([
+                ['data', 'char*'],
+                ['length', 'u64'],
+            ] as const, {
+                mapValue: (v: string) => ({
+                    data: v,
+                    length: Buffer.byteLength(v),
+                }),
+                reduceValue: (v: { data: number; length: bigint }) => {
+                    // @ts-ignore - toArrayBuffer pointer type issue
+                    const buffer = toArrayBuffer(v.data, 0, Number(v.length));
+                    return new TextDecoder().decode(buffer);
+                },
+            });
+
+            const testString = "Hello, World! 🌍";
+            const packed = StringStruct.pack(testString);
+            const unpacked = StringStruct.unpack(packed);
+
+            // The unpacked value should be the original string (transformed by reduceValue)
+            expect(typeof unpacked).toBe('string');
+            expect(unpacked).toBe(testString);
+        });
+
+        it("should support both mapValue and reduceValue with different types", () => {
+            interface Point3D {
+                x: number;
+                y: number;
+                z: number;
+            }
+
+            const Point3DStruct = defineStruct([
+                ['x', 'f32'],
+                ['y', 'f32'],
+                ['z', 'f32'],
+                ['magnitude', 'f32'] // Computed field
+            ] as const, {
+                mapValue: (point: Point3D) => ({
+                    x: point.x,
+                    y: point.y,
+                    z: point.z,
+                    magnitude: Math.sqrt(point.x * point.x + point.y * point.y + point.z * point.z)
+                }),
+                reduceValue: (packed: { x: number; y: number; z: number; magnitude: number }) => ({
+                    x: packed.x,
+                    y: packed.y,
+                    z: packed.z,
+                    // Note: we can return a different structure or add computed properties
+                    length: packed.magnitude,
+                    normalized: {
+                        x: packed.x / packed.magnitude,
+                        y: packed.y / packed.magnitude,
+                        z: packed.z / packed.magnitude,
+                    }
+                })
+            });
+
+            const inputPoint: Point3D = { x: 3, y: 4, z: 5 };
+            const packed = Point3DStruct.pack(inputPoint);
+            const unpacked = Point3DStruct.unpack(packed);
+
+            // Verify the transformed output
+            expect(unpacked.x).toBeCloseTo(3);
+            expect(unpacked.y).toBeCloseTo(4);
+            expect(unpacked.z).toBeCloseTo(5);
+            expect(unpacked.length).toBeCloseTo(Math.sqrt(50)); // ~7.07
+            expect(unpacked.normalized.x).toBeCloseTo(3 / Math.sqrt(50));
+            expect(unpacked.normalized.y).toBeCloseTo(4 / Math.sqrt(50));
+            expect(unpacked.normalized.z).toBeCloseTo(5 / Math.sqrt(50));
+        });
+
+        it("should work without reduceValue (normal struct behavior)", () => {
+            const NormalStruct = defineStruct([
+                ['a', 'u32'],
+                ['b', 'f32']
+            ] as const);
+
+            const input = { a: 42, b: 3.14 };
+            const packed = NormalStruct.pack(input);
+            const unpacked = NormalStruct.unpack(packed);
+
+            // Should return the raw struct object
+            expect(unpacked.a).toBe(42);
+            expect(unpacked.b).toBeCloseTo(3.14);
+            expect(typeof unpacked).toBe('object');
+        });
+
+        it("should handle nested structs with reduceValue transformations", () => {
+            // Create a nested struct that transforms a coordinate pair into a complex number
+            const ComplexNumberStruct = defineStruct([
+                ['real', 'f32'],
+                ['imaginary', 'f32']
+            ] as const, {
+                mapValue: (complex: { re: number; im: number }) => ({
+                    real: complex.re,
+                    imaginary: complex.im
+                }),
+                reduceValue: (packed: { real: number; imaginary: number }) => ({
+                    re: packed.real,
+                    im: packed.imaginary,
+                    magnitude: Math.sqrt(packed.real * packed.real + packed.imaginary * packed.imaginary),
+                    phase: Math.atan2(packed.imaginary, packed.real),
+                    toString: () => `${packed.real} + ${packed.imaginary}i`
+                })
+            });
+
+            // Create a parent struct that contains the transformed nested struct
+            const SignalStruct = defineStruct([
+                ['frequency', 'f32'],
+                ['amplitude', ComplexNumberStruct],
+                ['timestamp', 'u64']
+            ] as const, {
+                reduceValue: (packed: { frequency: number; amplitude: any; timestamp: bigint }) => ({
+                    freq: packed.frequency,
+                    signal: packed.amplitude, // This should be the transformed complex number
+                    time: Number(packed.timestamp),
+                    powerLevel: packed.amplitude.magnitude * packed.frequency
+                })
+            });
+
+            const input = {
+                frequency: 440.0, // A4 note
+                amplitude: { re: 3.0, im: 4.0 }, // Complex number input
+                timestamp: 1234567890n
+            };
+
+            const packed = SignalStruct.pack(input);
+            const unpacked = SignalStruct.unpack(packed);
+
+            // Verify the outer transformation worked
+            expect(unpacked.freq).toBeCloseTo(440.0);
+            expect(unpacked.time).toBe(1234567890);
+            expect(unpacked.powerLevel).toBeCloseTo(440.0 * 5.0); // magnitude of 3+4i is 5
+
+            // Verify the nested struct transformation worked
+            expect(unpacked.signal.re).toBeCloseTo(3.0);
+            expect(unpacked.signal.im).toBeCloseTo(4.0);
+            expect(unpacked.signal.magnitude).toBeCloseTo(5.0); // sqrt(3^2 + 4^2)
+            expect(unpacked.signal.phase).toBeCloseTo(Math.atan2(4, 3));
+            expect(typeof unpacked.signal.toString).toBe('function');
+            expect(unpacked.signal.toString()).toBe('3 + 4i');
+        });
+
+        it("should handle multiple nested structs with different reduceValue transformations", () => {
+            // Version struct that transforms to a string
+            const VersionStruct = defineStruct([
+                ['major', 'u32'],
+                ['minor', 'u32'],
+                ['patch', 'u32']
+            ] as const, {
+                reduceValue: (v: { major: number; minor: number; patch: number }) => 
+                    `${v.major}.${v.minor}.${v.patch}`
+            });
+
+            // Status struct that transforms to an enum-like object
+            const StatusStruct = defineStruct([
+                ['code', 'u32'],
+                ['message', 'char*'],
+                ['severity', 'u32']
+            ] as const, {
+                mapValue: (status: { code: number; msg: string; level: number }) => ({
+                    code: status.code,
+                    message: status.msg,
+                    severity: status.level
+                }),
+                reduceValue: (s: { code: number; message: number; severity: number }) => ({
+                    isOk: s.code === 0,
+                    isWarning: s.severity === 1,
+                    isError: s.severity === 2,
+                    statusCode: s.code,
+                    // Note: message is a pointer in the packed struct
+                    messagePtr: s.message
+                })
+            });
+
+            // Parent struct containing multiple transformed nested structs
+            const ApplicationStruct = defineStruct([
+                ['name', 'cstring'],
+                ['version', VersionStruct],
+                ['status', StatusStruct],
+                ['uptime', 'u64']
+            ] as const);
+
+            const input = {
+                name: "MyApp",
+                version: { major: 2, minor: 1, patch: 3 },
+                status: { code: 0, msg: "OK", level: 0 },
+                uptime: 86400n // 1 day in seconds
+            };
+
+            const packed = ApplicationStruct.pack(input);
+            const unpacked = ApplicationStruct.unpack(packed);
+
+            // Verify the version was transformed to a string
+            expect(typeof unpacked.version).toBe('string');
+            expect(unpacked.version).toBe('2.1.3');
+
+            // Verify the status was transformed to the enum-like object
+            const transformedStatus = unpacked.status as { isOk: boolean; isWarning: boolean; isError: boolean; statusCode: number; messagePtr: number };
+            expect(transformedStatus.isOk).toBe(true);
+            expect(transformedStatus.isWarning).toBe(false);
+            expect(transformedStatus.isError).toBe(false);
+            expect(transformedStatus.statusCode).toBe(0);
+            expect(typeof transformedStatus.messagePtr).toBe('number');
+
+            // Verify other fields remain unchanged
+            expect(unpacked.uptime).toBe(86400n);
         });
 
         it("should use struct-level defaults", () => {
@@ -432,8 +811,6 @@ describe("Structs FFI", () => {
             
             // Get the field layout to understand offsets
             const entryLayout = BindGroupLayoutEntryStruct.describe();
-            console.log('Entry struct layout:', entryLayout);
-            console.log('Entry struct size:', entryStructSize);
             
             // Read the entries array buffer
             // @ts-ignore - ignoring the Pointer type error as requested
@@ -696,12 +1073,6 @@ describe("Structs FFI", () => {
             const viewDimension = view.getUint32(textureOffset + 12, true); // After sampleType
             const multisampled = view.getUint32(textureOffset + 16, true); // After viewDimension
             
-            console.log('=== ENUM DEFAULT TEST ===');
-            console.log('texture offset:', textureOffset);
-            console.log('sampleType (should be 2):', sampleType);
-            console.log('viewDimension (should be 2):', viewDimension);
-            console.log('multisampled (should be 0):', multisampled);
-            
             // These should be the enum values, not zeros!
             expect(sampleType).toBe(2); // 'float' enum value
             expect(viewDimension).toBe(2); // '2d' enum value  
@@ -719,8 +1090,6 @@ describe("Structs FFI", () => {
             const emptyObjectPacked = SamplerStruct.pack({});
             
             const emptyView = new DataView(emptyObjectPacked);
-            
-            console.log('Empty object packed type value:', emptyView.getUint32(0, true));
             
             // Empty object should apply the default value of 2
             expect(emptyView.getUint32(0, true)).toBe(2);
@@ -745,8 +1114,6 @@ describe("Structs FFI", () => {
             const view = new DataView(packed);
             const binding = view.getUint32(0, true);
             const samplerType = view.getUint32(4, true); // sampler.type after binding field
-            
-            console.log('Nested - binding:', binding, 'samplerType:', samplerType);
             
             expect(binding).toBe(1);
             expect(samplerType).toBe(2); // Should have default applied

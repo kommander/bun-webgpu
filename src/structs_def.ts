@@ -1,4 +1,4 @@
-import { type Pointer } from "bun:ffi";
+import { toArrayBuffer, type Pointer } from "bun:ffi";
 import { fatalError } from "./utils/error";
 import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
 
@@ -128,7 +128,11 @@ export const WGPUStringView = defineStruct([
     mapValue: (v: string) => ({
         data: v,
         length: Buffer.byteLength(v),
-    })
+    }),
+    reduceValue: (v: { data: Pointer; length: bigint }) => {
+        const buffer = toArrayBuffer(v.data, 0, Number(v.length));
+        return new TextDecoder().decode(buffer);
+    },
 });
 
 export function pointerValue(ptr: Pointer | null): bigint {
@@ -499,6 +503,20 @@ export const WGPUUncapturedErrorCallbackInfoStruct = defineStruct([
     ['callback', 'pointer'],
     ['userdata1', 'pointer', { optional: true }],
     ['userdata2', 'pointer', { optional: true }],
+]);
+
+export const WGPUAdapterInfoStruct = defineStruct([
+    ['nextInChain', 'pointer', { optional: true }],
+    ['vendor', WGPUStringView],
+    ['architecture', WGPUStringView],
+    ['device', WGPUStringView],
+    ['description', WGPUStringView],
+    ['backendType', 'u32'],
+    ['adapterType', 'u32'],
+    ['vendorID', 'u32'],
+    ['deviceID', 'u32'],
+    ['subgroupMinSize', 'u32'],
+    ['subgroupMaxSize', 'u32'],
 ]);
 
 export const WGPUDeviceDescriptorStruct = defineStruct([
