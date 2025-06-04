@@ -202,21 +202,21 @@ export class GPUQueueImpl implements GPUQueue {
             return;
         }
 
-        const dataPtr = ptr(arrayBuffer, byteOffsetInData);
-        const packedDestination = WGPUTexelCopyTextureInfoStruct.pack(destination);
-        const normalizedWriteSize = normalizeGPUExtent3DStrict(writeSize);
-        
-        // Ensure rowsPerImage is set, defaulting to copy height
-        const layoutForPacking: GPUTexelCopyBufferLayout = {
-             offset: dataLayout.offset ?? 0,
-             bytesPerRow: dataLayout.bytesPerRow,
-             rowsPerImage: dataLayout.rowsPerImage ?? normalizedWriteSize.height, 
-        };
-        if (!layoutForPacking.bytesPerRow) {
+        if (!dataLayout.bytesPerRow) {
             fatalError("queueWriteTexture: dataLayout.bytesPerRow is required.");
         }
+
+        const normalizedWriteSize = normalizeGPUExtent3DStrict(writeSize);
+        const packedDestination = WGPUTexelCopyTextureInfoStruct.pack(destination);
+        const layoutForPacking: GPUTexelCopyBufferLayout = {
+            offset: dataLayout.offset ?? 0,
+            bytesPerRow: dataLayout.bytesPerRow,
+            rowsPerImage: dataLayout.rowsPerImage ?? normalizedWriteSize.height, 
+        };
+        
         const packedLayout = WGPUTexelCopyBufferLayoutStruct.pack(layoutForPacking);
         const packedWriteSize = WGPUExtent3DStruct.pack(normalizedWriteSize);
+        const dataPtr = ptr(arrayBuffer, byteOffsetInData);
 
         try {
             this.lib.wgpuQueueWriteTexture(
