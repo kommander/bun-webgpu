@@ -134,6 +134,10 @@ function _loadLibrary(libPath?: string) {
       // Add other adapter functions like GetFeatures, GetLimits, HasFeature etc.
 
       // --- Device Functions ---
+      zwgpuDeviceGetAdapterInfo: {
+        args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, info: *mut WGPUAdapterInfo
+        returns: FFIType.u32, // WGPUStatus
+      },
       zwgpuDeviceCreateBuffer: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUBufferDescriptor
         returns: FFIType.pointer, // -> WGPUBuffer

@@ -15,23 +15,18 @@ import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
 import { allocStruct } from "./structs_ffi";
 import { DEFAULT_SUPPORTED_LIMITS } from "./common";
+import { GPUAdapterInfoImpl, normalizeIdentifier } from "./shared";
 
 const RequestDeviceStatus = {
   Success: 1,
-  CallbackCancelled: 2, // Not typically used directly from JS
+  CallbackCancelled: 2,
   Error: 3,
   Unknown: 4,
 } as const;
 
 let deviceCount = 0;
 
-const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = {
-    __brand: "GPUAdapterInfo" as const,
-    vendor: "",
-    architecture: "",
-    device: "",
-    description: "",
-};
+const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
 
 export class GPUAdapterImpl implements GPUAdapter {
     __brand: "GPUAdapter" = "GPUAdapter";
@@ -67,9 +62,14 @@ export class GPUAdapterImpl implements GPUAdapter {
                 }
 
                 const rawInfo = WGPUAdapterInfoStruct.unpack(structBuffer);
-                this._info = Object.freeze({
-                    __brand: "GPUAdapterInfo" as const,
-                    ...rawInfo
+                this._info = Object.assign(Object.create(GPUAdapterInfoImpl.prototype), rawInfo, {
+                    vendor: rawInfo.vendor,
+                    architecture: rawInfo.architecture,
+                    description: rawInfo.description,
+                    device: normalizeIdentifier(rawInfo.device),
+                    subgroupMinSize: rawInfo.subgroupMinSize,
+                    subgroupMaxSize: rawInfo.subgroupMaxSize,
+                    isFallbackAdapter: false,
                 });
             } catch (e) {
                 console.error("Error calling wgpuAdapterGetInfo or unpacking struct:", e);
@@ -122,6 +122,7 @@ export class GPUAdapterImpl implements GPUAdapter {
             console.warn("Accessing limits on destroyed GPUAdapter");
             return DEFAULT_SUPPORTED_LIMITS;
         }
+
         if (this._limits === null) {
             let limitsStructPtr: Pointer | null = null;
             try {
@@ -234,7 +235,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                     userdata1: Pointer | null,
                     userdata2: Pointer | null
                 ) => {
-                    console.log('=== DEVICE LOST ===', devicePtr, reason, messagePtr, userdata1, userdata2);
+                    // TODO:
                     // this.handleDeviceLost(devicePtr, typeInt, messagePtr, userdata1, userdata2);
                 },
                 {

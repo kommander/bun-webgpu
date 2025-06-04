@@ -161,6 +161,10 @@ interface EnumDef<T extends Record<string, number>> {
   enum: T;
 }
 
+function enumTypeError(value: string): never {
+  throw new TypeError(`Invalid enum value: ${value}`);
+}
+
 // Enums
 export function defineEnum<T extends Record<string, number>>(mapping: T, base: Exclude<PrimitiveType, 'bool_u8' | 'bool_u32'> = 'u32'): EnumDef<T> {
   const reverse = Object.fromEntries(Object.entries(mapping).map(([k, v]) => [v, k]));
@@ -168,10 +172,10 @@ export function defineEnum<T extends Record<string, number>>(mapping: T, base: E
     __type: 'enum',
     type: base,
     to(value: keyof T): number {
-      return typeof value === 'number' ? value : mapping[value] ?? fatalError(`Invalid enum value: ${String(value)}`);
+      return typeof value === 'number' ? value : mapping[value] ?? enumTypeError(String(value));
     },
     from(value: number): keyof T {
-      return reverse[value] ?? fatalError(`Invalid enum value: ${value}`);
+      return reverse[value] ?? enumTypeError(String(value));
     },
     enum: mapping,
   };

@@ -1,7 +1,7 @@
 
 import { type Pointer, ptr } from "bun:ffi";
 import { BufferUsageFlags, DEFAULT_SUPPORTED_LIMITS } from "./common";
-import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct } from "./structs_def";
+import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
 import { type FFISymbols } from "./ffi";
@@ -21,6 +21,8 @@ import { fatalError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
+import { normalizeIdentifier } from "./shared";
+import { GPUAdapterInfoImpl } from "./shared";
 
 export const TextureDimension: Record<GPUTextureDimension, number> = {
     "1d": 0, // '1d' -> tdim_1d = 0
@@ -63,6 +65,8 @@ export class DeviceTicker {
     }
 }
 
+const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
+
 export class GPUDeviceImpl implements GPUDevice {
     readonly ptr: Pointer;
     readonly queuePtr: Pointer;
@@ -70,8 +74,9 @@ export class GPUDeviceImpl implements GPUDevice {
     private _userUncapturedErrorCallback: DeviceErrorCallback | null = null;
     private _ticker: DeviceTicker;
     private _lost: Promise<GPUDeviceLostInfo>;
-    private _features: GPUSupportedFeatures | null = null; // Cache for features
-    private _limits: GPUSupportedLimits | null = null; // Cache for limits
+    private _features: GPUSupportedFeatures | null = null;
+    private _limits: GPUSupportedLimits | null = null;
+    private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
     private _destroyed = false;
 
     __brand: "GPUDevice" = "GPUDevice";
@@ -177,6 +182,7 @@ export class GPUDeviceImpl implements GPUDevice {
             console.warn("Accessing limits on destroyed GPUDevice");
             return DEFAULT_SUPPORTED_LIMITS;
         }
+
         if (this._limits === null) {
             let limitsStructPtr: Pointer | null = null;
              try {
@@ -191,7 +197,7 @@ export class GPUDeviceImpl implements GPUDevice {
                 }
 
                 const jsLimits = WGPULimitsStruct.unpack(structBuffer);
-
+                // console.log("jsLimits", jsLimits);
                 this._limits = Object.freeze(jsLimits as unknown as GPUSupportedLimits);
 
             } catch (e) {
@@ -204,7 +210,44 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     get adapterInfo(): GPUAdapterInfo {
-        return fatalError('adapterInfo not implemented');
+        if (this._destroyed) {
+            return EMPTY_ADAPTER_INFO;
+        }
+
+        if (this._info === EMPTY_ADAPTER_INFO) {
+            let infoStructPtr: Pointer | null = null;
+            try {
+                const { buffer: structBuffer } = allocStruct(WGPUAdapterInfoStruct);
+                infoStructPtr = ptr(structBuffer);
+                const status = this.lib.wgpuDeviceGetAdapterInfo(this.devicePtr, infoStructPtr);
+
+                if (status !== 1) { // WGPUStatus_Success = 1
+                    console.error(`wgpuAdapterGetInfo failed with status: ${status}`);
+                    this._info = EMPTY_ADAPTER_INFO;
+                    return this._info;
+                }
+
+                const rawInfo = WGPUAdapterInfoStruct.unpack(structBuffer);
+                this._info = Object.assign(Object.create(GPUAdapterInfoImpl.prototype), rawInfo, {
+                    vendor: rawInfo.vendor,
+                    architecture: rawInfo.architecture,
+                    description: rawInfo.description,
+                    device: normalizeIdentifier(rawInfo.device),
+                    subgroupMinSize: rawInfo.subgroupMinSize,
+                    subgroupMaxSize: rawInfo.subgroupMaxSize,
+                    isFallbackAdapter: false,
+                });
+            } catch (e) {
+                console.error("Error calling wgpuAdapterGetInfo or unpacking struct:", e);
+                this._info = EMPTY_ADAPTER_INFO;
+            } finally {
+                if (infoStructPtr) {
+                    this.lib.wgpuAdapterInfoFreeMembers(infoStructPtr);
+                }
+            }
+        }
+
+        return this._info;
     }
 
     get queue(): GPUQueue {

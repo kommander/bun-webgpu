@@ -77,8 +77,14 @@ export class GPUImpl implements GPU {
         
         try {
             if (options) {
-                const buffer = WGPURequestAdapterOptionsStruct.pack(options); 
-                packedOptionsPtr = ptr(buffer);
+                try {
+                    const buffer = WGPURequestAdapterOptionsStruct.pack(options); 
+                    packedOptionsPtr = ptr(buffer);
+                } catch (e) {
+                    // console.error("Error packing WGPURequestAdapterOptionsStruct", e);
+                    resolve(null);
+                    return;
+                }
             }
 
             const callbackFn = (status: number, adapterPtr: Pointer | null, messagePtr: Pointer | null, messageSize: number, userdata1: Pointer | null, userdata2: Pointer | null) => {
@@ -89,7 +95,6 @@ export class GPUImpl implements GPU {
                     if (adapterPtr) {
                         resolve(new GPUAdapterImpl(adapterPtr, this.instancePtr, this.lib, this._ticker));
                     } else {
-                        console.error("WGPU Error: requestAdapter Success but adapter pointer is null.");
                         reject(new Error(`WGPU Error (Success but null adapter): ${message || 'No message.'}`));
                     }
                 } else if (status === RequestAdapterStatus.Unavailable) {
@@ -101,8 +106,6 @@ export class GPUImpl implements GPU {
 
                 if (jsCallback) {
                     jsCallback.close();
-                } else {
-                    console.warn("requestAdapter C-Callback: jsCallback handle was null, couldn't close.");
                 }
             };
 
@@ -131,7 +134,6 @@ export class GPUImpl implements GPU {
             );
             this._ticker.register();
         } catch (e) {
-            console.error("Error during requestAdapter setup or FFI call:", e);
             if (jsCallback) jsCallback.close();
             reject(e);
         }

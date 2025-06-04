@@ -92,6 +92,10 @@ pub export fn zwgpuDeviceRelease(device: c.WGPUDevice) void {
     c.wgpuDeviceRelease(device);
 }
 
+pub export fn zwgpuDeviceGetAdapterInfo(device: c.WGPUDevice, info_ptr: *c.WGPUAdapterInfo) c.WGPUStatus {
+    return c.wgpuDeviceGetAdapterInfo(device, info_ptr);
+}
+
 pub export fn zwgpuDeviceGetQueue(device: c.WGPUDevice) c.WGPUQueue {
     return c.wgpuDeviceGetQueue(device);
 }

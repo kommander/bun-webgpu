@@ -3,6 +3,8 @@
 import { type Pointer } from "bun:ffi";
 import { loadLibrary, type FFISymbols } from "./ffi";
 import { GPUImpl } from "./GPU";
+import { GPUDeviceImpl } from "./GPUDevice";
+import { GPUAdapterInfoImpl } from "./shared";
 
 export * from "./mocks/GPUCanvasContext";
 export * from "./common";
@@ -32,6 +34,15 @@ export async function globals({ libPath }: { libPath?: string } = {}) {
       gpu: gpuInstance,
     };
   }
+
+  class GPUDevice extends GPUDeviceImpl {
+    // @ts-ignore
+    constructor() {
+      throw new TypeError('Illegal constructor');
+    }
+  }
+  global.GPUDevice = GPUDevice as any;
+  global.GPUAdapterInfo = GPUAdapterInfoImpl as any;
 }
 
 export async function createWebGPUDevice() {
