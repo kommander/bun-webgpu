@@ -3,7 +3,7 @@ import { type Pointer } from "bun:ffi";
 import {
     createGPUInstance,
 } from "./index";
-import { BufferUsageFlags, MapModeFlags, TextureUsageFlags, GPUShaderStage } from "./common";
+import { BufferUsageFlags, TextureUsageFlags, GPUShaderStage } from "./common";
 import type { GPUImpl } from "./GPU";
 
 // Global variables for the test suite
@@ -215,7 +215,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 console.log("MapWrite Test: Queue finished.");
 
                 // 5. Map the buffer for WRITE (with manual ticking)
-                await mappableBuffer!.mapAsync(MapModeFlags.WRITE);
+                await mappableBuffer!.mapAsync(GPUMapMode.WRITE);
                 console.log("MapWrite Test: Buffer mapped.");
 
                 // 6. Get mapped range and write data
@@ -280,7 +280,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                  console.log("MapRead Test: Queue finished.");
 
                  // 4. Map the buffer for READ (with manual ticking)
-                 await readableBuffer!.mapAsync(MapModeFlags.READ);
+                 await readableBuffer!.mapAsync(GPUMapMode.READ);
                  console.log("MapRead Test: Buffer mapped.");
 
                  // 5. Get mapped range and read data
@@ -328,7 +328,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                  expect(buffer).not.toBeNull();
 
                  // Initiate the mapAsync call that should fail
-                 const mapPromise = buffer!.mapAsync(MapModeFlags.WRITE)
+                 const mapPromise = buffer!.mapAsync(GPUMapMode.WRITE)
                     .then(() => { 
                         mapPromiseResolved = true; 
                         console.error("AlreadyMapped Test: Promise resolved unexpectedly!"); 
@@ -374,12 +374,12 @@ describe("bun-webgpu FFI Wrapper", () => {
                  expect(buffer).not.toBeNull();
 
                  // Initiate the first map (don't await yet)
-                 const firstMapPromise = buffer!.mapAsync(MapModeFlags.WRITE)
+                 const firstMapPromise = buffer!.mapAsync(GPUMapMode.WRITE)
                     .then(() => { firstMapSucceeded = true; console.log("PendingMap Test: First map succeeded.") })
                     .catch((err) => { throw new Error("PendingMap Test: First map unexpectedly failed!", err); });
 
                  // Immediately try to initiate the second map
-                 const secondMapPromise = buffer!.mapAsync(MapModeFlags.WRITE);
+                 const secondMapPromise = buffer!.mapAsync(GPUMapMode.WRITE);
 
                  // Tick and wait for the SECOND map to fail
                  console.log("PendingMap Test: Ticking, expecting second map to fail...");
@@ -474,7 +474,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 await  queue!.onSubmittedWorkDone();
 
                 // 6. Map readback buffer and verify clear
-                await readbackBuffer!.mapAsync(MapModeFlags.READ);
+                await readbackBuffer!.mapAsync(GPUMapMode.READ);
 
                 const mappedRange = readbackBuffer!.getMappedRange(0, bufferSize);
                 expect(mappedRange).not.toBeNull();
@@ -508,7 +508,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 });
                 expect(buffer).not.toBeNull();
 
-                const mapPromise = buffer!.mapAsync(MapModeFlags.WRITE)
+                const mapPromise = buffer!.mapAsync(GPUMapMode.WRITE)
                     .catch((err) => {
                         console.log("UnmapBeforeResolve Test: Caught expected rejection", err);
                         expect(err).toBeInstanceOf(Error);
@@ -547,7 +547,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                  });
                  expect(buffer).not.toBeNull();
 
-                 const mapPromise = buffer!.mapAsync(MapModeFlags.WRITE, 0, bufferSize)
+                 const mapPromise = buffer!.mapAsync(GPUMapMode.WRITE, 0, bufferSize)
                      .catch((err) => {
                          console.log("DestroyBeforeResolve Test: Caught expected rejection", err);
                          expect(err).toBeInstanceOf(Error);
@@ -637,7 +637,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 await queue!.onSubmittedWorkDone();
 
                 // 6. Map readback buffer and verify data
-                await readbackBuffer!.mapAsync(MapModeFlags.READ, 0, bufferSize);
+                await readbackBuffer!.mapAsync(GPUMapMode.READ, 0, bufferSize);
 
                 const mappedRange = readbackBuffer!.getMappedRange(0, bufferSize);
                 expect(mappedRange).not.toBeNull();
@@ -1256,7 +1256,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 await queue!.onSubmittedWorkDone();
 
                 // 6. Map readback buffer and verify data
-                await readbackBuffer!.mapAsync(MapModeFlags.READ);
+                await readbackBuffer!.mapAsync(GPUMapMode.READ);
 
                 const mappedRange = readbackBuffer!.getMappedRange(0, bufferSize);
                 expect(mappedRange).not.toBeNull();
@@ -1364,7 +1364,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 await queue!.onSubmittedWorkDone();
 
                 // 6. Map readback buffer and verify data
-                await readbackBuffer!.mapAsync(MapModeFlags.READ);
+                await readbackBuffer!.mapAsync(GPUMapMode.READ);
 
                 const mappedRange = readbackBuffer!.getMappedRange(0, readbackBufferSize);
                 expect(mappedRange).not.toBeNull();
@@ -1484,7 +1484,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 await queue!.onSubmittedWorkDone();
 
                 // 6. Map readback buffer and verify data
-                await readbackBuffer!.mapAsync(MapModeFlags.READ);
+                await readbackBuffer!.mapAsync(GPUMapMode.READ);
 
                 const mappedRange = readbackBuffer!.getMappedRange(0, readbackBufferSize);
                 expect(mappedRange).not.toBeNull();
@@ -1631,7 +1631,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 await queue!.onSubmittedWorkDone();
 
                 // 8. Map readback buffer and verify data
-                await readbackBuffer!.mapAsync(MapModeFlags.READ);
+                await readbackBuffer!.mapAsync(GPUMapMode.READ);
 
                 const mappedRange = readbackBuffer!.getMappedRange(0, bufferSize);
                 expect(mappedRange).not.toBeNull();
@@ -1770,7 +1770,7 @@ describe("bun-webgpu FFI Wrapper", () => {
                 await queue!.onSubmittedWorkDone();
 
                 // 8. Map readback buffer and verify data
-                await readbackBuffer!.mapAsync(MapModeFlags.READ);
+                await readbackBuffer!.mapAsync(GPUMapMode.READ);
 
                 const mappedRange = readbackBuffer!.getMappedRange(0, bufferSize);
                 expect(mappedRange).not.toBeNull();

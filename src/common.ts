@@ -28,9 +28,9 @@ export const GPUShaderStage: GPUShaderStage = {
   COMPUTE: 1 << 2,
 } as const;
 
-export const MapModeFlags = {
-    READ: 1 << 0,
-    WRITE: 1 << 1,
+global.GPUMapMode = {
+  READ: 1 << 0,
+  WRITE: 1 << 1,
 } as const;
 
 export const DEFAULT_SUPPORTED_LIMITS: GPUSupportedLimits = Object.freeze({

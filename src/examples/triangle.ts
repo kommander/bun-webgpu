@@ -4,7 +4,6 @@ import {
   createGPUInstance, 
   BufferUsageFlags, 
   TextureUsageFlags,
-  MapModeFlags,
 } from '..';
 import type { GPUImpl } from "../GPU";
 
@@ -162,7 +161,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       await queue!.onSubmittedWorkDone();
 
       // 5. Map Readback Buffer
-      await readbackBuffer!.mapAsync(MapModeFlags.READ, 0, readbackBufferSize);
+      await readbackBuffer!.mapAsync(GPUMapMode.READ, 0, readbackBufferSize);
       const mappedData = readbackBuffer!.getMappedRange(0, readbackBufferSize);
 
       if (!mappedData) {
@@ -211,7 +210,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       console.log("Second copy finished.");
 
       console.log("Mapping second readback buffer...");
-      await readbackBuffer2!.mapAsync(MapModeFlags.READ, 0, readbackBufferSize);
+      await readbackBuffer2!.mapAsync(GPUMapMode.READ, 0, readbackBufferSize);
       const mappedData2 = readbackBuffer2!.getMappedRange(0, readbackBufferSize);
       if (!mappedData2) {
         console.error("Failed to map second readback buffer.");

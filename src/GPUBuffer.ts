@@ -38,7 +38,7 @@ export class GPUBufferImpl implements GPUBuffer {
       this._descriptor = descriptor;
       this._mapState = descriptor.mappedAtCreation ? 'mapped' : 'unmapped';
       this._mapCallback = new JSCallback(
-        (status: number, messagePtr: Pointer | null, messageSize: number, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
+        (status: number, messagePtr: Pointer | null, messageSize: bigint, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
           this._pendingMap = null;
           
@@ -49,7 +49,20 @@ export class GPUBufferImpl implements GPUBuffer {
               this._mapState = 'unmapped';
               console.error('WGPU Buffer Map Error', status);
               const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
-              const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr, 0, messageSize)).toString() : null;
+              let arrayBuffer: ArrayBuffer | null = null;
+              if (messagePtr) {
+                arrayBuffer = toArrayBuffer(messagePtr, 0, Number(messageSize));
+              }
+
+              let message = 'Could not decode error message';
+              if (arrayBuffer) {
+                if (arrayBuffer instanceof Error) {
+                  message = arrayBuffer.message;
+                } else {
+                  message = Buffer.from(arrayBuffer).toString();
+                }
+              }
+
               this._mapCallbackReject?.(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
           }
 
