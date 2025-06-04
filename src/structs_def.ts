@@ -554,7 +554,11 @@ export const WGPUExtent3DStruct = defineStruct([
     ['width', 'u32'],
     ['height', 'u32', { default: 1 }],
     ['depthOrArrayLayers', 'u32', { default: 1 }],
-]);
+], {
+    mapValue: (v: GPUExtent3DStrict) => {
+        return normalizeGPUExtent3DStrict(v);
+    }
+});
 
 export const WGPUTextureDimension = defineEnum({
     undefined: 0,
@@ -1085,7 +1089,19 @@ export const WGPUOrigin3DStruct = defineStruct([
     ['x', 'u32', { default: 0 }],
     ['y', 'u32', { default: 0 }],
     ['z', 'u32', { default: 0 }],
-]);
+], {
+    mapValue: (v: GPUOrigin3D) => {
+        if (Symbol.iterator in v) {
+            const arr = Array.from(v);
+            return {
+                x: arr[0] ?? 0,
+                y: arr[1] ?? 0,
+                z: arr[2] ?? 0
+            };
+        }
+        return v;
+    }
+});
 
 export const WGPURenderPassColorAttachmentStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
@@ -1158,7 +1174,7 @@ export const WGPUTexelCopyBufferInfoStruct = defineStruct([
 export const WGPUTexelCopyTextureInfoStruct = defineStruct([
     ['texture', objectPtr<GPUTexture>()],
     ['mipLevel', 'u32', { default: 0 }],
-    ['origin', WGPUOrigin3DStruct, { default: {x:0, y:0, z:0} }], // Nested struct
+    ['origin', WGPUOrigin3DStruct, { default: { x:0, y:0, z:0 } }],
     ['aspect', WGPUTextureAspect, { default: 'all' }],
 ]);
 

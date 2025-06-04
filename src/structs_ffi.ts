@@ -65,6 +65,17 @@ function isObjectPointerDef<T extends PointyObject>(
   return typeof type === 'object' && type !== null && type.__type === 'objectPointer';
 }
 
+// --- Types ---
+type Prettify<T> = {
+  [K in keyof T]: T[K]
+} & {};
+
+type Simplify<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends object
+  ? Prettify<T>
+  : T;
+
 type PrimitiveToTSType<T extends PrimitiveType> =
   T extends 'u8' | 'u16' | 'u32' | 'i32' | 'f32' | 'f64' ? number :
   T extends 'u64' ? bigint | number : // typescript webgpu types currently use numbers for u64
@@ -72,16 +83,30 @@ type PrimitiveToTSType<T extends PrimitiveType> =
   T extends 'pointer' ? number | bigint : // Represent pointers as numbers or bigints
   never;
 
-type FieldDefType<Def> =
+type FieldDefInputType<Def> =
   Def extends PrimitiveType ? PrimitiveToTSType<Def> :
   Def extends 'cstring' | 'char*' ? string | null : // Strings can be null
   Def extends EnumDef<infer E> ? keyof E : // Enums map to their keys
-  Def extends StructDef<infer S> ? S : // Structs map to their inferred type
+  Def extends StructDef<any, infer InputType> ? InputType : // Extract InputType for pack operations
   Def extends ObjectPointerDef<infer T> ? T | null :
   Def extends readonly [infer InnerDef] ? // Array check
     InnerDef extends PrimitiveType ? Iterable<PrimitiveToTSType<InnerDef>> :
     InnerDef extends EnumDef<infer E> ? Iterable<keyof E> :
-    InnerDef extends StructDef<infer S> ? Iterable<S> :
+    InnerDef extends StructDef<any, infer InputType> ? Iterable<InputType> : // Extract InputType for struct arrays
+    InnerDef extends ObjectPointerDef<infer T> ? (T | null)[] :
+    never :
+  never;
+
+type FieldDefOutputType<Def> =
+  Def extends PrimitiveType ? PrimitiveToTSType<Def> :
+  Def extends 'cstring' | 'char*' ? string | null : // Strings can be null
+  Def extends EnumDef<infer E> ? keyof E : // Enums map to their keys
+  Def extends StructDef<infer OutputType, any> ? OutputType : // Extract OutputType for unpack operations
+  Def extends ObjectPointerDef<infer T> ? T | null :
+  Def extends readonly [infer InnerDef] ? // Array check
+    InnerDef extends PrimitiveType ? Iterable<PrimitiveToTSType<InnerDef>> :
+    InnerDef extends EnumDef<infer E> ? Iterable<keyof E> :
+    InnerDef extends StructDef<infer OutputType, any> ? Iterable<OutputType> : // Extract OutputType for struct arrays
     InnerDef extends ObjectPointerDef<infer T> ? (T | null)[] :
     never :
   never;
@@ -93,26 +118,28 @@ type IsOptional<Options extends StructFieldOptions | undefined> =
   Options extends { condition: () => boolean } ? true : // condition implies the field might not exist
   false;
 
-// Constructs the TS object type from the struct field definitions
-export type StructObjectType<Fields extends readonly StructField[]> = {
-  // Gather non-optional fields
-  [F in Fields[number] as IsOptional<F[2]> extends false ? F[0] : never]: FieldDefType<F[1]>;
+// Constructs the TS object type from the struct field definitions for INPUT (pack operations)
+export type StructObjectInputType<Fields extends readonly StructField[]> = {
+  [F in Fields[number] as IsOptional<F[2]> extends false ? F[0] : never]: FieldDefInputType<F[1]>;
 } & {
-  // Gather optional fields (marked with '?')
-  [F in Fields[number] as IsOptional<F[2]> extends true ? F[0] : never]?: FieldDefType<F[1]> | null;
+  [F in Fields[number] as IsOptional<F[2]> extends true ? F[0] : never]?: FieldDefInputType<F[1]> | null;
 };
 
+// Constructs the TS object type from the struct field definitions for OUTPUT (unpack operations)  
+export type StructObjectOutputType<Fields extends readonly StructField[]> = {
+  [F in Fields[number] as IsOptional<F[2]> extends false ? F[0] : never]: FieldDefOutputType<F[1]>;
+} & {
+  [F in Fields[number] as IsOptional<F[2]> extends true ? F[0] : never]?: FieldDefOutputType<F[1]> | null;
+};
 
 type DefineStructReturnType<Fields extends readonly StructField[], Options extends StructDefOptions | undefined> =
     StructDef<
-        // OutputType: if reduceValue exists, use its return type, otherwise use StructObjectType<Fields>
-        Options extends { reduceValue: (value: any) => infer R } 
+        Simplify<Options extends { reduceValue: (value: any) => infer R } 
             ? R 
-            : StructObjectType<Fields>,
-        // InputType: if mapValue exists, use its input type, otherwise use StructObjectType<Fields>
-        Options extends { mapValue: (value: infer V) => any }
+            : StructObjectOutputType<Fields>>,
+        Simplify<Options extends { mapValue: (value: infer V) => any }
             ? V 
-            : StructObjectType<Fields>
+            : StructObjectInputType<Fields>>
     >;
 // --- END: types ---
 
@@ -187,9 +214,9 @@ interface StructDef<OutputType, InputType = OutputType> {
   __type: 'struct';
   size: number;
   align: number;
-  pack(obj: InputType): ArrayBuffer;
-  packInto(obj: InputType, view: DataView, offset: number): void;
-  unpack(buf: ArrayBuffer | SharedArrayBuffer): OutputType;
+  pack(obj: Simplify<InputType>): ArrayBuffer;
+  packInto(obj: Simplify<InputType>, view: DataView, offset: number): void;
+  unpack(buf: ArrayBuffer | SharedArrayBuffer): Simplify<OutputType>;
   describe(): { name: string; offset: number; size: number; align: number; optional: boolean }[];
 }
 
@@ -272,7 +299,7 @@ export function packObjectArray(val: (PointyObject | null)[]) {
   const bufferView = new DataView(buffer);
   for (let i = 0; i < val.length; i++) {
       const instance = val[i];
-      const ptrValue = instance?.ptr ?? null; // Extract pointer or null
+      const ptrValue = instance?.ptr ?? null;
       pointerPacker(bufferView, i * pointerSize, ptrValue);
   }
   return bufferView;
@@ -283,7 +310,7 @@ const encoder = new TextEncoder();
 // Define Struct
 export function defineStruct<const Fields extends readonly StructField[], const Opts extends StructDefOptions = {} >(
   fields: Fields,
-  structDefOptions?: Opts // Capture the options type accurately
+  structDefOptions?: Opts
 ): DefineStructReturnType<Fields, Opts> {
   let offset = 0;
   let maxAlign = 1;
@@ -426,7 +453,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       } else if (isStruct(def)) {
         // Array of Structs
         const elemSize = def.size;
-        pack = (view, off, val: any[]) => { // val should be StructObjectType<typeof def>[]
+        pack = (view, off, val: any[]) => {
           if (!val || val.length === 0) {
             pointerPacker(view, off, null);
             return;
@@ -525,11 +552,11 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     layout.push(layoutField);
 
     if (options.lengthOf) {
-      lengthOfFields[options.lengthOf] = layoutField; // Map: arrayFieldName -> lengthFieldLayout
+      lengthOfFields[options.lengthOf] = layoutField;
     }
     if (needsLengthOf) {
         if (!lengthOfDef) fatalError(`Internal error: needsLengthOf=true but lengthOfDef is null for ${name}`);
-        lengthOfRequested.push({ requester: layoutField, def: lengthOfDef }); // requester = array field
+        lengthOfRequested.push({ requester: layoutField, def: lengthOfDef });
     }
 
     offset += size;
@@ -576,13 +603,12 @@ export function defineStruct<const Fields extends readonly StructField[], const 
 
   const totalSize = alignOffset(offset, maxAlign);
 
-  // Return the struct definition object conforming to StructDef<StructObjectType<Fields>>
   return {
     __type: 'struct',
     size: totalSize,
     align: maxAlign,
 
-    pack(obj: StructObjectType<Fields>): ArrayBuffer {
+    pack(obj: Simplify<StructObjectInputType<Fields>>): ArrayBuffer {
       let mappedObj: any = obj;
       if (structDefOptions?.mapValue) {
         mappedObj = structDefOptions.mapValue(obj);
@@ -600,7 +626,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       return view.buffer;
     },
 
-    packInto(obj: StructObjectType<Fields>, view: DataView, offset: number): void {
+    packInto(obj: Simplify<StructObjectInputType<Fields>>, view: DataView, offset: number): void {
       for (const field of layout) {
         const value = (obj as any)[field.name] ?? field.default;
         if (!field.optional && value === undefined) {
@@ -611,7 +637,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     },
 
     // unpack method now returns the specific inferred object type
-    unpack(buf: ArrayBuffer | SharedArrayBuffer): any {
+    unpack(buf: ArrayBuffer | SharedArrayBuffer): Simplify<any> {
       if (buf.byteLength < totalSize) {
         fatalError(`Buffer size (${buf.byteLength}) is smaller than struct size (${totalSize}) for unpacking.`);
       }
@@ -635,13 +661,11 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         }
       }
       
-      // Apply reduceValue transformation if present
       if (structDefOptions?.reduceValue) {
         return structDefOptions.reduceValue(result);
       }
       
-       // Assert the final result matches the inferred type
-      return result as StructObjectType<Fields>;
+      return result as StructObjectOutputType<Fields>;
     },
 
     describe() {
@@ -653,5 +677,5 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         optional: f.optional,
       }));
     }
-  };
+  } as DefineStructReturnType<Fields, Opts>;
 }

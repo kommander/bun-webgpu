@@ -11,8 +11,7 @@ import {
     WGPUTexelCopyBufferInfoStruct,
     WGPUTexelCopyTextureInfoStruct,
     WGPUExtent3DStruct,
-    UINT64_MAX, // For WHOLE_SIZE equivalent
-    normalizeGPUExtent3DStrict
+    UINT64_MAX,
 } from "./structs_def";
 import { GPUBufferImpl } from "./GPUBuffer";
 
@@ -116,8 +115,7 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
         }
         const packedSourceBuffer = WGPUTexelCopyBufferInfoStruct.pack(source);
         const packedDestinationBuffer = WGPUTexelCopyTextureInfoStruct.pack(destination);
-        const normalizedCopySize = normalizeGPUExtent3DStrict(copySize);
-        const packedCopySizeBuffer = WGPUExtent3DStruct.pack(normalizedCopySize);
+        const packedCopySizeBuffer = WGPUExtent3DStruct.pack(copySize);
 
         try {
             this.lib.wgpuCommandEncoderCopyBufferToTexture(
@@ -137,8 +135,7 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
         }
         const packedSourceBuffer = WGPUTexelCopyTextureInfoStruct.pack(source);
         const packedDestinationBuffer = WGPUTexelCopyBufferInfoStruct.pack(destination);
-        const normalizedCopySize = normalizeGPUExtent3DStrict(copySize);
-        const packedCopySizeBuffer = WGPUExtent3DStruct.pack(normalizedCopySize);
+        const packedCopySizeBuffer = WGPUExtent3DStruct.pack(copySize);
 
         try {
             this.lib.wgpuCommandEncoderCopyTextureToBuffer(
@@ -158,8 +155,7 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
         }
         const packedSourceBuffer = WGPUTexelCopyTextureInfoStruct.pack(source);
         const packedDestinationBuffer = WGPUTexelCopyTextureInfoStruct.pack(destination);
-        const normalizedCopySize = normalizeGPUExtent3DStrict(copySize);
-        const packedCopySizeBuffer = WGPUExtent3DStruct.pack(normalizedCopySize);
+        const packedCopySizeBuffer = WGPUExtent3DStruct.pack(copySize);
 
         try {
             this.lib.wgpuCommandEncoderCopyTextureToTexture(
