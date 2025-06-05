@@ -12,7 +12,7 @@ import {
     WGPUAdapterInfoStruct,
     WGPUDeviceLostReasonDef
 } from "./structs_def";
-import { fatalError } from "./utils/error";
+import { fatalError, OperationError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
 import { allocStruct } from "./structs_ffi";
 import { GPUAdapterInfoImpl, normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage } from "./shared";
@@ -36,6 +36,7 @@ export class GPUAdapterImpl implements GPUAdapter {
     private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
     private _destroyed = false;
     private _devices: Map<number, GPUDeviceImpl> = new Map();
+    private _consumed = false;
 
     constructor(
       public readonly adapterPtr: Pointer,
@@ -203,8 +204,6 @@ export class GPUAdapterImpl implements GPUAdapter {
             
             if (device) {
                 device.handleDeviceLost(WGPUDeviceLostReasonDef.from(reason) as GPUDeviceLostReason, message);
-            } else {
-                console.error(`Device ${deviceId} not found for device lost`);
             }
         } catch (e) {
             console.error('Error getting deviceId from userdata1', e);
@@ -215,9 +214,28 @@ export class GPUAdapterImpl implements GPUAdapter {
       if (this._destroyed) {
           return Promise.reject(new Error("Adapter destroyed"));
       }
+      if (this._consumed) {
+          return Promise.reject(new OperationError("Adapter already consumed"));
+      }
       if (!this.adapterPtr) {
           return Promise.reject(new Error("Adapter pointer is null"));
       }
+
+      // Validation
+      // TODO: Move to structs_def.ts
+      if (descriptor?.requiredLimits) {
+          for (const [limitName, limitValue] of Object.entries(descriptor.requiredLimits)) {
+              if (limitValue !== undefined) {
+                  if (limitName.includes('Alignment') && limitValue > 0) {
+                      if ((limitValue & (limitValue - 1)) !== 0) {
+                          return Promise.reject(new OperationError(`${limitName} must be a power of 2, got ${limitValue}`));
+                      }
+                  }
+              }
+          }
+      }
+
+      this._consumed = true;
 
       return new Promise((resolve, reject) => {
           let packedDescriptorPtr: Pointer | null = null;
@@ -295,29 +313,37 @@ export class GPUAdapterImpl implements GPUAdapter {
                   label: 'default queue',
                 },
               }
-              const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor);
-              packedDescriptorPtr = ptr(descBuffer);
+              
+              try {
+                const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor);
+                packedDescriptorPtr = ptr(descBuffer);
+              } catch (e) {
+                this._consumed = false;
+                reject(e);
+                return;
+              }
 
               // --- 2. Create JSCallback ---
               const callbackFn = (status: number, devicePtr: Pointer | null, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) => {
                   this.instanceTicker.unregister();
                   const message = decodeCallbackMessage(messagePtr, messageSize);
-
+                  
                   if (status === RequestDeviceStatus.Success) {
                       if (userdata1 && devicePtr) {
-                          const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
-                          const userDataView = new DataView(userdata1Buffer);
-                          const deviceId = userDataView.getUint32(0, true);
-                          const device = new GPUDeviceImpl(devicePtr, this.lib, this.instanceTicker);
-                          this._devices.set(deviceId, device);
-                          resolve(device);
-                      } else {
-                          console.error("WGPU Error: requestDevice Success but device pointer is null.");
-                          reject(new Error(`WGPU Error (Success but null device): ${message || 'No message.'}`));
-                      }
+                            const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
+                            const userDataView = new DataView(userdata1Buffer);
+                            const deviceId = userDataView.getUint32(0, true);
+                            const device = new GPUDeviceImpl(devicePtr, this.lib, this.instanceTicker);
+                            this._devices.set(deviceId, device);
+                            resolve(device);
+                        } else {
+                            console.error("WGPU Error: requestDevice Success but device pointer is null.");
+                            reject(new Error(`WGPU Error (Success but null device): ${message || 'No message.'}`));
+                        }
                   } else {
+                      this._consumed = false;
                       let statusName = Object.keys(RequestDeviceStatus).find(key => RequestDeviceStatus[key as keyof typeof RequestDeviceStatus] === status) || 'Unknown WGPU Error';
-                      reject(new Error(`WGPU Error (${statusName}): ${message || 'No message provided.'}`));
+                      reject(new OperationError(`WGPU Error (${statusName}): ${message || 'No message provided.'}`));
                   }
 
                   if (jsCallback) {
@@ -353,7 +379,8 @@ export class GPUAdapterImpl implements GPUAdapter {
 
               this.instanceTicker.register();
           } catch (e) {
-              console.error("Error during requestDevice setup or FFI call:", e);
+              console.error("Error during requestDevice:", e);
+              this._consumed = false;
               if (jsCallback) jsCallback.close();
               reject(e);
           }

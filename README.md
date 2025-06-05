@@ -23,6 +23,16 @@ The `package.json` includes scripts to build the native library components.
 *   `build:dev`
 *   `build:prod`
 
+## Conformance Test Suite (CTS)
+
+To run the CTS, build the library first, then run the tests:
+
+```bash
+./run-cts.sh 'webgpu:api,operation,adapter,requestDevice:always_returns_device:*'
+```
+
+Run all webgpu tests for example with `./run-cts.sh 'webgpu:*'`
+
 ## Testing
 
 To run tests, build the library first, then run the tests:

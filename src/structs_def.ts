@@ -435,7 +435,7 @@ export const WGPULimitsStruct = defineStruct([
     ['maxUniformBuffersPerShaderStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxUniformBufferBindingSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
     ['maxStorageBufferBindingSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
-    ['minUniformBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
+    ['minUniformBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED, validate: (val: number) => val > 0 && (val & (val - 1)) === 0 }],
     ['minStorageBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxVertexBuffers', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxBufferSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],

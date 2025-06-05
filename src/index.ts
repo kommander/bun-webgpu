@@ -41,13 +41,7 @@ export async function globals({ libPath }: { libPath?: string } = {}) {
   global.GPUShaderStage = ShaderStageFlags;
   global.GPUMapMode = MapModeFlags;
 
-  class GPUDevice extends GPUDeviceImpl {
-    // @ts-ignore
-    constructor() {
-      throw new TypeError('Illegal constructor');
-    }
-  }
-  global.GPUDevice = GPUDevice as any;
+  global.GPUDevice = GPUDeviceImpl as any;
   global.GPUAdapterInfo = GPUAdapterInfoImpl as any;
   global.GPUSupportedLimits = GPUSupportedLimitsImpl as any;
 }
