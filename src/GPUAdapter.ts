@@ -193,10 +193,7 @@ export class GPUAdapterImpl implements GPUAdapter {
       if (this._state === 'consumed') {
           return Promise.reject(new OperationError("Adapter already consumed"));
       }
-      if (!this.adapterPtr) {
-          return Promise.reject(new Error("Adapter pointer is null"));
-      }
-
+      
       this._state = 'consumed';
 
       return new Promise((resolve, reject) => {
@@ -273,7 +270,12 @@ export class GPUAdapterImpl implements GPUAdapter {
               }
               
               try {
-                const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor, { validationHints: this._limits });
+                const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor, { 
+                    validationHints: {
+                        limits: this._limits,
+                        features: this._features,
+                    }
+                });
                 packedDescriptorPtr = ptr(descBuffer);
               } catch (e) {
                 this._state = 'valid';

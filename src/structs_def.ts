@@ -429,21 +429,21 @@ function validateRange(val: number, min: number, max: number) {
     }
 }
 
-function minValidator(val: number, fieldName: string, hints?: typeof DEFAULT_SUPPORTED_LIMITS) {
+function minValidator(val: number, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) {
     if (val < 0 || val > Number.MAX_SAFE_INTEGER) {
         throw new TypeError(`Value must be between 0 and ${Number.MAX_SAFE_INTEGER}, got ${val}`);
     }
-    if (hints && fieldName in hints) {
-        const minValue = hints[fieldName as keyof typeof hints] as number;
+    if (hints && fieldName in hints.limits) {
+        const minValue = hints.limits[fieldName as keyof GPUSupportedLimits] as number;
         if (val < minValue) {
             throw new OperationError(`Value must be >= ${minValue}, got ${val}`);
         }
     }
 }
 
-function validateLimitField(val: number, fieldName: string, hints?: typeof DEFAULT_SUPPORTED_LIMITS) {
-    if (hints && fieldName in hints) {
-        const maxValue = hints[fieldName as keyof typeof hints] as number;
+function validateLimitField(val: number, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) {
+    if (hints && fieldName in hints.limits) {
+        const maxValue = hints.limits[fieldName as keyof GPUSupportedLimits] as number;
         validateRange(val, 0, maxValue);
     }
 }
@@ -540,8 +540,26 @@ export const WGPUDeviceDescriptorStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['label', WGPUStringView, { optional: true }],
     ['requiredFeatureCount', 'u64', { lengthOf: 'requiredFeatures' }], // Assuming 64-bit size_t
-    ['requiredFeatures', [WGPUFeatureNameDef], { optional: true }],
-    ['requiredLimits', WGPULimitsStruct, { optional: true, asPointer: true }],
+    ['requiredFeatures', [WGPUFeatureNameDef], { optional: true, validate: (val: string[] | undefined, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) => {
+        if (!val) {
+            return;
+        }
+        for (const feature of val) {
+            if (!hints?.features.has(feature)) {
+                throw new TypeError(`Invalid feature required: ${feature}`);
+            }
+        }
+    } }],
+    ['requiredLimits', WGPULimitsStruct, { optional: true, asPointer: true, validate: (val: WGPULimits | undefined, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) => {
+        if (!val) {
+            return;
+        }
+        for (const key in val) {
+            if (hints?.limits && !(key in hints?.limits) && val[key as keyof WGPULimits] !== undefined) {
+                throw new OperationError(`Invalid limit required: ${key} ${val[key as keyof WGPULimits]}`);
+            }
+        }
+    } }],
     ['defaultQueue', WGPUQueueDescriptorStruct],
     ['deviceLostCallbackInfo', WGPUCallbackInfoStruct, { optional: true }],
     ['uncapturedErrorCallbackInfo', WGPUUncapturedErrorCallbackInfoStruct],
