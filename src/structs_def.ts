@@ -1,6 +1,7 @@
 import { toArrayBuffer, type Pointer } from "bun:ffi";
 import { fatalError } from "./utils/error";
 import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
+import { DEFAULT_SUPPORTED_LIMITS } from "./shared";
 
 export const WGPUBool = 'bool_u32';
 export const UINT64_MAX = 0xFFFFFFFFFFFFFFFFn;
@@ -397,41 +398,6 @@ export const WGPUSupportedFeaturesStruct = defineStruct([
 const WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF;
 const WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFFn;
 
-export const defaultLimitsForPacking = {
-    maxTextureDimension1D: WGPU_LIMIT_U32_UNDEFINED,
-    maxTextureDimension2D: WGPU_LIMIT_U32_UNDEFINED,
-    maxTextureDimension3D: WGPU_LIMIT_U32_UNDEFINED,
-    maxTextureArrayLayers: WGPU_LIMIT_U32_UNDEFINED,
-    maxBindGroups: WGPU_LIMIT_U32_UNDEFINED,
-    maxBindGroupsPlusVertexBuffers: WGPU_LIMIT_U32_UNDEFINED,
-    maxBindingsPerBindGroup: WGPU_LIMIT_U32_UNDEFINED,
-    maxDynamicUniformBuffersPerPipelineLayout: WGPU_LIMIT_U32_UNDEFINED,
-    maxDynamicStorageBuffersPerPipelineLayout: WGPU_LIMIT_U32_UNDEFINED,
-    maxSampledTexturesPerShaderStage: WGPU_LIMIT_U32_UNDEFINED,
-    maxSamplersPerShaderStage: WGPU_LIMIT_U32_UNDEFINED,
-    maxStorageBuffersPerShaderStage: WGPU_LIMIT_U32_UNDEFINED,
-    maxStorageTexturesPerShaderStage: WGPU_LIMIT_U32_UNDEFINED,
-    maxUniformBuffersPerShaderStage: WGPU_LIMIT_U32_UNDEFINED,
-    maxUniformBufferBindingSize: WGPU_LIMIT_U64_UNDEFINED,
-    maxStorageBufferBindingSize: WGPU_LIMIT_U64_UNDEFINED,
-    minUniformBufferOffsetAlignment: WGPU_LIMIT_U32_UNDEFINED,
-    minStorageBufferOffsetAlignment: WGPU_LIMIT_U32_UNDEFINED,
-    maxVertexBuffers: WGPU_LIMIT_U32_UNDEFINED,
-    maxBufferSize: WGPU_LIMIT_U64_UNDEFINED,
-    maxVertexAttributes: WGPU_LIMIT_U32_UNDEFINED,
-    maxVertexBufferArrayStride: WGPU_LIMIT_U32_UNDEFINED,
-    maxInterStageShaderComponents: WGPU_LIMIT_U32_UNDEFINED,
-    maxInterStageShaderVariables: WGPU_LIMIT_U32_UNDEFINED,
-    maxColorAttachments: WGPU_LIMIT_U32_UNDEFINED,
-    maxColorAttachmentBytesPerSample: WGPU_LIMIT_U32_UNDEFINED,
-    maxComputeWorkgroupStorageSize: WGPU_LIMIT_U32_UNDEFINED,
-    maxComputeInvocationsPerWorkgroup: WGPU_LIMIT_U32_UNDEFINED,
-    maxComputeWorkgroupSizeX: WGPU_LIMIT_U32_UNDEFINED,
-    maxComputeWorkgroupSizeY: WGPU_LIMIT_U32_UNDEFINED,
-    maxComputeWorkgroupSizeZ: WGPU_LIMIT_U32_UNDEFINED,
-    maxComputeWorkgroupsPerDimension: WGPU_LIMIT_U32_UNDEFINED,
-};
-
 // WGPULimits struct mirroring C layout
 export const WGPULimitsStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
@@ -472,7 +438,7 @@ export const WGPULimitsStruct = defineStruct([
     ['maxStorageTexturesInFragmentStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
 ], {
     default: {
-        ...defaultLimitsForPacking,
+        ...DEFAULT_SUPPORTED_LIMITS,
     }
 });
 

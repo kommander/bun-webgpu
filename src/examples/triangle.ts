@@ -2,10 +2,11 @@ import sharp from 'sharp';
 import { type Pointer } from "bun:ffi";
 import { 
   createGPUInstance, 
-  BufferUsageFlags, 
-  TextureUsageFlags,
+  globals,
 } from '..';
 import type { GPUImpl } from "../GPU";
+
+globals();
 
 export async function runTriangleToPngExample(filename: string = "triangle.png") {
   console.log("\n--- Running Triangle to PNG Example ---");
@@ -74,8 +75,8 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       fsModule = device!.createShaderModule({ code: wgslFS });
 
       // Final buffers (Ensure COPY_DST usage)
-      vertexBuffer = device!.createBuffer({ size: vertexData.byteLength, usage: BufferUsageFlags.VERTEX | BufferUsageFlags.COPY_DST });
-      indexBuffer = device!.createBuffer({ size: indexData.byteLength, usage: BufferUsageFlags.INDEX | BufferUsageFlags.COPY_DST });
+      vertexBuffer = device!.createBuffer({ size: vertexData.byteLength, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST });
+      indexBuffer = device!.createBuffer({ size: indexData.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST });
 
       // Use queueWriteBuffer to upload data directly
       console.log("Uploading vertex/index data using queueWriteBuffer...");
@@ -109,7 +110,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       renderTargetTexture = device!.createTexture({
           size: [width, height],
           format: textureFormat,
-          usage: TextureUsageFlags.RENDER_ATTACHMENT | TextureUsageFlags.COPY_SRC,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
       });
       renderTargetView = renderTargetTexture!.createView({ label: "Triangle Render Target View" });
 
@@ -119,7 +120,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
        readbackBuffer = device!.createBuffer({
            label: "Triangle Readback Buffer",
            size: readbackBufferSize,
-           usage: BufferUsageFlags.MAP_READ | BufferUsageFlags.COPY_DST,
+           usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
        });
 
       if (!vsModule || !fsModule || !vertexBuffer || !indexBuffer || !bgl || !pll || !pipeline || !renderTargetTexture || !renderTargetView || !readbackBuffer) {
@@ -193,7 +194,7 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
       const readbackBuffer2 = device!.createBuffer({
         label: "Triangle Readback Buffer 2",
         size: readbackBufferSize, // Reuse size
-        usage: BufferUsageFlags.MAP_READ | BufferUsageFlags.COPY_DST,
+        usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
       });
       
       const commandEncoder2 = device.createCommandEncoder({ label: "Triangle Command Encoder 2" });

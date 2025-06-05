@@ -24,3 +24,86 @@ export function normalizeIdentifier(input: string): string {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 }
+
+export const DEFAULT_SUPPORTED_LIMITS: Omit<GPUSupportedLimits, '__brand'> = Object.freeze({
+    maxTextureDimension1D: 8192,
+    maxTextureDimension2D: 8192,
+    maxTextureDimension3D: 2048,
+    maxTextureArrayLayers: 256,
+    maxBindGroups: 4,
+    maxBindGroupsPlusVertexBuffers: 24,
+    maxBindingsPerBindGroup: 1000,
+    maxStorageBuffersInFragmentStage: 8,
+    maxStorageBuffersInVertexStage: 8,
+    maxStorageTexturesInFragmentStage: 4,
+    maxStorageTexturesInVertexStage: 4,
+    maxDynamicUniformBuffersPerPipelineLayout: 8,
+    maxDynamicStorageBuffersPerPipelineLayout: 4,
+    maxSampledTexturesPerShaderStage: 16,
+    maxSamplersPerShaderStage: 16,
+    maxStorageBuffersPerShaderStage: 8,
+    maxStorageTexturesPerShaderStage: 4,
+    maxUniformBuffersPerShaderStage: 12,
+    maxUniformBufferBindingSize: 65536,
+    maxStorageBufferBindingSize: 134217728,
+    minUniformBufferOffsetAlignment: 256,
+    minStorageBufferOffsetAlignment: 256,
+    maxVertexBuffers: 8,
+    maxBufferSize: 268435456,
+    maxVertexAttributes: 16,
+    maxVertexBufferArrayStride: 2048,
+    maxInterStageShaderComponents: 4294967295,
+    maxInterStageShaderVariables: 16,
+    maxColorAttachments: 8,
+    maxColorAttachmentBytesPerSample: 32,
+    maxComputeWorkgroupStorageSize: 16384,
+    maxComputeInvocationsPerWorkgroup: 256,
+    maxComputeWorkgroupSizeX: 256,
+    maxComputeWorkgroupSizeY: 256,
+    maxComputeWorkgroupSizeZ: 64,
+    maxComputeWorkgroupsPerDimension: 65535,
+});
+
+export class GPUSupportedLimitsImpl implements GPUSupportedLimits {
+    __brand: "GPUSupportedLimits" = "GPUSupportedLimits";
+    maxTextureDimension1D = 8192;
+    maxTextureDimension2D = 8192;
+    maxTextureDimension3D = 2048;
+    maxTextureArrayLayers = 256;
+    maxBindGroups = 4;
+    maxBindGroupsPlusVertexBuffers = 24;
+    maxBindingsPerBindGroup = 1000;
+    maxStorageBuffersInFragmentStage = 8;
+    maxStorageBuffersInVertexStage = 8;
+    maxStorageTexturesInFragmentStage = 4;
+    maxStorageTexturesInVertexStage = 4;
+    maxDynamicUniformBuffersPerPipelineLayout = 8;
+    maxDynamicStorageBuffersPerPipelineLayout = 4;
+    maxSampledTexturesPerShaderStage = 16;
+    maxSamplersPerShaderStage = 16;
+    maxStorageBuffersPerShaderStage = 8;
+    maxStorageTexturesPerShaderStage = 4;
+    maxUniformBuffersPerShaderStage = 12;
+    maxUniformBufferBindingSize = 65536;
+    maxStorageBufferBindingSize = 134217728;
+    minUniformBufferOffsetAlignment = 256;
+    minStorageBufferOffsetAlignment = 256;
+    maxVertexBuffers = 8;
+    maxBufferSize = 268435456;
+    maxVertexAttributes = 16;
+    maxVertexBufferArrayStride = 2048;
+    maxInterStageShaderComponents = 4294967295;
+    maxInterStageShaderVariables = 16;
+    maxColorAttachments = 8;
+    maxColorAttachmentBytesPerSample = 32;
+    maxComputeWorkgroupStorageSize = 16384;
+    maxComputeInvocationsPerWorkgroup = 256;
+    maxComputeWorkgroupSizeX = 256;
+    maxComputeWorkgroupSizeY = 256;
+    maxComputeWorkgroupSizeZ = 64;
+    maxComputeWorkgroupsPerDimension = 65535;
+
+    constructor() {
+        throw new TypeError('Illegal constructor');
+    }
+}

@@ -4,7 +4,7 @@ set -e
 
 REPO_URL="git@github.com:gpuweb/cts.git"
 REPO_DIR="cts"
-SCRIPT_TO_RUN="../tools/cts.ts"
+SCRIPT_TO_RUN="./tools/cts.ts"
 
 if [ -d "$REPO_DIR" ]; then
   echo "Directory $REPO_DIR already exists. Skipping clone."
@@ -27,4 +27,4 @@ for arg in "$@"; do
   fi
 done
 
-DEBUG=$debug_flag bun "$SCRIPT_TO_RUN" "--gpu-provider" "$(pwd)/../tools/setup.ts" "webgpu:*" "${filtered_args[@]}"
+DEBUG=$debug_flag bun "$SCRIPT_TO_RUN" "--gpu-provider" "$(pwd)/../tools/setup.ts" "${filtered_args[@]}" "webgpu:*"

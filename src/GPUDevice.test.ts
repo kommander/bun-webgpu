@@ -3,7 +3,9 @@ import {
     createGPUInstance, 
 } from "./index";
 import type { GPUImpl } from "./GPU";
-import { GPUShaderStage } from "./common";
+import { globals } from "./index";
+
+globals();
 
 // Global variables for the test suite
 let gpu: GPUImpl | null = null;
@@ -309,14 +311,9 @@ describe("GPUDevice", () => {
             // Destroy the device
             device!.destroy();
 
-            // Verify internal cache is cleared
-            expect((device as any)['_limits']).toBeNull();
-
             // Verify public getter now returns the default limits object
             const limitsAfterDestroy = device!.limits;
-            // Check if it returns the *exact* default object (or a clone with same values)
-            // For now, check a key property. A deep equal might be better.
-            expect(limitsAfterDestroy.maxTextureDimension2D).toBe(0); // Check a default value
+            expect(limitsAfterDestroy.maxTextureDimension2D).toBe(8192);
         });
     });
 

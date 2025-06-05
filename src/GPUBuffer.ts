@@ -22,6 +22,7 @@ export class GPUBufferImpl implements GPUBuffer {
     private _mapCallback: JSCallback;
     private _mapCallbackResolve: ((value: undefined) => void) | null = null;
     private _mapCallbackReject: ((reason?: any) => void) | null = null;
+    private _destroyed = false;
 
     __brand: "GPUBuffer" = "GPUBuffer";
     label: string = '';
@@ -47,7 +48,6 @@ export class GPUBufferImpl implements GPUBuffer {
               this._mapCallbackResolve?.(undefined);
           } else {
               this._mapState = 'unmapped';
-              console.error('WGPU Buffer Map Error', status);
               const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
               let arrayBuffer: ArrayBuffer | null = null;
               if (messagePtr) {
@@ -68,6 +68,10 @@ export class GPUBufferImpl implements GPUBuffer {
 
           this._mapCallbackResolve = null;
           this._mapCallbackReject = null;
+
+          if (this._destroyed) {
+            this._mapCallback.close();
+          }
         },
         {
             args: [FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
@@ -89,6 +93,10 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     mapAsync(mode: GPUMapModeFlags, offset?: GPUSize64, size?: GPUSize64): Promise<undefined> {
+      if (this._destroyed) {
+        return Promise.reject(new Error('Buffer is destroyed'));
+      }
+
       if (this._pendingMap) {
         // TODO: Should throw an error?
         return this._pendingMap;
@@ -134,6 +142,10 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     getMappedRangePtr(offset?: GPUSize64, size?: GPUSize64): Pointer {
+      if (this._destroyed) {
+        throw new Error('Buffer is destroyed');
+      }
+
       if (this._descriptor.usage & BufferUsageFlags.MAP_READ) {
         return this._getConstMappedRangePtr(offset, size);
       }
@@ -169,6 +181,10 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     getMappedRange(offset?: GPUSize64, size?: GPUSize64): ArrayBuffer {
+      if (this._destroyed) {
+        throw new Error('Buffer is destroyed');
+      }
+
       if (this._descriptor.usage & BufferUsageFlags.MAP_READ) {
         return this._getConstMappedRange(offset, size);
       }
@@ -204,12 +220,20 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     unmap(): undefined {
+      if (this._destroyed) {
+        throw new Error('Buffer is destroyed');
+      }
+
       this.lib.wgpuBufferUnmap(this.bufferPtr);
       this._mapState = 'unmapped';
       return undefined;
     }
 
     release(): undefined {
+      if (this._destroyed) {
+        throw new Error('Buffer is destroyed');
+      }
+
       try { 
         this.lib.wgpuBufferRelease(this.bufferPtr); 
       } catch(e) { 
@@ -218,9 +242,13 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     destroy(): undefined {
-      this._mapCallback.close();
+      if (this._destroyed) {
+        return;
+      }
+
       try {
         this.lib.wgpuBufferDestroy(this.bufferPtr);
+        this._destroyed = true;
       } catch (e) {
          console.error("Error calling bufferDestroy FFI function:", e);
       }

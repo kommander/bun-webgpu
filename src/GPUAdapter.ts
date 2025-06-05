@@ -14,8 +14,7 @@ import {
 import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
 import { allocStruct } from "./structs_ffi";
-import { DEFAULT_SUPPORTED_LIMITS } from "./common";
-import { GPUAdapterInfoImpl, normalizeIdentifier } from "./shared";
+import { GPUAdapterInfoImpl, normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl } from "./shared";
 
 const RequestDeviceStatus = {
   Success: 1,
@@ -27,11 +26,12 @@ const RequestDeviceStatus = {
 let deviceCount = 0;
 
 const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
+const DEFAULT_LIMITS = Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), DEFAULT_SUPPORTED_LIMITS);
 
 export class GPUAdapterImpl implements GPUAdapter {
     __brand: "GPUAdapter" = "GPUAdapter";
     private _features: GPUSupportedFeatures | null = null;
-    private _limits: GPUSupportedLimits | null = null;
+    private _limits: GPUSupportedLimits = DEFAULT_LIMITS;
     private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
     private _destroyed = false;
     private _devices: Map<number, GPUDeviceImpl> = new Map();
@@ -120,7 +120,7 @@ export class GPUAdapterImpl implements GPUAdapter {
     get limits(): GPUSupportedLimits {
         if (this._destroyed) {
             console.warn("Accessing limits on destroyed GPUAdapter");
-            return DEFAULT_SUPPORTED_LIMITS;
+            return this._limits;
         }
 
         if (this._limits === null) {
@@ -133,23 +133,20 @@ export class GPUAdapterImpl implements GPUAdapter {
 
                 if (status !== 1) { // WGPUStatus_Success = 1
                     console.error(`wgpuAdapterGetLimits failed with status: ${status}`);
-                    this._limits = DEFAULT_SUPPORTED_LIMITS; // Cache default on failure
                     return this._limits;
                 }
 
                 const jsLimits = WGPULimitsStruct.unpack(structBuffer);
 
-                this._limits = Object.freeze({
+                this._limits = Object.freeze(Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), {
                     __brand: "GPUSupportedLimits" as const,
                     ...jsLimits,
                     maxUniformBufferBindingSize: Number(jsLimits.maxUniformBufferBindingSize),
                     maxStorageBufferBindingSize: Number(jsLimits.maxStorageBufferBindingSize),
                     maxBufferSize: Number(jsLimits.maxBufferSize),
-                } as GPUSupportedLimits);
-
+                }));
             } catch (e) {
                 console.error("Error calling wgpuAdapterGetLimits or unpacking struct:", e);
-                this._limits = DEFAULT_SUPPORTED_LIMITS; // Cache default on error
             }
         }
         return this._limits;
@@ -341,8 +338,7 @@ export class GPUAdapterImpl implements GPUAdapter {
 
       this._destroyed = true;
       this._features = null;
-      this._limits = null;
-
+      
       try {
           this.lib.wgpuAdapterRelease(this.adapterPtr);
       } catch(e) {

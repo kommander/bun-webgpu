@@ -1,6 +1,6 @@
 
 import { type Pointer, ptr } from "bun:ffi";
-import { BufferUsageFlags, DEFAULT_SUPPORTED_LIMITS } from "./common";
+import { BufferUsageFlags } from "./common";
 import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
@@ -21,14 +21,8 @@ import { fatalError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
-import { normalizeIdentifier } from "./shared";
+import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl } from "./shared";
 import { GPUAdapterInfoImpl } from "./shared";
-
-export const TextureDimension: Record<GPUTextureDimension, number> = {
-    "1d": 0, // '1d' -> tdim_1d = 0
-    "2d": 1, // '2d' -> tdim_2d = 1
-    "3d": 2, // '3d' -> tdim_3d = 2
-  } as const;
 
 type EventListenerOptions = any;
 export type DeviceErrorCallback = (this: GPUDevice, ev: GPUUncapturedErrorEvent) => any;
@@ -66,6 +60,7 @@ export class DeviceTicker {
 }
 
 const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
+const DEFAULT_LIMITS = Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), DEFAULT_SUPPORTED_LIMITS);
 
 export class GPUDeviceImpl implements GPUDevice {
     readonly ptr: Pointer;
@@ -75,7 +70,7 @@ export class GPUDeviceImpl implements GPUDevice {
     private _ticker: DeviceTicker;
     private _lost: Promise<GPUDeviceLostInfo>;
     private _features: GPUSupportedFeatures | null = null;
-    private _limits: GPUSupportedLimits | null = null;
+    private _limits: GPUSupportedLimits = DEFAULT_LIMITS;
     private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
     private _destroyed = false;
 
@@ -180,7 +175,7 @@ export class GPUDeviceImpl implements GPUDevice {
     get limits(): GPUSupportedLimits {
         if (this._destroyed) {
             console.warn("Accessing limits on destroyed GPUDevice");
-            return DEFAULT_SUPPORTED_LIMITS;
+            return this._limits;
         }
 
         if (this._limits === null) {
@@ -193,17 +188,22 @@ export class GPUDeviceImpl implements GPUDevice {
 
                 if (status !== 1) { // WGPUStatus_Success = 1 (assuming, needs verification or enum import)
                      console.error(`wgpuDeviceGetLimits failed with status: ${status}`);
-                     return DEFAULT_SUPPORTED_LIMITS;
+                     return this._limits;
                 }
 
                 const jsLimits = WGPULimitsStruct.unpack(structBuffer);
-                // console.log("jsLimits", jsLimits);
-                this._limits = Object.freeze(jsLimits as unknown as GPUSupportedLimits);
+                this._limits = Object.freeze(Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), {
+                    __brand: "GPUSupportedLimits" as const,
+                    ...jsLimits,
+                    maxUniformBufferBindingSize: Number(jsLimits.maxUniformBufferBindingSize),
+                    maxStorageBufferBindingSize: Number(jsLimits.maxStorageBufferBindingSize),
+                    maxBufferSize: Number(jsLimits.maxBufferSize),
+                }));
 
             } catch (e) {
                 console.error("Error calling wgpuDeviceGetLimits or unpacking struct:", e);
                 limitsStructPtr = null;
-                return DEFAULT_SUPPORTED_LIMITS;
+                return this._limits;
             }
         }
         return this._limits;
@@ -262,7 +262,6 @@ export class GPUDeviceImpl implements GPUDevice {
         this._destroyed = true;
         // Invalidate caches
         this._features = null;
-        this._limits = null;
         this._queue?.destroy();
         this._queue = null;
 
