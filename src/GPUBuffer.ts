@@ -4,6 +4,7 @@ import { BufferUsageFlags } from "./common";
 import { fatalError } from "./utils/error";
 import { WGPUCallbackInfoStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
+import { decodeCallbackMessage } from "./shared";
 
 const BufferMapAsyncStatus = {
   Success: 1,
@@ -49,19 +50,7 @@ export class GPUBufferImpl implements GPUBuffer {
           } else {
               this._mapState = 'unmapped';
               const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
-              let arrayBuffer: ArrayBuffer | null = null;
-              if (messagePtr) {
-                arrayBuffer = toArrayBuffer(messagePtr, 0, Number(messageSize));
-              }
-
-              let message = 'Could not decode error message';
-              if (arrayBuffer) {
-                if (arrayBuffer instanceof Error) {
-                  message = arrayBuffer.message;
-                } else {
-                  message = Buffer.from(arrayBuffer).toString();
-                }
-              }
+              const message = decodeCallbackMessage(messagePtr, messageSize);
 
               this._mapCallbackReject?.(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
           }

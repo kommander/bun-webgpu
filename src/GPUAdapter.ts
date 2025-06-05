@@ -14,7 +14,7 @@ import {
 import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
 import { allocStruct } from "./structs_ffi";
-import { GPUAdapterInfoImpl, normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl } from "./shared";
+import { GPUAdapterInfoImpl, normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage } from "./shared";
 
 const RequestDeviceStatus = {
   Success: 1,
@@ -157,8 +157,8 @@ export class GPUAdapterImpl implements GPUAdapter {
         throw new Error("Not implemented");
     }
 
-    private handleUncapturedError(devicePtr: Pointer, typeInt: number, messagePtr: Pointer | null, _unknown: number, userdata1: Pointer | null, userdata2: Pointer | null) {
-        const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : undefined;
+    private handleUncapturedError(devicePtr: Pointer, typeInt: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) {
+        const message = decodeCallbackMessage(messagePtr, messageSize);
         const typeName = Object.keys(WGPUErrorType).find(key => WGPUErrorType[key as keyof typeof WGPUErrorType] === typeInt) || 'Unknown';
 
         if (userdata1) {
@@ -185,8 +185,6 @@ export class GPUAdapterImpl implements GPUAdapter {
 
     requestDevice(descriptor?: GPUDeviceDescriptor): Promise<GPUDevice> {
       if (this._destroyed) {
-          console.warn("requestDevice called on destroyed GPUAdapter.");
-          // Spec doesn't explicitly state rejection, but it seems logical.
           return Promise.reject(new Error("Adapter destroyed"));
       }
       if (!this.adapterPtr) {
@@ -201,7 +199,6 @@ export class GPUAdapterImpl implements GPUAdapter {
               // --- 1. Pack Descriptor ---
               const deviceId = ++deviceCount;
               const userDataBuffer = new Uint32Array(1);
-              userDataBuffer[0] = deviceId;
               const userDataPtr = ptr(userDataBuffer.buffer);
 
               const uncapturedErrorCallback = new JSCallback(
@@ -209,7 +206,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                       devicePtr: Pointer,
                       typeInt: number,
                       messagePtr: Pointer | null,
-                      messageSize: number,
+                      messageSize: bigint,
                       userdata1: Pointer | null,
                       userdata2: Pointer | null
                   ) => {
@@ -275,9 +272,9 @@ export class GPUAdapterImpl implements GPUAdapter {
               packedDescriptorPtr = ptr(descBuffer);
 
               // --- 2. Create JSCallback ---
-              const callbackFn = (status: number, devicePtr: Pointer | null, messagePtr: Pointer | null, messageSize: number, userdata1: Pointer | null, userdata2: Pointer | null) => {
+              const callbackFn = (status: number, devicePtr: Pointer | null, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) => {
                   this.instanceTicker.unregister();
-                  const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
+                  const message = decodeCallbackMessage(messagePtr, messageSize);
 
                   if (status === RequestDeviceStatus.Success) {
                       if (devicePtr) {

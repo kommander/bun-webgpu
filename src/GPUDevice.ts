@@ -1,7 +1,7 @@
 
-import { type Pointer, ptr } from "bun:ffi";
+import { FFIType, JSCallback, type Pointer, ptr, toArrayBuffer } from "bun:ffi";
 import { BufferUsageFlags } from "./common";
-import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct } from "./structs_def";
+import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
 import { type FFISymbols } from "./ffi";
@@ -21,7 +21,7 @@ import { fatalError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
-import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl } from "./shared";
+import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage, GPUErrorImpl } from "./shared";
 import { GPUAdapterInfoImpl } from "./shared";
 
 type EventListenerOptions = any;
@@ -62,6 +62,8 @@ export class DeviceTicker {
 const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
 const DEFAULT_LIMITS = Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), DEFAULT_SUPPORTED_LIMITS);
 
+let erroScopePopId = 0;
+
 export class GPUDeviceImpl implements GPUDevice {
     readonly ptr: Pointer;
     readonly queuePtr: Pointer;
@@ -73,6 +75,11 @@ export class GPUDeviceImpl implements GPUDevice {
     private _limits: GPUSupportedLimits = DEFAULT_LIMITS;
     private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
     private _destroyed = false;
+    private _popErrorScopeCallback: JSCallback;
+    private _popErrorScopePromises: Map<number, {
+        resolve: (value: GPUError | null) => void,
+        reject: (reason?: any) => void,
+    }> = new Map();
 
     __brand: "GPUDevice" = "GPUDevice";
     label: string = '';
@@ -91,6 +98,37 @@ export class GPUDeviceImpl implements GPUDevice {
       this._lost = new Promise((resolve, reject) => {
         // TODO: Implement lost event
       });
+
+      this._popErrorScopeCallback = new JSCallback(
+        (status: number, errorType: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) => {
+            this.instanceTicker.unregister();
+            
+            const message = decodeCallbackMessage(messagePtr, messageSize);
+            const error = Object.assign(Object.create(GPUErrorImpl.prototype), {
+                message,
+            });
+            
+            if (!userdata1) {
+                console.error('[POP ERROR SCOPE CALLBACK] userdata1 is null');
+                return;
+            }
+            
+            const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
+            const userDataView = new DataView(userdata1Buffer);
+            const popId = userDataView.getUint32(0, true);
+            const promise = this._popErrorScopePromises.get(popId);
+            
+            if (promise) {
+                promise.resolve(error);
+                this._popErrorScopePromises.delete(popId);
+            } else {
+                console.error('[POP ERROR SCOPE CALLBACK] promise not found');
+            }
+        },
+        {
+            args: [FFIType.u32, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
+        }
+      );
     }
 
     tick(): undefined {
@@ -120,11 +158,33 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     pushErrorScope(filter: GPUErrorFilter): undefined {
-        fatalError('pushErrorScope not implemented', filter);
+        if (this._destroyed) {
+            fatalError('pushErrorScope on destroyed GPUDevice');
+        }
+        this.lib.wgpuDevicePushErrorScope(this.devicePtr, WGPUErrorFilter.to(filter));
+        return undefined;
     }
 
     popErrorScope(): Promise<GPUError | null> {
-        fatalError('popErrorScope not implemented');
+        if (this._destroyed) {
+            fatalError('popErrorScope on destroyed GPUDevice');
+        }
+
+        return new Promise((resolve, reject) => {
+            const id = erroScopePopId++;
+            this._popErrorScopePromises.set(id, { resolve, reject });
+            const userDataBuffer = new Uint32Array(1);
+            userDataBuffer[0] = id;
+            const userDataPtr = ptr(userDataBuffer.buffer);
+
+            const callbackInfo = WGPUCallbackInfoStruct.pack({
+                mode: 'AllowProcessEvents',
+                callback: this._popErrorScopeCallback.ptr!,
+                userdata1: userDataPtr,
+            });
+            this.lib.wgpuDevicePopErrorScope(this.devicePtr, ptr(callbackInfo));
+            this.instanceTicker.register();
+        });
     }
 
     set onuncapturederror(listener: DeviceErrorCallback | null) {

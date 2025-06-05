@@ -1,3 +1,5 @@
+import { type Pointer, toArrayBuffer } from "bun:ffi";
+
 export class GPUAdapterInfoImpl implements GPUAdapterInfo {
     __brand: "GPUAdapterInfo" = "GPUAdapterInfo";
     vendor: string = "";
@@ -23,6 +25,30 @@ export function normalizeIdentifier(input: string): string {
         .replace(/[^a-z0-9-]/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
+}
+
+export class GPUErrorImpl implements GPUError {
+    message: string = '';
+    constructor() {
+        throw new Error('Illegal constructor');
+    }
+}
+
+export function decodeCallbackMessage(messagePtr: Pointer | null, messageSize: number | bigint): string {
+    if (!messagePtr || messageSize === 0n || messageSize === 0) {
+        return '[empty message]';
+    }
+
+    let arrayBuffer: ArrayBuffer | null = null;
+    arrayBuffer = toArrayBuffer(messagePtr, 0, Number(messageSize));
+
+    let message = 'Could not decode error message';
+    if (arrayBuffer instanceof Error) {
+        message = arrayBuffer.message;
+    } else {
+        message = Buffer.from(arrayBuffer).toString();
+    }
+    return message;
 }
 
 export const DEFAULT_SUPPORTED_LIMITS: Omit<GPUSupportedLimits, '__brand'> = Object.freeze({
@@ -62,6 +88,7 @@ export const DEFAULT_SUPPORTED_LIMITS: Omit<GPUSupportedLimits, '__brand'> = Obj
     maxComputeWorkgroupSizeY: 256,
     maxComputeWorkgroupSizeZ: 64,
     maxComputeWorkgroupsPerDimension: 65535,
+    maxImmediateSize: 0,
 });
 
 export class GPUSupportedLimitsImpl implements GPUSupportedLimits {

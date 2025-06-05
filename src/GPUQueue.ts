@@ -71,6 +71,10 @@ export class GPUQueueImpl implements GPUQueue {
 
             this._onSubmittedWorkDoneResolves.push(resolve);
             this._onSubmittedWorkDoneRejects.push(reject);
+            
+            // if (this._onSubmittedWorkDoneResolves.length > 1) {
+            //     return;
+            // }
 
             const callbackInfo = WGPUCallbackInfoStruct.pack({
                 mode: 'AllowProcessEvents',

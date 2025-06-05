@@ -122,6 +122,13 @@ export const WGPUCompareFunction = defineEnum({
     "force-32": 0x7FFFFFFF
 });
 
+export const WGPUErrorFilter = defineEnum({
+    validation: 0x00000001,
+    "out-of-memory": 0x00000002,
+    internal: 0x00000003,
+    "force-32": 0x7FFFFFFF
+});
+
 export const WGPUStringView = defineStruct([
     ['data', 'char*'],
     ['length', 'u64'],
@@ -432,6 +439,7 @@ export const WGPULimitsStruct = defineStruct([
     ['maxComputeWorkgroupSizeY', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxComputeWorkgroupSizeZ', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxComputeWorkgroupsPerDimension', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
+    ['maxImmediateSize', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxStorageBuffersInVertexStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxStorageTexturesInVertexStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxStorageBuffersInFragmentStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
