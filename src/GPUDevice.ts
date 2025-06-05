@@ -155,7 +155,15 @@ export class GPUDeviceImpl implements GPUDevice {
         }
     }
 
-    handleDeviceLost(reason: GPUDeviceLostReason, message: string) {
+    handleDeviceLost(reason: GPUDeviceLostReason, message: string, override: boolean = false) {
+        if (override) {
+            this._lost = Promise.resolve({ 
+                reason, 
+                message, 
+                __brand: "GPUDeviceLostInfo" as const,
+            });
+            return;
+        }
         if (this._lostPromiseResolve) {
             this._lostPromiseResolve({ 
                 reason, 
