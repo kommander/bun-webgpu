@@ -313,7 +313,7 @@ const encoder = new TextEncoder();
 
 // Define Struct
 export function defineStruct<const Fields extends readonly StructField[], const Opts extends StructDefOptions = {} >(
-  fields: Fields,
+  fields: Fields & StructField[],
   structDefOptions?: Opts
 ): DefineStructReturnType<Fields, Opts> {
   let offset = 0;
