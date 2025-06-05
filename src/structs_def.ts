@@ -16,13 +16,24 @@ export const WGPUCallbackMode = {
 export const WGPUCallbackModeDef = defineEnum(WGPUCallbackMode);
 
 export const WGPUErrorType = {
-    NoError: 0,
-    Validation: 1,
-    OutOfMemory: 2,
-    Internal: 3,
-    Unknown: 4,
-    DeviceLost: 5,
+    "no-error": 0,
+    "validation": 1,
+    "out-of-memory": 2,
+    "internal": 3,
+    "unknown": 4,
+    "device-lost": 5,
+    "force-32": 0x7FFFFFFF
 } as const;
+export const WGPUErrorTypeDef = defineEnum(WGPUErrorType);
+
+export const WGPUDeviceLostReason = {
+    unknown: 0x00000001,
+    destroyed: 0x00000002,
+    "callback-cancelled": 0x00000003,
+    "failed-creation": 0x00000004,
+    "force-32": 0x7FFFFFFF
+} as const;
+export const WGPUDeviceLostReasonDef = defineEnum(WGPUDeviceLostReason);
 
 export const WGPUSType = {
     ShaderSourceSPIRV: 0x00000001,

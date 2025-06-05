@@ -9,7 +9,8 @@ import {
     type WGPUUncapturedErrorCallbackInfo, 
     WGPULimitsStruct, 
     WGPUSupportedFeaturesStruct,
-    WGPUAdapterInfoStruct
+    WGPUAdapterInfoStruct,
+    WGPUDeviceLostReasonDef
 } from "./structs_def";
 import { fatalError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
@@ -119,7 +120,6 @@ export class GPUAdapterImpl implements GPUAdapter {
 
     get limits(): GPUSupportedLimits {
         if (this._destroyed) {
-            console.warn("Accessing limits on destroyed GPUAdapter");
             return this._limits;
         }
 
@@ -161,25 +161,53 @@ export class GPUAdapterImpl implements GPUAdapter {
         const message = decodeCallbackMessage(messagePtr, messageSize);
         const typeName = Object.keys(WGPUErrorType).find(key => WGPUErrorType[key as keyof typeof WGPUErrorType] === typeInt) || 'Unknown';
 
-        if (userdata1) {
-            try {
-                const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
-                const userDataView = new DataView(userdata1Buffer);
-                const deviceId = userDataView.getUint32(0, true);
-                const device = this._devices.get(deviceId);
-                if (device) {
-                    const event: GPUUncapturedErrorEvent = Object.assign(new Event('uncapturederror', { bubbles: true, cancelable: true }), {
-                        __brand: "GPUUncapturedErrorEvent" as const,
-                        error: {
-                            message: message || '(none)'
-                        }
-                    });
-                    device.handleUncapturedError(event);
-                    device.dispatchEvent(event);
-                }
-            } catch (e) {
-                console.error('Error getting deviceId from userdata1', e);
+        if (!userdata1) {
+            console.error('No userdata1 for uncaptured error');
+            return;
+        }
+
+        try {
+            const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
+            const userDataView = new DataView(userdata1Buffer);
+            const deviceId = userDataView.getUint32(0, true);
+            const device = this._devices.get(deviceId);
+            if (device) {
+                const event: GPUUncapturedErrorEvent = Object.assign(new Event('uncapturederror', { bubbles: true, cancelable: true }), {
+                    __brand: "GPUUncapturedErrorEvent" as const,
+                    error: {
+                        message: message || '(none)'
+                    }
+                });
+                device.handleUncapturedError(event);
+                device.dispatchEvent(event);
+            } else {
+                console.error(`Device ${deviceId} not found for uncaptured error`);
             }
+        } catch (e) {
+            console.error('Error getting deviceId from userdata1', e);
+        }
+    }
+
+    private handleDeviceLost(devicePtr: Pointer | null, reason: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) {
+        const message = decodeCallbackMessage(messagePtr, messageSize);
+        if (!userdata1) {
+            console.error('No userdata1 for device lost');
+            return;
+        }
+
+        try {
+            const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
+            const userDataView = new DataView(userdata1Buffer);
+            const deviceId = userDataView.getUint32(0, true);
+            const device = this._devices.get(deviceId);
+            
+            if (device) {
+                device.handleDeviceLost(WGPUDeviceLostReasonDef.from(reason) as GPUDeviceLostReason, message);
+            } else {
+                console.error(`Device ${deviceId} not found for device lost`);
+            }
+        } catch (e) {
+            console.error('Error getting deviceId from userdata1', e);
         }
     }
 
@@ -197,8 +225,8 @@ export class GPUAdapterImpl implements GPUAdapter {
 
           try {
               // --- 1. Pack Descriptor ---
-              const deviceId = ++deviceCount;
               const userDataBuffer = new Uint32Array(1);
+              userDataBuffer[0] = ++deviceCount;
               const userDataPtr = ptr(userDataBuffer.buffer);
 
               const uncapturedErrorCallback = new JSCallback(
@@ -219,28 +247,27 @@ export class GPUAdapterImpl implements GPUAdapter {
                     returns: FFIType.void
                   }
               );
+
+              if (!uncapturedErrorCallback.ptr) {
+                fatalError("Failed to create uncapturedErrorCallback");
+              }
               
               const deviceLostCallback = new JSCallback(
                 (
                     devicePtr: Pointer | null,
                     reason: number,
                     messagePtr: Pointer | null,
-                    messageSize: number,
+                    messageSize: bigint,
                     userdata1: Pointer | null,
                     userdata2: Pointer | null
                 ) => {
-                    // TODO:
-                    // this.handleDeviceLost(devicePtr, typeInt, messagePtr, userdata1, userdata2);
+                    this.handleDeviceLost(devicePtr, reason, messagePtr, messageSize, userdata1, userdata2);
                 },
                 {
                   args: [FFIType.pointer, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer ],
-                  returns: FFIType.void
+                  returns: FFIType.void,
                 }
               );
-
-              if (!uncapturedErrorCallback.ptr) {
-                fatalError("Failed to create uncapturedErrorCallback");
-              }
 
               if (!deviceLostCallback.ptr) {
                 fatalError("Failed to create deviceLostCallback");
@@ -261,7 +288,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                   nextInChain: null,
                   mode: 'AllowProcessEvents',
                   callback: deviceLostCallback.ptr,
-                  userdata1: null,
+                  userdata1: userDataPtr,
                   userdata2: null,
                 },
                 defaultQueue: {
@@ -277,7 +304,10 @@ export class GPUAdapterImpl implements GPUAdapter {
                   const message = decodeCallbackMessage(messagePtr, messageSize);
 
                   if (status === RequestDeviceStatus.Success) {
-                      if (devicePtr) {
+                      if (userdata1 && devicePtr) {
+                          const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
+                          const userDataView = new DataView(userdata1Buffer);
+                          const deviceId = userDataView.getUint32(0, true);
                           const device = new GPUDeviceImpl(devicePtr, this.lib, this.instanceTicker);
                           this._devices.set(deviceId, device);
                           resolve(device);
@@ -308,7 +338,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                   nextInChain: null,
                   mode: "AllowProcessEvents",
                   callback: jsCallback?.ptr,
-                  userdata1: null,
+                  userdata1: userDataPtr,
                   userdata2: null,
               });
 

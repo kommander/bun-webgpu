@@ -35,6 +35,10 @@ export class InstanceTicker {
       return this._waiting > 0;
   }
 
+  processEvents() {
+    this.lib.wgpuInstanceProcessEvents(this.instancePtr);
+  }
+
   private scheduleTick() {
       if (this._ticking) return;
       this._ticking = true;

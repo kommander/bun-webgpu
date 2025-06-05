@@ -71,6 +71,7 @@ export class GPUDeviceImpl implements GPUDevice {
     private _userUncapturedErrorCallback: DeviceErrorCallback | null = null;
     private _ticker: DeviceTicker;
     private _lost: Promise<GPUDeviceLostInfo>;
+    private _lostPromiseResolve: ((value: GPUDeviceLostInfo) => void) | null = null;
     private _features: GPUSupportedFeatures | null = null;
     private _limits: GPUSupportedLimits = DEFAULT_LIMITS;
     private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
@@ -95,8 +96,8 @@ export class GPUDeviceImpl implements GPUDevice {
       // TODO: When are device ticks still needed?
       this._ticker = new DeviceTicker(this.devicePtr, this.lib);
       this._queue = new GPUQueueImpl(this.queuePtr, this.lib, this.instanceTicker);
-      this._lost = new Promise((resolve, reject) => {
-        // TODO: Implement lost event
+      this._lost = new Promise((resolve) => {
+        this._lostPromiseResolve = resolve;
       });
 
       this._popErrorScopeCallback = new JSCallback(
@@ -137,11 +138,13 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     addEventListener<K extends keyof __GPUDeviceEventMap>(type: K, listener: (this: GPUDevice, ev: __GPUDeviceEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
-        fatalError('addEventListener not implemented', type, listener, options);
+        // fatalError('addEventListener not implemented', type, listener, options);
+        console.warn('addEventListener not implemented', type, listener, options);
     }
 
     removeEventListener<K extends keyof __GPUDeviceEventMap>(type: K, listener: (this: GPUDevice, ev: __GPUDeviceEventMap[K]) => any, options?: boolean | EventListenerOptions): void {
-        fatalError('removeEventListener not implemented', type, listener, options);
+        // fatalError('removeEventListener not implemented', type, listener, options);
+        console.warn('removeEventListener not implemented', type, listener, options);
     }
 
     handleUncapturedError(event: GPUUncapturedErrorEvent) {
@@ -149,6 +152,16 @@ export class GPUDeviceImpl implements GPUDevice {
             this._userUncapturedErrorCallback.call(this, event);
         } else {
             console.error(`>>> JS Device Error Callback <<< Type: ${event.error.message}`);
+        }
+    }
+
+    handleDeviceLost(reason: GPUDeviceLostReason, message: string) {
+        if (this._lostPromiseResolve) {
+            this._lostPromiseResolve({ 
+                reason, 
+                message, 
+                __brand: "GPUDeviceLostInfo" as const,
+            });
         }
     }
 
@@ -325,7 +338,8 @@ export class GPUDeviceImpl implements GPUDevice {
         this._queue?.destroy();
         this._queue = null;
 
-        try { this.lib.wgpuDeviceRelease(this.devicePtr); } catch(e) { console.error("FFI Error: deviceRelease", e); }
+        this.lib.wgpuDeviceDestroy(this.devicePtr);
+        this.instanceTicker.processEvents();
         return undefined;
     }
 
