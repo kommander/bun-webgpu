@@ -200,6 +200,7 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
             fatalError("wgpuCommandEncoderFinish returned null.");
         }
         this._destroy();
+        
         return new GPUCommandBufferImpl(commandBufferPtr, this.lib, descriptor?.label);
     }
 

@@ -17,15 +17,22 @@ import { GPUShaderModuleImpl } from "./GPUShaderModule";
 import { GPUPipelineLayoutImpl } from "./GPUPipelineLayout";
 import { GPUComputePipelineImpl } from "./GPUComputePipeline";
 import { GPURenderPipelineImpl } from "./GPURenderPipeline";
-import { fatalError } from "./utils/error";
+import { fatalError, GPUErrorImpl } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
-import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage, GPUErrorImpl } from "./shared";
+import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage } from "./shared";
 import { GPUAdapterInfoImpl } from "./shared";
+import { EventEmitter } from "events";
 
 type EventListenerOptions = any;
 export type DeviceErrorCallback = (this: GPUDevice, ev: GPUUncapturedErrorEvent) => any;
+
+const PopErrorScopeStatus = {
+    Success: 1,
+    CallbackCancelled: 2,
+    Error: 3,
+} as const;
 
 export class DeviceTicker {
     private _waiting: number = 0;
@@ -64,7 +71,7 @@ const DEFAULT_LIMITS = Object.assign(Object.create(GPUSupportedLimitsImpl.protot
 
 let erroScopePopId = 0;
 
-export class GPUDeviceImpl implements GPUDevice {
+export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     readonly ptr: Pointer;
     readonly queuePtr: Pointer;
     private _queue: GPUQueue | null = null;
@@ -86,6 +93,7 @@ export class GPUDeviceImpl implements GPUDevice {
     label: string = '';
 
     constructor(public readonly devicePtr: Pointer, private lib: FFISymbols, private instanceTicker: InstanceTicker) {
+      super();
       this.ptr = devicePtr;
       const queuePtr = this.lib.wgpuDeviceGetQueue(this.devicePtr);
       if (!queuePtr) {
@@ -104,24 +112,30 @@ export class GPUDeviceImpl implements GPUDevice {
         (status: number, errorType: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) => {
             this.instanceTicker.unregister();
             
-            const message = decodeCallbackMessage(messagePtr, messageSize);
-            const error = Object.assign(Object.create(GPUErrorImpl.prototype), {
-                message,
-            });
-            
             if (!userdata1) {
                 console.error('[POP ERROR SCOPE CALLBACK] userdata1 is null');
                 return;
             }
-            
+
             const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
             const userDataView = new DataView(userdata1Buffer);
             const popId = userDataView.getUint32(0, true);
             const promise = this._popErrorScopePromises.get(popId);
             
+            this._popErrorScopePromises.delete(popId);
+            
             if (promise) {
-                promise.resolve(error);
-                this._popErrorScopePromises.delete(popId);
+                if (messageSize === 0n) {
+                    promise.resolve(null);
+                } else if (status === PopErrorScopeStatus.Error) {
+                    promise.resolve(null);
+                } else {
+                    const message = decodeCallbackMessage(messagePtr, messageSize);
+                    const error = Object.assign(Object.create(GPUErrorImpl.prototype), {
+                        message,
+                    });
+                    promise.resolve(error);
+                }
             } else {
                 console.error('[POP ERROR SCOPE CALLBACK] promise not found');
             }
@@ -138,16 +152,19 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     addEventListener<K extends keyof __GPUDeviceEventMap>(type: K, listener: (this: GPUDevice, ev: __GPUDeviceEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
-        // fatalError('addEventListener not implemented', type, listener, options);
-        console.warn('addEventListener not implemented', type, listener, options);
+        if (typeof options === 'object' && options !== null && options.once) {
+            this.once(type, listener);
+        } else {
+            this.on(type, listener);
+        }
     }
 
     removeEventListener<K extends keyof __GPUDeviceEventMap>(type: K, listener: (this: GPUDevice, ev: __GPUDeviceEventMap[K]) => any, options?: boolean | EventListenerOptions): void {
-        // fatalError('removeEventListener not implemented', type, listener, options);
-        console.warn('removeEventListener not implemented', type, listener, options);
+        this.off(type, listener);
     }
 
     handleUncapturedError(event: GPUUncapturedErrorEvent) {
+        this.emit('uncapturederror', event);
         if (this._userUncapturedErrorCallback) {
             this._userUncapturedErrorCallback.call(this, event);
         } else {
@@ -174,7 +191,7 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     dispatchEvent(event: Event): boolean {
-        console.warn('dispatchEvent not implemented');
+        this.emit(event.type, event);
         return true;
     }
 
@@ -388,25 +405,14 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     createTexture(descriptor: GPUTextureDescriptor): GPUTexture {
-        let size = descriptor.size;
-        if (Symbol.iterator in size) {
-            const sizeArray = Array.from(size);
-            size = { width: sizeArray[0] || 1, height: sizeArray[1] || 1 }
-        } else {
-            size = { width: size.width || 1, height: size.height || 1, depthOrArrayLayers: size.depthOrArrayLayers || 1 }
-        }
-
-        const packedDescriptor = WGPUTextureDescriptorStruct.pack({
-            ...descriptor,
-            size,
-        });
+        const packedDescriptor = WGPUTextureDescriptorStruct.pack(descriptor);
 
         try {
             const texturePtr = this.lib.wgpuDeviceCreateTexture(
                 this.devicePtr,
                 ptr(packedDescriptor)
             );
-
+            
             if (!texturePtr) {
                 fatalError("Failed to create texture");
             }
@@ -543,12 +549,15 @@ export class GPUDeviceImpl implements GPUDevice {
     }
 
     createBindGroup(descriptor: GPUBindGroupDescriptor): GPUBindGroup {
-        if (!this.devicePtr) {
-            fatalError("createBindGroup: Device pointer is null");
-        }
-
         const entries = Array.from(descriptor.entries).map((e) => {
-            if (isBufferBinding(e.resource)) {
+            if (e.resource instanceof GPUBufferImpl) {
+                return {
+                    ...e,
+                    buffer: e.resource,
+                    offset: e.resource.offset ?? 0n,
+                    size: e.resource.size ?? UINT64_MAX
+                }
+            } else if (isBufferBinding(e.resource)) {
                 return {
                     ...e,
                     buffer: e.resource.buffer,

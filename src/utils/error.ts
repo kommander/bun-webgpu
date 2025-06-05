@@ -10,3 +10,31 @@ export class OperationError extends Error {
         this.name = 'OperationError';
     }
 }
+
+export class GPUErrorImpl extends Error implements GPUError {
+    constructor(message: string) {
+        super(message);
+        this.name = 'GPUError';
+    }
+}
+
+export class GPUOutOfMemoryError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'GPUOutOfMemoryError';
+    }
+}
+
+export class GPUInternalError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'GPUInternalError';
+    }
+}
+
+export class GPUValidationError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'GPUValidationError';
+    }
+}

@@ -51,15 +51,15 @@ export class GPUQueueImpl implements GPUQueue {
 
     submit(commandBuffers: Iterable<GPUCommandBuffer>): undefined {
         const commandBuffersArray = Array.from(commandBuffers);
-        if (!commandBuffersArray || commandBuffersArray.length === 0) { console.warn("queueSubmit: no command buffers provided"); return; }
+        if (!commandBuffersArray || commandBuffersArray.length === 0) { 
+            // console.warn("queueSubmit: no command buffers provided"); 
+            // The CTS test suite calls .submit([]) to work around a bug in chromium to flush the queue.
+            return; 
+        }
         const handleView = packObjectArray(commandBuffersArray)
-        try { 
-            this.lib.wgpuQueueSubmit(this.ptr, commandBuffersArray.length, ptr(handleView.buffer));
-            for (const commandBuffer of commandBuffersArray) {
-                commandBuffer._destroy();
-            }
-        } catch(e) { 
-            console.error("FFI Error: queueSubmit", e); 
+        this.lib.wgpuQueueSubmit(this.ptr, commandBuffersArray.length, ptr(handleView.buffer));
+        for (const commandBuffer of commandBuffersArray) {
+            commandBuffer._destroy();
         }
     }
 

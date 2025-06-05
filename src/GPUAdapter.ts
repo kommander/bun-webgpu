@@ -12,7 +12,7 @@ import {
     WGPUAdapterInfoStruct,
     WGPUDeviceLostReasonDef
 } from "./structs_def";
-import { fatalError, OperationError } from "./utils/error";
+import { fatalError, GPUErrorImpl, OperationError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
 import { allocStruct } from "./structs_ffi";
 import { GPUAdapterInfoImpl, normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage } from "./shared";
@@ -27,6 +27,16 @@ const ReverseDeviceStatus = Object.fromEntries(Object.entries(RequestDeviceStatu
                       
 const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
 const DEFAULT_LIMITS = Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), DEFAULT_SUPPORTED_LIMITS);
+
+export class GPUUncapturedErrorEventImpl extends Event implements GPUUncapturedErrorEvent {
+    __brand: "GPUUncapturedErrorEvent" = "GPUUncapturedErrorEvent";
+    error: GPUError;
+
+    constructor(error: GPUError) {
+        super('uncapturederror', { bubbles: true, cancelable: true });
+        this.error = error;
+    }
+}
 
 export class GPUAdapterImpl implements GPUAdapter {
     __brand: "GPUAdapter" = "GPUAdapter";
@@ -159,14 +169,24 @@ export class GPUAdapterImpl implements GPUAdapter {
 
     private handleUncapturedError(devicePtr: Pointer, typeInt: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) {
         const message = decodeCallbackMessage(messagePtr, messageSize);
+        let error: GPUError | null = null;
         
+        switch (typeInt) {
+            case WGPUErrorType['out-of-memory']:
+                error = new GPUOutOfMemoryError(message);
+                break;
+            case WGPUErrorType.internal:
+                error = new GPUInternalError(message);
+                break;
+            case WGPUErrorType.validation:
+                error = new GPUValidationError(message);
+                break;
+            default:
+                error = new GPUErrorImpl(message);
+                break;
+        }
         if (this._device) {
-            const event: GPUUncapturedErrorEvent = Object.assign(new Event('uncapturederror', { bubbles: true, cancelable: true }), {
-                __brand: "GPUUncapturedErrorEvent" as const,
-                error: {
-                    message: message || '(none)'
-                }
-            });
+            const event: GPUUncapturedErrorEvent = new GPUUncapturedErrorEventImpl(error);
             this._device.handleUncapturedError(event);
             this._device.dispatchEvent(event);
         } else {

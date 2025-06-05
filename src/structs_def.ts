@@ -16,12 +16,12 @@ export const WGPUCallbackMode = {
 export const WGPUCallbackModeDef = defineEnum(WGPUCallbackMode);
 
 export const WGPUErrorType = {
-    "no-error": 0,
-    "validation": 1,
-    "out-of-memory": 2,
-    "internal": 3,
-    "unknown": 4,
-    "device-lost": 5,
+    "no-error": 1,
+    "validation": 2,
+    "out-of-memory": 3,
+    "internal": 4,
+    "unknown": 5,
+    // "device-lost": 6,
     "force-32": 0x7FFFFFFF
 } as const;
 export const WGPUErrorTypeDef = defineEnum(WGPUErrorType);

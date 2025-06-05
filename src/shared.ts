@@ -27,13 +27,6 @@ export function normalizeIdentifier(input: string): string {
         .replace(/^-|-$/g, '');
 }
 
-export class GPUErrorImpl implements GPUError {
-    message: string = '';
-    constructor() {
-        throw new Error('Illegal constructor');
-    }
-}
-
 export function decodeCallbackMessage(messagePtr: Pointer | null, messageSize: number | bigint): string {
     if (!messagePtr || messageSize === 0n || messageSize === 0) {
         return '[empty message]';

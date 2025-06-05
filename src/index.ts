@@ -4,8 +4,9 @@ import { type Pointer } from "bun:ffi";
 import { loadLibrary, type FFISymbols } from "./ffi";
 import { GPUImpl } from "./GPU";
 import { GPUDeviceImpl } from "./GPUDevice";
-import { GPUAdapterInfoImpl, GPUErrorImpl, GPUSupportedLimitsImpl } from "./shared";
+import { GPUAdapterInfoImpl, GPUSupportedLimitsImpl } from "./shared";
 import { BufferUsageFlags, MapModeFlags, ShaderStageFlags, TextureUsageFlags } from "./common";
+import { GPUOutOfMemoryError, GPUErrorImpl, GPUInternalError, GPUValidationError } from "./utils/error";
 
 export * from "./mocks/GPUCanvasContext";
 
@@ -36,6 +37,9 @@ export async function globals({ libPath }: { libPath?: string } = {}) {
   }
 
   global.GPUError = GPUErrorImpl as any;
+  global.GPUOutOfMemoryError = GPUOutOfMemoryError as any;
+  global.GPUInternalError = GPUInternalError as any;
+  global.GPUValidationError = GPUValidationError as any;
   global.GPUTextureUsage = TextureUsageFlags;
   global.GPUBufferUsage = BufferUsageFlags;
   global.GPUShaderStage = ShaderStageFlags;
