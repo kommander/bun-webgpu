@@ -185,6 +185,8 @@ function isEnum<T extends Record<string, number>>(type: any): type is EnumDef<T>
   return typeof type === 'object' && type.__type === 'enum';
 }
 
+type ValidationFunction = (value: any, fieldName: string, hints?: any) => void | never;
+
 interface StructFieldOptions {
   optional?: boolean,
   unpackTransform?: (value: any) => any,
@@ -193,7 +195,7 @@ interface StructFieldOptions {
   asPointer?: boolean,
   default?: any,
   condition?: () => boolean,
-  validate?: (value: any, fieldName: string, hints?: any) => void | never,
+  validate?: ValidationFunction | ValidationFunction[],
 };
 
 type StructField =
@@ -204,6 +206,10 @@ type StructField =
   | readonly [string, ObjectPointerDef<any>, StructFieldOptions?]
   | readonly [string, readonly [EnumDef<any> | StructDef<any> | PrimitiveType | ObjectPointerDef<any>], StructFieldOptions?];
 
+interface StructFieldPackOptions {
+  validationHints?: any;
+}
+
 interface StructLayoutField {
   name: string;
   offset: number;
@@ -211,8 +217,8 @@ interface StructLayoutField {
   align: number;
   optional: boolean;
   default?: any;
-  validate?: (value: any, fieldName: string, hints?: any) => void | never;
-  pack: (view: DataView, offset: number, value: any, obj: any) => void;
+  validate?: ValidationFunction[];
+  pack: (view: DataView, offset: number, value: any, obj: any, options?: StructFieldPackOptions) => void;
   unpack: (view: DataView, offset: number) => any;
 }
 
@@ -220,8 +226,8 @@ interface StructDef<OutputType, InputType = OutputType> {
   __type: 'struct';
   size: number;
   align: number;
-  pack(obj: Simplify<InputType>, options?: { validationHints?: any }): ArrayBuffer;
-  packInto(obj: Simplify<InputType>, view: DataView, offset: number): void;
+  pack(obj: Simplify<InputType>, options?: StructFieldPackOptions): ArrayBuffer;
+  packInto(obj: Simplify<InputType>, view: DataView, offset: number, options?: StructFieldPackOptions): void;
   unpack(buf: ArrayBuffer | SharedArrayBuffer): Simplify<OutputType>;
   describe(): { name: string; offset: number; size: number; align: number; optional: boolean }[];
 }
@@ -330,7 +336,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     }
 
     let size = 0, align = 0;
-    let pack: (view: DataView, offset: number, value: any, obj: any) => void;
+    let pack: (view: DataView, offset: number, value: any, obj: any, options?: StructFieldPackOptions) => void;
     let unpack: (view: DataView, offset: number) => any;
     let needsLengthOf = false;
     let lengthOfDef: EnumDef<any> | null = null;
@@ -385,12 +391,12 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       if (options.asPointer === true) {
         size = pointerSize;
         align = pointerSize;
-        pack = (view, off, val) => {
+        pack = (view, off, val, obj, options) => {
           if (!val) {
              pointerPacker(view, off, null);
              return;
           }
-          const nestedBuf = typeOrStruct.pack(val);
+          const nestedBuf = typeOrStruct.pack(val, options);
           pointerPacker(view, off, ptr(nestedBuf));
         };
         unpack = (view, off) => {
@@ -399,8 +405,8 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       } else { // Inline struct
         size = typeOrStruct.size;
         align = typeOrStruct.align;
-        pack = (view, off, val) => {
-          const nestedBuf = typeOrStruct.pack(val);
+        pack = (view, off, val, obj, options) => {
+          const nestedBuf = typeOrStruct.pack(val, options);
           const nestedView = new Uint8Array(nestedBuf);
           const dView = new Uint8Array(view.buffer);
           dView.set(nestedView, off);
@@ -459,7 +465,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       } else if (isStruct(def)) {
         // Array of Structs
         const elemSize = def.size;
-        pack = (view, off, val: any[]) => {
+        pack = (view, off, val: any[], obj, options) => {
           if (!val || val.length === 0) {
             pointerPacker(view, off, null);
             return;
@@ -467,7 +473,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
           const buffer = new ArrayBuffer(val.length * elemSize);
           const bufferView = new DataView(buffer);
           for (let i = 0; i < val.length; i++) {
-            def.packInto(val[i], bufferView, i * elemSize);
+            def.packInto(val[i], bufferView, i * elemSize, options);
           }
           pointerPacker(view, off, ptr(buffer));
         };
@@ -523,25 +529,31 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     }
     if (options.packTransform) {
       const originalPack = pack;
-      pack = (view, off, val, obj) => originalPack(view, off, options.packTransform!(val), obj);
+      pack = (view, off, val, obj, packOptions) => originalPack(view, off, options.packTransform!(val), obj, packOptions);
     }
     if (options.optional) {
       const originalPack = pack;
       if (isStruct(typeOrStruct) && !options.asPointer) {
-        pack = (view, off, val, obj) => {
+        pack = (view, off, val, obj, packOptions) => {
           if (!val) {
             // no-op, just skip the inline range
           } else {
-            originalPack(view, off, val, obj);
+            originalPack(view, off, val, obj, packOptions);
           }
         };
       } else {
-        pack = (view, off, val, obj) => originalPack(view, off, val ?? 0, obj);
+        pack = (view, off, val, obj, packOptions) => originalPack(view, off, val ?? 0, obj, packOptions);
       }
     }
     if (options.lengthOf) {
       const originalPack = pack;
-      pack = (view, off, val, obj) => originalPack(view, off, obj[options.lengthOf!] ? obj[options.lengthOf!].length : 0, obj);
+      pack = (view, off, val, obj, packOptions) => originalPack(view, off, obj[options.lengthOf!] ? obj[options.lengthOf!].length : 0, obj, packOptions);
+    }
+
+    // Normalize validation to always be an array
+    let validateFunctions: ValidationFunction[] | undefined;
+    if (options.validate) {
+      validateFunctions = Array.isArray(options.validate) ? options.validate : [options.validate];
     }
 
     // LAYOUT FIELD
@@ -550,7 +562,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       offset,
       size,
       align,
-      validate: options.validate,
+      validate: validateFunctions,
       optional: !!options.optional || !!options.lengthOf || options.default !== undefined,
       default: options.default,
       pack,
@@ -615,7 +627,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     size: totalSize,
     align: maxAlign,
 
-    pack(obj: Simplify<StructObjectInputType<Fields>>, options?: { validationHints?: any }): ArrayBuffer {
+    pack(obj: Simplify<StructObjectInputType<Fields>>, options?: StructFieldPackOptions): ArrayBuffer {
       let mappedObj: any = obj;
       if (structDefOptions?.mapValue) {
         mappedObj = structDefOptions.mapValue(obj);
@@ -629,20 +641,27 @@ export function defineStruct<const Fields extends readonly StructField[], const 
           fatalError(`Packing non-optional field '${field.name}' but value is undefined (and no default provided)`);
         }
         if (field.validate) {
-          field.validate(value, field.name, options?.validationHints);
+          for (const validateFn of field.validate) {
+            validateFn(value, field.name, options?.validationHints);
+          }
         }
-        field.pack(view, field.offset, value, mappedObj);
+        field.pack(view, field.offset, value, mappedObj, options);
       }
       return view.buffer;
     },
 
-    packInto(obj: Simplify<StructObjectInputType<Fields>>, view: DataView, offset: number): void {
+    packInto(obj: Simplify<StructObjectInputType<Fields>>, view: DataView, offset: number, options?: StructFieldPackOptions): void {
       for (const field of layout) {
         const value = (obj as any)[field.name] ?? field.default;
         if (!field.optional && value === undefined) {
           console.warn(`packInto missing value for non-optional field '${field.name}' at offset ${offset + field.offset}. Writing default or zero.`);
         }
-        field.pack(view, offset + field.offset, value, obj);
+        if (field.validate) {
+          for (const validateFn of field.validate) {
+            validateFn(value, field.name, options?.validationHints);
+          }
+        }
+        field.pack(view, offset + field.offset, value, obj, options);
       }
     },
 

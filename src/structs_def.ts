@@ -429,49 +429,64 @@ function validateRange(val: number, min: number, max: number) {
     }
 }
 
+function minValidator(val: number, fieldName: string, hints?: typeof DEFAULT_SUPPORTED_LIMITS) {
+    if (val < 0 || val > Number.MAX_SAFE_INTEGER) {
+        throw new TypeError(`Value must be between 0 and ${Number.MAX_SAFE_INTEGER}, got ${val}`);
+    }
+    if (hints && fieldName in hints) {
+        const minValue = hints[fieldName as keyof typeof hints] as number;
+        if (val < minValue) {
+            throw new OperationError(`Value must be >= ${minValue}, got ${val}`);
+        }
+    }
+}
+
 function validateLimitField(val: number, fieldName: string, hints?: typeof DEFAULT_SUPPORTED_LIMITS) {
-    console.log('validateLimitField', fieldName, val, hints);
+    if (hints && fieldName in hints) {
+        const maxValue = hints[fieldName as keyof typeof hints] as number;
+        validateRange(val, 0, maxValue);
+    }
 }
 
 // WGPULimits struct mirroring C layout
 export const WGPULimitsStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
-    ['maxTextureDimension1D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension1D }],
-    ['maxTextureDimension2D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension2D }],
-    ['maxTextureDimension3D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension3D }],
-    ['maxTextureArrayLayers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureArrayLayers }],
-    ['maxBindGroups', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindGroups }],
-    ['maxBindGroupsPlusVertexBuffers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindGroupsPlusVertexBuffers }],
-    ['maxBindingsPerBindGroup', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindingsPerBindGroup }],
-    ['maxDynamicUniformBuffersPerPipelineLayout', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxDynamicUniformBuffersPerPipelineLayout }],
-    ['maxDynamicStorageBuffersPerPipelineLayout', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxDynamicStorageBuffersPerPipelineLayout }],
-    ['maxSampledTexturesPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxSampledTexturesPerShaderStage }],
-    ['maxSamplersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxSamplersPerShaderStage }],
-    ['maxStorageBuffersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersPerShaderStage }],
-    ['maxStorageTexturesPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesPerShaderStage }],
-    ['maxUniformBuffersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxUniformBuffersPerShaderStage }],
-    ['maxUniformBufferBindingSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxUniformBufferBindingSize }],
-    ['maxStorageBufferBindingSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBufferBindingSize }],
-    ['minUniformBufferOffsetAlignment', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.minUniformBufferOffsetAlignment, validate: (val: number) => validateMutipleOf(val, 2) }],
-    ['minStorageBufferOffsetAlignment', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.minStorageBufferOffsetAlignment, validate: (val: number) => validateMutipleOf(val, 2) }],
-    ['maxVertexBuffers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexBuffers }],
-    ['maxBufferSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxBufferSize }],
-    ['maxVertexAttributes', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexAttributes }],
-    ['maxVertexBufferArrayStride', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexBufferArrayStride }],
-    ['maxInterStageShaderVariables', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxInterStageShaderVariables }],
-    ['maxColorAttachments', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxColorAttachments }],
-    ['maxColorAttachmentBytesPerSample', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxColorAttachmentBytesPerSample }],
-    ['maxComputeWorkgroupStorageSize', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupStorageSize }],
-    ['maxComputeInvocationsPerWorkgroup', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeInvocationsPerWorkgroup }],
-    ['maxComputeWorkgroupSizeX', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeX }],
-    ['maxComputeWorkgroupSizeY', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeY }],
-    ['maxComputeWorkgroupSizeZ', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeZ }],
+    ['maxTextureDimension1D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension1D, validate: validateLimitField }],
+    ['maxTextureDimension2D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension2D, validate: validateLimitField }],
+    ['maxTextureDimension3D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension3D, validate: validateLimitField }],
+    ['maxTextureArrayLayers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureArrayLayers, validate: validateLimitField }],
+    ['maxBindGroups', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindGroups, validate: validateLimitField }],
+    ['maxBindGroupsPlusVertexBuffers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindGroupsPlusVertexBuffers, validate: validateLimitField }],
+    ['maxBindingsPerBindGroup', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindingsPerBindGroup, validate: validateLimitField }],
+    ['maxDynamicUniformBuffersPerPipelineLayout', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxDynamicUniformBuffersPerPipelineLayout, validate: validateLimitField }],
+    ['maxDynamicStorageBuffersPerPipelineLayout', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxDynamicStorageBuffersPerPipelineLayout, validate: validateLimitField }],
+    ['maxSampledTexturesPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxSampledTexturesPerShaderStage, validate: validateLimitField }],
+    ['maxSamplersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxSamplersPerShaderStage, validate: validateLimitField }],
+    ['maxStorageBuffersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersPerShaderStage, validate: validateLimitField }],
+    ['maxStorageTexturesPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesPerShaderStage, validate: validateLimitField }],
+    ['maxUniformBuffersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxUniformBuffersPerShaderStage, validate: validateLimitField }],
+    ['maxUniformBufferBindingSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxUniformBufferBindingSize, validate: validateLimitField }],
+    ['maxStorageBufferBindingSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBufferBindingSize, validate: validateLimitField }],
+    ['minUniformBufferOffsetAlignment', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.minUniformBufferOffsetAlignment, validate: [minValidator, (val: number) => validateMutipleOf(val, 2)] }],
+    ['minStorageBufferOffsetAlignment', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.minStorageBufferOffsetAlignment, validate: [minValidator, (val: number) => validateMutipleOf(val, 2)] }],
+    ['maxVertexBuffers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexBuffers, validate: validateLimitField }],
+    ['maxBufferSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxBufferSize, validate: validateLimitField }],
+    ['maxVertexAttributes', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexAttributes, validate: validateLimitField }],
+    ['maxVertexBufferArrayStride', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexBufferArrayStride, validate: validateLimitField }],
+    ['maxInterStageShaderVariables', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxInterStageShaderVariables, validate: validateLimitField }],
+    ['maxColorAttachments', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxColorAttachments, validate: validateLimitField }],
+    ['maxColorAttachmentBytesPerSample', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxColorAttachmentBytesPerSample, validate: validateLimitField }],
+    ['maxComputeWorkgroupStorageSize', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupStorageSize, validate: validateLimitField }],
+    ['maxComputeInvocationsPerWorkgroup', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeInvocationsPerWorkgroup, validate: validateLimitField }],
+    ['maxComputeWorkgroupSizeX', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeX, validate: validateLimitField }],
+    ['maxComputeWorkgroupSizeY', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeY, validate: validateLimitField }],
+    ['maxComputeWorkgroupSizeZ', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeZ, validate: validateLimitField }],
     ['maxComputeWorkgroupsPerDimension', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupsPerDimension, validate: validateLimitField }],
-    ['maxImmediateSize', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxImmediateSize }],
-    ['maxStorageBuffersInVertexStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersInVertexStage }],
-    ['maxStorageTexturesInVertexStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesInVertexStage }],
-    ['maxStorageBuffersInFragmentStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersInFragmentStage }],
-    ['maxStorageTexturesInFragmentStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesInFragmentStage }],
+    ['maxImmediateSize', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxImmediateSize, validate: validateLimitField }],
+    ['maxStorageBuffersInVertexStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersInVertexStage, validate: validateLimitField }],
+    ['maxStorageTexturesInVertexStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesInVertexStage, validate: validateLimitField }],
+    ['maxStorageBuffersInFragmentStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersInFragmentStage, validate: validateLimitField }],
+    ['maxStorageTexturesInFragmentStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesInFragmentStage, validate: validateLimitField }],
 ], {
     default: {
         ...DEFAULT_SUPPORTED_LIMITS,
