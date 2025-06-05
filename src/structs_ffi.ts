@@ -193,6 +193,7 @@ interface StructFieldOptions {
   asPointer?: boolean,
   default?: any,
   condition?: () => boolean,
+  validate?: (value: any) => void | never,
 };
 
 type StructField =
@@ -210,6 +211,7 @@ interface StructLayoutField {
   align: number;
   optional: boolean;
   default?: any;
+  validate?: (value: any) => void | never;
   pack: (view: DataView, offset: number, value: any, obj: any) => void;
   unpack: (view: DataView, offset: number) => any;
 }
@@ -548,6 +550,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       offset,
       size,
       align,
+      validate: options.validate,
       optional: !!options.optional || !!options.lengthOf || options.default !== undefined,
       default: options.default,
       pack,
@@ -624,6 +627,9 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         const value = (mappedObj as any)[field.name] ?? field.default;
         if (!field.optional && value === undefined) {
           fatalError(`Packing non-optional field '${field.name}' but value is undefined (and no default provided)`);
+        }
+        if (field.validate) {
+          field.validate(value);
         }
         field.pack(view, field.offset, value, mappedObj);
       }

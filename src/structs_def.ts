@@ -1,5 +1,5 @@
 import { toArrayBuffer, type Pointer } from "bun:ffi";
-import { fatalError } from "./utils/error";
+import { fatalError, OperationError } from "./utils/error";
 import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
 import { DEFAULT_SUPPORTED_LIMITS } from "./shared";
 
@@ -416,6 +416,13 @@ export const WGPUSupportedFeaturesStruct = defineStruct([
 const WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF;
 const WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFFn;
 
+function validateMutipleOf(val: number, multipleOf: number) {
+    const mod = val % multipleOf;
+    if (mod !== 0) {
+        throw new OperationError(`Value must be a multiple of ${multipleOf}, got ${val}`);
+    }
+}
+
 // WGPULimits struct mirroring C layout
 export const WGPULimitsStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
@@ -435,8 +442,8 @@ export const WGPULimitsStruct = defineStruct([
     ['maxUniformBuffersPerShaderStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxUniformBufferBindingSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
     ['maxStorageBufferBindingSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
-    ['minUniformBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['minStorageBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
+    ['minUniformBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED, validate: (val: number) => validateMutipleOf(val, 2) }],
+    ['minStorageBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED, validate: (val: number) => validateMutipleOf(val, 2) }],
     ['maxVertexBuffers', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
     ['maxBufferSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
     ['maxVertexAttributes', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],

@@ -221,20 +221,6 @@ export class GPUAdapterImpl implements GPUAdapter {
           return Promise.reject(new Error("Adapter pointer is null"));
       }
 
-      // Validation
-      // TODO: Move to structs_def.ts
-      if (descriptor?.requiredLimits) {
-          for (const [limitName, limitValue] of Object.entries(descriptor.requiredLimits)) {
-              if (limitValue !== undefined) {
-                  if (limitName.includes('Alignment') && limitValue > 0) {
-                      if ((limitValue & (limitValue - 1)) !== 0) {
-                          return Promise.reject(new OperationError(`${limitName} must be a power of 2, got ${limitValue}`));
-                      }
-                  }
-              }
-          }
-      }
-
       this._consumed = true;
 
       return new Promise((resolve, reject) => {
