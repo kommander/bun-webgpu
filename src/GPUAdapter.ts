@@ -23,7 +23,8 @@ const RequestDeviceStatus = {
   Error: 3,
   Unknown: 4,
 } as const;
-
+const ReverseDeviceStatus = Object.fromEntries(Object.entries(RequestDeviceStatus).map(([key, value]) => [value, key]));
+                      
 let deviceCount = 0;
 
 const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
@@ -301,7 +302,7 @@ export class GPUAdapterImpl implements GPUAdapter {
               }
               
               try {
-                const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor);
+                const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor, { validationHints: this._limits });
                 packedDescriptorPtr = ptr(descBuffer);
               } catch (e) {
                 this._consumed = false;
@@ -328,7 +329,7 @@ export class GPUAdapterImpl implements GPUAdapter {
                         }
                   } else {
                       this._consumed = false;
-                      let statusName = Object.keys(RequestDeviceStatus).find(key => RequestDeviceStatus[key as keyof typeof RequestDeviceStatus] === status) || 'Unknown WGPU Error';
+                      let statusName = ReverseDeviceStatus[status] || 'Unknown WGPU Error';
                       reject(new OperationError(`WGPU Error (${statusName}): ${message || 'No message provided.'}`));
                   }
 

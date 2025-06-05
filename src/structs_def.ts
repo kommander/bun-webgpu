@@ -413,9 +413,6 @@ export const WGPUSupportedFeaturesStruct = defineStruct([
     ['features', [WGPUFeatureNameDef]],
 ]);
 
-const WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF;
-const WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFFn;
-
 function validateMutipleOf(val: number, multipleOf: number) {
     const mod = val % multipleOf;
     if (mod !== 0) {
@@ -423,45 +420,58 @@ function validateMutipleOf(val: number, multipleOf: number) {
     }
 }
 
+function validateRange(val: number, min: number, max: number) {
+    if (val < 0 || val > Number.MAX_SAFE_INTEGER) {
+        throw new TypeError(`Value must be between 0 and ${Number.MAX_SAFE_INTEGER}, got ${val}`);
+    }
+    if (val < min || val > max) {
+        throw new OperationError(`Value must be between ${min} and ${max}, got ${val}`);
+    }
+}
+
+function validateLimitField(val: number, fieldName: string, hints?: typeof DEFAULT_SUPPORTED_LIMITS) {
+    console.log('validateLimitField', fieldName, val, hints);
+}
+
 // WGPULimits struct mirroring C layout
 export const WGPULimitsStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
-    ['maxTextureDimension1D', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxTextureDimension2D', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxTextureDimension3D', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxTextureArrayLayers', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxBindGroups', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxBindGroupsPlusVertexBuffers', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxBindingsPerBindGroup', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxDynamicUniformBuffersPerPipelineLayout', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxDynamicStorageBuffersPerPipelineLayout', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxSampledTexturesPerShaderStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxSamplersPerShaderStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxStorageBuffersPerShaderStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxStorageTexturesPerShaderStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxUniformBuffersPerShaderStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxUniformBufferBindingSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
-    ['maxStorageBufferBindingSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
-    ['minUniformBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED, validate: (val: number) => validateMutipleOf(val, 2) }],
-    ['minStorageBufferOffsetAlignment', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED, validate: (val: number) => validateMutipleOf(val, 2) }],
-    ['maxVertexBuffers', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxBufferSize', 'u64', { default: WGPU_LIMIT_U64_UNDEFINED }],
-    ['maxVertexAttributes', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxVertexBufferArrayStride', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxInterStageShaderVariables', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxColorAttachments', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxColorAttachmentBytesPerSample', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxComputeWorkgroupStorageSize', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxComputeInvocationsPerWorkgroup', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxComputeWorkgroupSizeX', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxComputeWorkgroupSizeY', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxComputeWorkgroupSizeZ', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxComputeWorkgroupsPerDimension', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxImmediateSize', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxStorageBuffersInVertexStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxStorageTexturesInVertexStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxStorageBuffersInFragmentStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
-    ['maxStorageTexturesInFragmentStage', 'u32', { default: WGPU_LIMIT_U32_UNDEFINED }],
+    ['maxTextureDimension1D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension1D }],
+    ['maxTextureDimension2D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension2D }],
+    ['maxTextureDimension3D', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureDimension3D }],
+    ['maxTextureArrayLayers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxTextureArrayLayers }],
+    ['maxBindGroups', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindGroups }],
+    ['maxBindGroupsPlusVertexBuffers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindGroupsPlusVertexBuffers }],
+    ['maxBindingsPerBindGroup', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxBindingsPerBindGroup }],
+    ['maxDynamicUniformBuffersPerPipelineLayout', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxDynamicUniformBuffersPerPipelineLayout }],
+    ['maxDynamicStorageBuffersPerPipelineLayout', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxDynamicStorageBuffersPerPipelineLayout }],
+    ['maxSampledTexturesPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxSampledTexturesPerShaderStage }],
+    ['maxSamplersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxSamplersPerShaderStage }],
+    ['maxStorageBuffersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersPerShaderStage }],
+    ['maxStorageTexturesPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesPerShaderStage }],
+    ['maxUniformBuffersPerShaderStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxUniformBuffersPerShaderStage }],
+    ['maxUniformBufferBindingSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxUniformBufferBindingSize }],
+    ['maxStorageBufferBindingSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBufferBindingSize }],
+    ['minUniformBufferOffsetAlignment', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.minUniformBufferOffsetAlignment, validate: (val: number) => validateMutipleOf(val, 2) }],
+    ['minStorageBufferOffsetAlignment', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.minStorageBufferOffsetAlignment, validate: (val: number) => validateMutipleOf(val, 2) }],
+    ['maxVertexBuffers', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexBuffers }],
+    ['maxBufferSize', 'u64', { default: DEFAULT_SUPPORTED_LIMITS.maxBufferSize }],
+    ['maxVertexAttributes', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexAttributes }],
+    ['maxVertexBufferArrayStride', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxVertexBufferArrayStride }],
+    ['maxInterStageShaderVariables', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxInterStageShaderVariables }],
+    ['maxColorAttachments', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxColorAttachments }],
+    ['maxColorAttachmentBytesPerSample', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxColorAttachmentBytesPerSample }],
+    ['maxComputeWorkgroupStorageSize', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupStorageSize }],
+    ['maxComputeInvocationsPerWorkgroup', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeInvocationsPerWorkgroup }],
+    ['maxComputeWorkgroupSizeX', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeX }],
+    ['maxComputeWorkgroupSizeY', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeY }],
+    ['maxComputeWorkgroupSizeZ', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupSizeZ }],
+    ['maxComputeWorkgroupsPerDimension', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxComputeWorkgroupsPerDimension, validate: validateLimitField }],
+    ['maxImmediateSize', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxImmediateSize }],
+    ['maxStorageBuffersInVertexStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersInVertexStage }],
+    ['maxStorageTexturesInVertexStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesInVertexStage }],
+    ['maxStorageBuffersInFragmentStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageBuffersInFragmentStage }],
+    ['maxStorageTexturesInFragmentStage', 'u32', { default: DEFAULT_SUPPORTED_LIMITS.maxStorageTexturesInFragmentStage }],
 ], {
     default: {
         ...DEFAULT_SUPPORTED_LIMITS,

@@ -193,7 +193,7 @@ interface StructFieldOptions {
   asPointer?: boolean,
   default?: any,
   condition?: () => boolean,
-  validate?: (value: any) => void | never,
+  validate?: (value: any, fieldName: string, hints?: any) => void | never,
 };
 
 type StructField =
@@ -211,7 +211,7 @@ interface StructLayoutField {
   align: number;
   optional: boolean;
   default?: any;
-  validate?: (value: any) => void | never;
+  validate?: (value: any, fieldName: string, hints?: any) => void | never;
   pack: (view: DataView, offset: number, value: any, obj: any) => void;
   unpack: (view: DataView, offset: number) => any;
 }
@@ -220,7 +220,7 @@ interface StructDef<OutputType, InputType = OutputType> {
   __type: 'struct';
   size: number;
   align: number;
-  pack(obj: Simplify<InputType>): ArrayBuffer;
+  pack(obj: Simplify<InputType>, options?: { validationHints?: any }): ArrayBuffer;
   packInto(obj: Simplify<InputType>, view: DataView, offset: number): void;
   unpack(buf: ArrayBuffer | SharedArrayBuffer): Simplify<OutputType>;
   describe(): { name: string; offset: number; size: number; align: number; optional: boolean }[];
@@ -615,7 +615,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     size: totalSize,
     align: maxAlign,
 
-    pack(obj: Simplify<StructObjectInputType<Fields>>): ArrayBuffer {
+    pack(obj: Simplify<StructObjectInputType<Fields>>, options?: { validationHints?: any }): ArrayBuffer {
       let mappedObj: any = obj;
       if (structDefOptions?.mapValue) {
         mappedObj = structDefOptions.mapValue(obj);
@@ -629,7 +629,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
           fatalError(`Packing non-optional field '${field.name}' but value is undefined (and no default provided)`);
         }
         if (field.validate) {
-          field.validate(value);
+          field.validate(value, field.name, options?.validationHints);
         }
         field.pack(view, field.offset, value, mappedObj);
       }

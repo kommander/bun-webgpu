@@ -51,7 +51,7 @@ export function decodeCallbackMessage(messagePtr: Pointer | null, messageSize: n
     return message;
 }
 
-export const DEFAULT_SUPPORTED_LIMITS: Omit<GPUSupportedLimits, '__brand'> = Object.freeze({
+export const DEFAULT_SUPPORTED_LIMITS: Omit<GPUSupportedLimits, '__brand'> & { maxImmediateSize: number } = Object.freeze({
     maxTextureDimension1D: 8192,
     maxTextureDimension2D: 8192,
     maxTextureDimension3D: 2048,
