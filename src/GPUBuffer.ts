@@ -1,7 +1,7 @@
 import { FFIType, JSCallback, ptr, toArrayBuffer, type Pointer } from "bun:ffi";
 import type { FFISymbols } from "./ffi";
 import { BufferUsageFlags } from "./common";
-import { fatalError } from "./utils/error";
+import { fatalError, OperationError } from "./utils/error";
 import { WGPUCallbackInfoStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
 import { decodeCallbackMessage } from "./shared";
@@ -24,6 +24,8 @@ export class GPUBufferImpl implements GPUBuffer {
     private _mapCallbackResolve: ((value: undefined) => void) | null = null;
     private _mapCallbackReject: ((reason?: any) => void) | null = null;
     private _destroyed = false;
+    private _mappedOffset: number = 0;
+    private _mappedSize: number = 0;
 
     __brand: "GPUBuffer" = "GPUBuffer";
     label: string = '';
@@ -39,6 +41,12 @@ export class GPUBufferImpl implements GPUBuffer {
       this._size = descriptor.size;
       this._descriptor = descriptor;
       this._mapState = descriptor.mappedAtCreation ? 'mapped' : 'unmapped';
+      
+      if (descriptor.mappedAtCreation) {
+        this._mappedOffset = 0;
+        this._mappedSize = this._size;
+      }
+      
       this._mapCallback = new JSCallback(
         (status: number, messagePtr: Pointer | null, messageSize: bigint, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
@@ -94,9 +102,10 @@ export class GPUBufferImpl implements GPUBuffer {
       this._mode = mode;
       this._mapState = 'pending';
       this._pendingMap = new Promise((resolve, reject) => {
-          // TODO: WGPU requires offset to be multiple of 8 or 0, size multiple of 4. ??
-          const mapOffset = BigInt(offset ?? 0);
-          const mapSize = BigInt(size ?? this._size);
+          const mapOffsetValue = offset ?? 0;
+          const mapSizeValue = size ?? (this._size - mapOffsetValue);
+          const mapOffset = BigInt(mapOffsetValue);
+          const mapSize = BigInt(mapSizeValue);
 
           this._mapCallbackResolve = resolve;
           this._mapCallbackReject = reject;
@@ -118,6 +127,10 @@ export class GPUBufferImpl implements GPUBuffer {
                   mapSize,
                   ptr(callbackInfo)
               );
+              
+              this._mappedOffset = mapOffsetValue;
+              this._mappedSize = mapSizeValue;
+              
               this.instanceTicker.register();
           } catch(e) {
               this._pendingMap = null;
@@ -139,15 +152,15 @@ export class GPUBufferImpl implements GPUBuffer {
         return this._getConstMappedRangePtr(offset, size);
       }
 
-      const mappedSize = size ?? this._size;
-      const mappedOffset = offset ?? 0
+      const mappedOffset = offset ?? 0;
+      const mappedSize = size ?? (this._size - mappedOffset);
       
       const readOffset = BigInt(mappedOffset);
       const readSize = BigInt(mappedSize);
       
       const dataPtr = this.lib.wgpuBufferGetMappedRange(this.bufferPtr, readOffset, readSize);
       if (dataPtr === null || dataPtr.valueOf() === 0) {
-          fatalError("getMappedRangePtr: Received null pointer (buffer likely not mapped or range invalid).");
+          throw new OperationError("getMappedRangePtr: Received null pointer (buffer likely not mapped or range invalid).");
       }
       
       return dataPtr;
@@ -155,7 +168,7 @@ export class GPUBufferImpl implements GPUBuffer {
 
     _getConstMappedRangePtr(offset?: GPUSize64, size?: GPUSize64): Pointer {
       const mappedOffset = offset ?? 0;
-      const mappedSize = size ?? this._size;
+      const mappedSize = size ?? (this._size - mappedOffset);
       
       const readOffset = BigInt(mappedOffset);
       const readSize = BigInt(mappedSize);
@@ -163,7 +176,7 @@ export class GPUBufferImpl implements GPUBuffer {
       const dataPtr = this.lib.wgpuBufferGetConstMappedRange(this.bufferPtr, readOffset, readSize);
       
       if (dataPtr === null || dataPtr.valueOf() === 0) {
-          fatalError("getConstMappedRangePtr: Received null pointer (buffer likely not mapped or range invalid).");
+          throw new OperationError("getConstMappedRangePtr: Received null pointer (buffer likely not mapped or range invalid).");
       }
       
       return dataPtr;
@@ -174,35 +187,42 @@ export class GPUBufferImpl implements GPUBuffer {
         throw new Error('Buffer is destroyed');
       }
 
-      if (this._descriptor.usage & BufferUsageFlags.MAP_READ) {
-        return this._getConstMappedRange(offset, size);
+      const requestedOffset = offset ?? 0;
+      const requestedSize = size ?? (this._size - requestedOffset);
+
+      if (requestedOffset < this._mappedOffset ||
+          requestedOffset > this._size ||
+          requestedOffset + requestedSize > this._mappedOffset + this._mappedSize) {
+        throw new OperationError("getMappedRange: Requested range is outside the mapped region.");
       }
 
-      const mappedSize = size ?? this._size;
-      const mappedOffset = offset ?? 0
+      if (requestedSize === 0) {
+        return new ArrayBuffer(0);
+      }
+
+      if (this._descriptor.usage & BufferUsageFlags.MAP_READ) {
+        return this._getConstMappedRange(requestedOffset, requestedSize);
+      }
       
-      const readOffset = BigInt(mappedOffset);
-      const readSize = BigInt(mappedSize);
+      const readOffset = BigInt(requestedOffset);
+      const readSize = BigInt(requestedSize);
       
       const dataPtr = this.lib.wgpuBufferGetMappedRange(this.bufferPtr, readOffset, readSize);
       if (dataPtr === null || dataPtr.valueOf() === 0) {
-          fatalError("getMappedRange: Received null pointer (buffer likely not mapped or range invalid).");
+          throw new OperationError("getMappedRange: Received null pointer (buffer likely not mapped or range invalid).");
       }
       
       return toArrayBuffer(dataPtr, 0, Number(readSize));
     }
 
-    _getConstMappedRange(offset?: GPUSize64, size?: GPUSize64): ArrayBuffer {
-      const mappedOffset = offset ?? 0;
-      const mappedSize = size ?? this._size;
-      
-      const readOffset = BigInt(mappedOffset);
-      const readSize = BigInt(mappedSize);
+    _getConstMappedRange(offset: GPUSize64, size: GPUSize64): ArrayBuffer {
+      const readOffset = BigInt(offset);
+      const readSize = BigInt(size);
 
       const dataPtr = this.lib.wgpuBufferGetConstMappedRange(this.bufferPtr, readOffset, readSize);
       
       if (dataPtr === null || dataPtr.valueOf() === 0) {
-          fatalError("getConstMappedRange: Received null pointer (buffer likely not mapped or range invalid).");
+          throw new OperationError("getConstMappedRange: Received null pointer (buffer likely not mapped or range invalid).");
       }
       
       return toArrayBuffer(dataPtr, 0, Number(readSize));
@@ -215,6 +235,8 @@ export class GPUBufferImpl implements GPUBuffer {
 
       this.lib.wgpuBufferUnmap(this.bufferPtr);
       this._mapState = 'unmapped';
+      this._mappedOffset = 0;
+      this._mappedSize = 0;
       return undefined;
     }
 
