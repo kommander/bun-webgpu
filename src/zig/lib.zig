@@ -194,6 +194,24 @@ pub export fn zwgpuDeviceInjectError(device: c.WGPUDevice, error_type: c.WGPUErr
     c.wgpuDeviceInjectError(device, error_type, message_view_ptr.*);
 }
 
+pub export fn zwgpuDeviceCreateComputePipelineAsync(
+    device: c.WGPUDevice,
+    descriptor: *const c.WGPUComputePipelineDescriptor,
+    callback_info_ptr: *const c.WGPUCreateComputePipelineAsyncCallbackInfo,
+) u64 {
+    const future = c.wgpuDeviceCreateComputePipelineAsync(device, descriptor, callback_info_ptr.*);
+    return future.id;
+}
+
+pub export fn zwgpuDeviceCreateRenderPipelineAsync(
+    device: c.WGPUDevice,
+    descriptor: *const c.WGPURenderPipelineDescriptor,
+    callback_info_ptr: *const c.WGPUCreateRenderPipelineAsyncCallbackInfo,
+) u64 {
+    const future = c.wgpuDeviceCreateRenderPipelineAsync(device, descriptor, callback_info_ptr.*);
+    return future.id;
+}
+
 // --- Queue Functions ---
 
 pub export fn zwgpuQueueRelease(queue: c.WGPUQueue) void {

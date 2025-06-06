@@ -38,11 +38,11 @@ import { GPUShaderModuleImpl } from "./GPUShaderModule";
 import { GPUPipelineLayoutImpl } from "./GPUPipelineLayout";
 import { GPUComputePipelineImpl } from "./GPUComputePipeline";
 import { GPURenderPipelineImpl } from "./GPURenderPipeline";
-import { createWGPUError, fatalError, GPUErrorImpl, OperationError } from "./utils/error";
+import { createWGPUError, fatalError, GPUErrorImpl, GPUPipelineErrorImpl, OperationError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
-import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage } from "./shared";
+import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage, AsyncStatus, unpackUserDataId, packUserDataId } from "./shared";
 import { GPUAdapterInfoImpl } from "./shared";
 import { EventEmitter } from "events";
 import { GPUTextureViewImpl } from "./GPUTextureView";
@@ -92,6 +92,8 @@ const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInf
 const DEFAULT_LIMITS = Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), DEFAULT_SUPPORTED_LIMITS);
 
 let erroScopePopId = 0;
+let createComputePipelineAsyncId = 0;
+let createRenderPipelineAsyncId = 0;
 
 export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     readonly ptr: Pointer;
@@ -108,6 +110,18 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     private _popErrorScopeCallback: JSCallback;
     private _popErrorScopePromises: Map<number, {
         resolve: (value: GPUError | null) => void,
+        reject: (reason?: any) => void,
+    }> = new Map();
+
+    private _createComputePipelineAsyncCallback: JSCallback;
+    private _createComputePipelineAsyncPromises: Map<number, {
+        resolve: (value: GPUComputePipeline) => void,
+        reject: (reason?: any) => void,
+    }> = new Map();
+
+    private _createRenderPipelineAsyncCallback: JSCallback;
+    private _createRenderPipelineAsyncPromises: Map<number, {
+        resolve: (value: GPURenderPipeline) => void,
         reject: (reason?: any) => void,
     }> = new Map();
 
@@ -139,9 +153,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
                 return;
             }
 
-            const userdata1Buffer = toArrayBuffer(userdata1, 0, 4);
-            const userDataView = new DataView(userdata1Buffer);
-            const popId = userDataView.getUint32(0, true);
+            const popId = unpackUserDataId(userdata1);
             const promise = this._popErrorScopePromises.get(popId);
             
             this._popErrorScopePromises.delete(popId);
@@ -163,6 +175,66 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         },
         {
             args: [FFIType.u32, FFIType.u32, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
+        }
+      );
+
+      this._createComputePipelineAsyncCallback = new JSCallback(
+        (status: number, pipeline: Pointer | null, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, userdata2: Pointer | null) => {
+            this.instanceTicker.unregister();
+            
+            const asyncId = unpackUserDataId(userdata1);
+            const promise = this._createComputePipelineAsyncPromises.get(asyncId);
+            
+            this._createComputePipelineAsyncPromises.delete(asyncId);
+            
+            if (promise) {
+                if (status === AsyncStatus.Success) {
+                    if (pipeline) {
+                        const computePipeline = new GPUComputePipelineImpl(pipeline, this.lib, "async-compute-pipeline");
+                        promise.resolve(computePipeline);
+                    } else {
+                        promise.reject(new Error("Pipeline creation succeeded but pipeline is null"));
+                    }
+                } else {
+                    const message = messagePtr ? decodeCallbackMessage(messagePtr, messageSize) : "Unknown error";
+                    promise.reject(new GPUPipelineErrorImpl(message, { reason: 'validation' }));
+                }
+            } else {
+                console.error('[CREATE COMPUTE PIPELINE ASYNC CALLBACK] promise not found');
+            }
+        },
+        {
+            args: [FFIType.u32, FFIType.pointer, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
+        }
+      );
+
+      this._createRenderPipelineAsyncCallback = new JSCallback(
+        (status: number, pipeline: Pointer | null, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, userdata2: Pointer | null) => {
+            this.instanceTicker.unregister();
+            
+            const asyncId = unpackUserDataId(userdata1);
+            const promise = this._createRenderPipelineAsyncPromises.get(asyncId);
+            
+            this._createRenderPipelineAsyncPromises.delete(asyncId);
+            
+            if (promise) {
+                if (status === AsyncStatus.Success) {
+                    if (pipeline) {
+                        const renderPipeline = new GPURenderPipelineImpl(pipeline, this.lib, "async-render-pipeline");
+                        promise.resolve(renderPipeline);
+                    } else {
+                        promise.reject(new Error("Pipeline creation succeeded but pipeline is null"));
+                    }
+                } else {
+                    const message = messagePtr ? decodeCallbackMessage(messagePtr, messageSize) : "Unknown error";
+                    promise.reject(new GPUPipelineErrorImpl(message, { reason: 'validation' }));
+                }
+            } else {
+                console.error('[CREATE RENDER PIPELINE ASYNC CALLBACK] promise not found');
+            }
+        },
+        {
+            args: [FFIType.u32, FFIType.pointer, FFIType.pointer, FFIType.u64, FFIType.pointer, FFIType.pointer],
         }
       );
     }
@@ -630,7 +702,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         }
     }
 
-    createComputePipeline(descriptor: GPUComputePipelineDescriptor): GPUComputePipeline {
+    _prepareComputePipelineDescriptor(descriptor: GPUComputePipelineDescriptor): ArrayBuffer {
         let compute: ReturnType<typeof WGPUComputeStateStruct.unpack> | undefined = undefined;
         if (descriptor.compute) {
             const constants = descriptor.compute.constants ? Object.entries(descriptor.compute.constants).map(([key, value]) => ({ key, value })) : [];
@@ -652,23 +724,25 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             layout: layoutForPacking
         });
 
-        let pipelinePtr: Pointer | null = null;
-        try {
-            pipelinePtr = this.lib.wgpuDeviceCreateComputePipeline(
-                this.devicePtr,
-                ptr(packedPipelineDescriptor)
-            );
-        } catch(e) {
-             fatalError("Error calling wgpuDeviceCreateComputePipeline FFI function:", e);
-        }
+        return packedPipelineDescriptor;
+    }
 
+    createComputePipeline(descriptor: GPUComputePipelineDescriptor): GPUComputePipeline {
+        const packedPipelineDescriptor = this._prepareComputePipelineDescriptor(descriptor);
+
+        let pipelinePtr: Pointer | null = null;
+        pipelinePtr = this.lib.wgpuDeviceCreateComputePipeline(
+            this.devicePtr,
+            ptr(packedPipelineDescriptor)
+        );
+        
         if (!pipelinePtr) {
             fatalError("Failed to create compute pipeline (FFI returned null)");
         }
         return new GPUComputePipelineImpl(pipelinePtr, this.lib, descriptor.label);
     }
 
-    createRenderPipeline(descriptor: GPURenderPipelineDescriptor): GPURenderPipeline {
+    _prepareRenderPipelineDescriptor(descriptor: GPURenderPipelineDescriptor): ArrayBuffer {
         let fragment: ReturnType<typeof WGPUFragmentStateStruct.unpack> | undefined = undefined;
         if (descriptor.fragment) {
             const constants = descriptor.fragment.constants ? Object.entries(descriptor.fragment.constants).map(([key, value]) => ({ key, value })) : [];
@@ -702,6 +776,12 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             layout: layoutForPacking
         });
 
+        return packedPipelineDescriptor;
+    }
+
+    createRenderPipeline(descriptor: GPURenderPipelineDescriptor): GPURenderPipeline {
+        const packedPipelineDescriptor = this._prepareRenderPipelineDescriptor(descriptor);
+
         let pipelinePtr: Pointer | null = null;
         pipelinePtr = this.lib.wgpuDeviceCreateRenderPipeline(
             this.devicePtr,
@@ -724,11 +804,53 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     }
 
     createComputePipelineAsync(descriptor: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
-        fatalError('createComputePipelineAsync not implemented', descriptor);
+        if (this._destroyed) {
+            return Promise.reject(new Error('createComputePipelineAsync on destroyed GPUDevice'));
+        }
+
+        return new Promise((resolve, reject) => {
+            const id = createComputePipelineAsyncId++;
+            this._createComputePipelineAsyncPromises.set(id, { resolve, reject });
+            const userDataPtr = ptr(packUserDataId(id));
+            const packedPipelineDescriptor = this._prepareComputePipelineDescriptor(descriptor);
+            const callbackInfo = WGPUCallbackInfoStruct.pack({
+                mode: 'AllowProcessEvents',
+                callback: this._createComputePipelineAsyncCallback.ptr!,
+                userdata1: userDataPtr,
+            });
+
+            this.lib.wgpuDeviceCreateComputePipelineAsync(
+                this.devicePtr,
+                ptr(packedPipelineDescriptor),
+                ptr(callbackInfo)
+            );
+            this.instanceTicker.register();
+        });
     }
 
     createRenderPipelineAsync(descriptor: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
-        fatalError('createRenderPipelineAsync not implemented', descriptor);
+        if (this._destroyed) {
+            return Promise.reject(new Error('createRenderPipelineAsync on destroyed GPUDevice'));
+        }
+
+        return new Promise((resolve, reject) => {
+            const id = createRenderPipelineAsyncId++;
+            this._createRenderPipelineAsyncPromises.set(id, { resolve, reject });
+            const userDataPtr = ptr(packUserDataId(id));
+            const packedPipelineDescriptor = this._prepareRenderPipelineDescriptor(descriptor);
+            const callbackInfo = WGPUCallbackInfoStruct.pack({
+                mode: 'AllowProcessEvents',
+                callback: this._createRenderPipelineAsyncCallback.ptr!,
+                userdata1: userDataPtr,
+            });
+
+            this.lib.wgpuDeviceCreateRenderPipelineAsync(
+                this.devicePtr,
+                ptr(packedPipelineDescriptor),
+                ptr(callbackInfo)
+            );
+            this.instanceTicker.register();
+        });
     }
 
     createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): GPURenderBundleEncoder {

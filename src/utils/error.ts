@@ -41,6 +41,21 @@ export class GPUValidationError extends Error {
     }
 }
 
+export class GPUPipelineErrorImpl extends DOMException implements GPUPipelineError {
+    readonly reason: GPUPipelineErrorReason;
+    readonly __brand: 'GPUPipelineError' = 'GPUPipelineError';
+
+    constructor(message: string, options: GPUPipelineErrorInit) {
+        const parts = message.split('\n');
+        const errorMessage = parts[0];
+        const stack = parts.slice(1).join('\n');
+        // @ts-ignore
+        super(errorMessage, 'GPUPipelineError');
+        this.reason = options.reason;
+        this.stack = stack;
+    }
+}
+
 export class AbortError extends Error {
     constructor(message: string) {
         super(message);

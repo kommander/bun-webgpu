@@ -1,5 +1,25 @@
 import { type Pointer, toArrayBuffer } from "bun:ffi";
 
+export const AsyncStatus = {
+    Success: 1,
+    CallbackCancelled: 2,
+    Error: 3,
+    Aborted: 4,
+    Force32: 0x7FFFFFFF,
+} as const;
+
+export function packUserDataId(id: number): ArrayBuffer {
+    const userDataBuffer = new Uint32Array(1);
+    userDataBuffer[0] = id;
+    return userDataBuffer.buffer;
+}
+
+export function unpackUserDataId(userDataPtr: Pointer): number {
+    const userDataBuffer = toArrayBuffer(userDataPtr, 0, 4);
+    const userDataView = new DataView(userDataBuffer);
+    return userDataView.getUint32(0, true);
+}
+
 export class GPUAdapterInfoImpl implements GPUAdapterInfo {
     __brand: "GPUAdapterInfo" = "GPUAdapterInfo";
     vendor: string = "";

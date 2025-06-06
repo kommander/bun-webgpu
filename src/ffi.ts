@@ -218,6 +218,22 @@ function _loadLibrary(libPath?: string) {
         args: [FFIType.pointer, FFIType.u32, FFIType.pointer], // device: WGPUDevice, type: WGPUErrorType, message: *const WGPUStringView
         returns: FFIType.void,
       },
+      zwgpuDeviceCreateComputePipelineAsync: {
+        args: [
+          FFIType.pointer, // device: WGPUDevice
+          FFIType.pointer, // descriptor: *const WGPUComputePipelineDescriptor
+          FFIType.pointer, // callbackInfo: *const WGPUCreateComputePipelineAsyncCallbackInfo
+        ],
+        returns: FFIType.u64, // -> WGPUFuture (id)
+      },
+      zwgpuDeviceCreateRenderPipelineAsync: {
+        args: [
+          FFIType.pointer, // device: WGPUDevice
+          FFIType.pointer, // descriptor: *const WGPURenderPipelineDescriptor
+          FFIType.pointer, // callbackInfo: *const WGPUCreateRenderPipelineAsyncCallbackInfo
+        ],
+        returns: FFIType.u64, // -> WGPUFuture (id)
+      },
       zwgpuDeviceDestroy: {
           args: [FFIType.pointer], // device: WGPUDevice
           returns: FFIType.void,

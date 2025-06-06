@@ -6,7 +6,9 @@ import { GPUImpl } from "./GPU";
 import { GPUDeviceImpl } from "./GPUDevice";
 import { GPUAdapterInfoImpl, GPUSupportedLimitsImpl } from "./shared";
 import { BufferUsageFlags, MapModeFlags, ShaderStageFlags, TextureUsageFlags } from "./common";
-import { GPUOutOfMemoryError, GPUErrorImpl, GPUInternalError, GPUValidationError, AbortError } from "./utils/error";
+import { 
+  GPUOutOfMemoryError, GPUErrorImpl, GPUInternalError, GPUValidationError, AbortError, GPUPipelineErrorImpl 
+} from "./utils/error";
 
 export * from "./mocks/GPUCanvasContext";
 
@@ -36,6 +38,7 @@ export async function globals({ libPath }: { libPath?: string } = {}) {
     };
   }
 
+  global.GPUPipelineError = GPUPipelineErrorImpl as any;
   global.AbortError = AbortError as any;
   global.GPUError = GPUErrorImpl as any;
   global.GPUOutOfMemoryError = GPUOutOfMemoryError as any;
