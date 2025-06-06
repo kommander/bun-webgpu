@@ -59,11 +59,6 @@ export class GPUTextureImpl implements GPUTexture {
     createView(descriptor?: GPUTextureViewDescriptor): GPUTextureView {
         const label = descriptor?.label || `View of ${this.label || 'Texture_'+this.texturePtr}`;
         
-        // For 3D textures, arrayLayerCount is always 1, regardless of depthOrArrayLayers
-        // For 1D/2D textures, depthOrArrayLayers represents the array layer count
-        // https://github.com/gpuweb/cts/blob/main/src/webgpu/api/validation/createBindGroup.spec.ts#L1244
-        const arrayLayerCount = this.dimension === '3d' ? 1 : (descriptor?.arrayLayerCount ?? this.depthOrArrayLayers);
-        
         const mergedDescriptor = {
             ...descriptor,
             format: descriptor?.format ?? this.format,
@@ -71,12 +66,20 @@ export class GPUTextureImpl implements GPUTexture {
             baseMipLevel: descriptor?.baseMipLevel || 0,
             mipLevelCount: descriptor?.mipLevelCount || this.mipLevelCount,
             baseArrayLayer: descriptor?.baseArrayLayer || 0,
-            arrayLayerCount,
             usage: descriptor?.usage || this.usage,
             label
         };
-        const packedDescriptorBuffer = WGPUTextureViewDescriptorStruct.pack(mergedDescriptor);
         
+        // 3D textures always have arrayLayerCount = 1 since they use depth, not array layers.
+        // For 1D/2D textures, let native implementation handle defaults and validate view compatibility.
+        // https://github.com/gpuweb/cts/blob/main/src/webgpu/api/validation/createBindGroup.spec.ts#L1244
+        if (descriptor?.arrayLayerCount !== undefined) {
+            mergedDescriptor.arrayLayerCount = descriptor.arrayLayerCount;
+        } else if (this.dimension === '3d') {
+            mergedDescriptor.arrayLayerCount = 1;
+        }
+        
+        const packedDescriptorBuffer = WGPUTextureViewDescriptorStruct.pack(mergedDescriptor);
         const viewPtr = this.lib.wgpuTextureCreateView(this.texturePtr, ptr(packedDescriptorBuffer)); 
         
         if (!viewPtr) {
