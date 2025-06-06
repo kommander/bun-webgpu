@@ -1,7 +1,7 @@
 
 import { FFIType, JSCallback, type Pointer, ptr, toArrayBuffer } from "bun:ffi";
 import { BufferUsageFlags } from "./common";
-import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct, WGPUErrorType, WGPUExternalTextureBindingLayoutStruct } from "./structs_def";
+import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct, WGPUErrorType, WGPUExternalTextureBindingLayoutStruct, normalizeGPUExtent3DStrict } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
 import { type FFISymbols } from "./ffi";
@@ -406,7 +406,6 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
 
     createTexture(descriptor: GPUTextureDescriptor): GPUTexture {
         const packedDescriptor = WGPUTextureDescriptorStruct.pack(descriptor);
-
         try {
             const texturePtr = this.lib.wgpuDeviceCreateTexture(
                 this.devicePtr,
@@ -417,21 +416,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
                 fatalError("Failed to create texture");
             }
 
-            let width, height, depthOrArrayLayers;
-            if (Symbol.iterator in descriptor.size) {
-                // It's an Iterable<number>
-                const sizeArray = Array.from(descriptor.size);
-                width = sizeArray[0] || 1;
-                height = sizeArray[1] || 1;
-                depthOrArrayLayers = sizeArray[2] || 1;
-            } else {
-                // It's a GPUExtent3DDict
-                const sizeDict = descriptor.size as GPUExtent3DDict;
-                width = sizeDict.width;
-                height = sizeDict.height || 1;
-                depthOrArrayLayers = sizeDict.depthOrArrayLayers || 1;
-            }
-
+            const { width, height = 1, depthOrArrayLayers = 1 } = normalizeGPUExtent3DStrict(descriptor.size);
             const dimension = descriptor.dimension || '2d';
             const mipLevelCount = descriptor.mipLevelCount || 1;
             const sampleCount = descriptor.sampleCount || 1;
