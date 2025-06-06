@@ -293,124 +293,133 @@ export const WGPUFeatureNameDef = defineEnum({
 }, 'u32');
 
 export const WGPUTextureFormat = defineEnum({
-  // 
-  rgb10a2uint: 0x00000019,
-
   // Basic formats
-  r8unorm: 0x00000001,           // r8_unorm
-  r8snorm: 0x00000002,           // r8_snorm
-  r8uint: 0x00000003,            // r8_uint
-  r8sint: 0x00000004,            // r8_sint
-  r16uint: 0x00000005,           // r16_uint
-  r16sint: 0x00000006,           // r16_sint
-  r16float: 0x00000007,          // r16_float
-  rg8unorm: 0x00000008,          // rg8_unorm
-  rg8snorm: 0x00000009,          // rg8_snorm
-  rg8uint: 0x0000000a,           // rg8_uint
-  rg8sint: 0x0000000b,           // rg8_sint
-  r32float: 0x0000000c,          // r32_float
-  r32uint: 0x0000000d,           // r32_uint
-  r32sint: 0x0000000e,           // r32_sint
-  rg16uint: 0x0000000f,          // rg16_uint
-  rg16sint: 0x00000010,          // rg16_sint
-  rg16float: 0x00000011,         // rg16_float
-
-  // RGBA formats
-  rgba8unorm: 0x00000012,          // rgba8_unorm
-  "rgba8unorm-srgb": 0x00000013,   // rgba8_unorm_srgb
-  rgba8snorm: 0x00000014,          // rgba8_snorm
-  rgba8uint: 0x00000015,           // rgba8_uint
-  rgba8sint: 0x00000016,           // rgba8_sint
-  bgra8unorm: 0x00000017,          // bgra8_unorm
-  "bgra8unorm-srgb": 0x00000018,   // bgra8_unorm_srgb
-
-  rgb10a2unorm: 0x00000019,        // rgb10_a2_unorm
-  rg11b10ufloat: 0x0000001a,       // rg11_b10_ufloat
-  rgb9e5ufloat: 0x0000001b,        // rgb9_e5_ufloat
-
-  // High precision formats
-  rg32float: 0x0000001c,         // rg32_float
-  rg32uint: 0x0000001d,          // rg32_uint
-  rg32sint: 0x0000001e,          // rg32_sint
-  rgba16uint: 0x0000001f,        // rgba16_uint
-  rgba16sint: 0x00000020,        // rgba16_sint
-  rgba16float: 0x00000021,       // rgba16_float
-  rgba32float: 0x00000022,       // rgba32_float
-  rgba32uint: 0x00000023,        // rgba32_uint
-  rgba32sint: 0x00000024,        // rgba32_sint
-
-  // Depth/stencil formats
-  stencil8: 0x00000025,           // stencil8
-  depth16unorm: 0x00000026,       // depth16_unorm
-  depth24plus: 0x00000027,        // depth24_plus
-  "depth24plus-stencil8": 0x00000028, // depth24_plus_stencil8
-  depth32float: 0x00000029,       // depth32_float
-  "depth32float-stencil8": 0x0000002a, // depth32_float_stencil8
-
-  // BC compressed formats
-  "bc1-rgba-unorm": 0x0000002b,      // bc1_rgba_unorm
-  "bc1-rgba-unorm-srgb": 0x0000002c, // bc1_rgba_unorm_srgb
-  "bc2-rgba-unorm": 0x0000002d,      // bc2_rgba_unorm
-  "bc2-rgba-unorm-srgb": 0x0000002e, // bc2_rgba_unorm_srgb
-  "bc3-rgba-unorm": 0x0000002f,      // bc3_rgba_unorm
-  "bc3-rgba-unorm-srgb": 0x00000030, // bc3_rgba_unorm_srgb
-  "bc4-r-unorm": 0x00000031,         // bc4_runorm
-  "bc4-r-snorm": 0x00000032,         // bc4_rsnorm
-  "bc5-rg-unorm": 0x00000033,        // bc5_rg_unorm
-  "bc5-rg-snorm": 0x00000034,        // bc5_rg_snorm
-  "bc6h-rgb-ufloat": 0x00000035,     // bc6_hrgb_ufloat
-  "bc6h-rgb-float": 0x00000036,      // bc6_hrgb_float
-  "bc7-rgba-unorm": 0x00000037,      // bc7_rgba_unorm
-  "bc7-rgba-unorm-srgb": 0x00000038, // bc7_rgba_unorm_srgb
-
-  // ETC2/EAC compressed formats
-  "etc2-rgb8unorm": 0x00000039,        // etc2_rgb8_unorm
-  "etc2-rgb8unorm-srgb": 0x0000003a,   // etc2_rgb8_unorm_srgb
-  "etc2-rgb8a1unorm": 0x0000003b,      // etc2_rgb8_a1_unorm
-  "etc2-rgb8a1unorm-srgb": 0x0000003c, // etc2_rgb8_a1_unorm_srgb
-  "etc2-rgba8unorm": 0x0000003d,       // etc2_rgba8_unorm
-  "etc2-rgba8unorm-srgb": 0x0000003e,  // etc2_rgba8_unorm_srgb
-  "eac-r11unorm": 0x0000003f,          // eacr11_unorm
-  "eac-r11snorm": 0x00000040,          // eacr11_snorm
-  "eac-rg11unorm": 0x00000041,         // eacrg11_unorm
-  "eac-rg11snorm": 0x00000042,         // eacrg11_snorm
-
-  // ASTC compressed formats
-  "astc-4x4-unorm": 0x00000043,        // astc4x4_unorm
-  "astc-4x4-unorm-srgb": 0x00000044,   // astc4x4_unorm_srgb
-  "astc-5x4-unorm": 0x00000045,        // astc5x4_unorm
-  "astc-5x4-unorm-srgb": 0x00000046,   // astc5x4_unorm_srgb
-  "astc-5x5-unorm": 0x00000047,        // astc5x5_unorm
-  "astc-5x5-unorm-srgb": 0x00000048,   // astc5x5_unorm_srgb
-  "astc-6x5-unorm": 0x00000049,        // astc6x5_unorm
-  "astc-6x5-unorm-srgb": 0x0000004a,   // astc6x5_unorm_srgb
-  "astc-6x6-unorm": 0x0000004b,        // astc6x6_unorm
-  "astc-6x6-unorm-srgb": 0x0000004c,   // astc6x6_unorm_srgb
-  "astc-8x5-unorm": 0x0000004d,        // astc8x5_unorm
-  "astc-8x5-unorm-srgb": 0x0000004e,   // astc8x5_unorm_srgb
-  "astc-8x6-unorm": 0x0000004f,        // astc8x6_unorm
-  "astc-8x6-unorm-srgb": 0x00000050,   // astc8x6_unorm_srgb
-  "astc-8x8-unorm": 0x00000051,        // astc8x8_unorm
-  "astc-8x8-unorm-srgb": 0x00000052,   // astc8x8_unorm_srgb
-  "astc-10x5-unorm": 0x00000053,       // astc10x5_unorm
-  "astc-10x5-unorm-srgb": 0x00000054,  // astc10x5_unorm_srgb
-  "astc-10x6-unorm": 0x00000055,       // astc10x6_unorm
-  "astc-10x6-unorm-srgb": 0x00000056,  // astc10x6_unorm_srgb
-  "astc-10x8-unorm": 0x00000057,       // astc10x8_unorm
-  "astc-10x8-unorm-srgb": 0x00000058,  // astc10x8_unorm_srgb
-  "astc-10x10-unorm": 0x00000059,      // astc10x10_unorm
-  "astc-10x10-unorm-srgb": 0x0000005a, // astc10x10_unorm_srgb
-  "astc-12x10-unorm": 0x0000005b,      // astc12x10_unorm
-  "astc-12x10-unorm-srgb": 0x0000005c, // astc12x10_unorm_srgb
-  "astc-12x12-unorm": 0x0000005d,      // astc12x12_unorm
-  "astc-12x12-unorm-srgb": 0x0000005e, // astc12x12_unorm_srgb
-
-  // YUV formats
-  // Does not exist in GPUTextureFormat
-  // "r8bg8biplanar420unorm": 0x0000005f, // r8_bg8_biplanar420_unorm
-
   // Used for testing, causes uncaptured validation errors
   undefined: 0x00000000,
+  
+  r8unorm: 0x00000001,
+  r8snorm: 0x00000002,
+  r8uint: 0x00000003,
+  r8sint: 0x00000004,
+  r16uint: 0x00000005,
+  r16sint: 0x00000006,
+  r16float: 0x00000007,
+  rg8unorm: 0x00000008,
+  rg8snorm: 0x00000009,
+  rg8uint: 0x0000000A,
+  rg8sint: 0x0000000B,
+  r32float: 0x0000000C,
+  r32uint: 0x0000000D,
+  r32sint: 0x0000000E,
+  rg16uint: 0x0000000F,
+  rg16sint: 0x00000010,
+  rg16float: 0x00000011,
+
+  // RGBA formats
+  rgba8unorm: 0x00000012,
+  "rgba8unorm-srgb": 0x00000013,
+  rgba8snorm: 0x00000014,
+  rgba8uint: 0x00000015,
+  rgba8sint: 0x00000016,
+  bgra8unorm: 0x00000017,
+  "bgra8unorm-srgb": 0x00000018,
+  rgb10a2uint: 0x00000019,
+  rgb10a2unorm: 0x0000001A,
+  rg11b10ufloat: 0x0000001B,
+  rgb9e5ufloat: 0x0000001C,
+
+  // High precision formats
+  rg32float: 0x0000001D,
+  rg32uint: 0x0000001E,
+  rg32sint: 0x0000001F,
+  rgba16uint: 0x00000020,
+  rgba16sint: 0x00000021,
+  rgba16float: 0x00000022,
+  rgba32float: 0x00000023,
+  rgba32uint: 0x00000024,
+  rgba32sint: 0x00000025,
+
+  // Depth/stencil formats
+  stencil8: 0x00000026,
+  depth16unorm: 0x00000027,
+  depth24plus: 0x00000028,
+  "depth24plus-stencil8": 0x00000029,
+  depth32float: 0x0000002A,
+  "depth32float-stencil8": 0x0000002B,
+
+  // BC compressed formats
+  "bc1-rgba-unorm": 0x0000002C,
+  "bc1-rgba-unorm-srgb": 0x0000002D,
+  "bc2-rgba-unorm": 0x0000002E,
+  "bc2-rgba-unorm-srgb": 0x0000002F,
+  "bc3-rgba-unorm": 0x00000030,
+  "bc3-rgba-unorm-srgb": 0x00000031,
+  "bc4-r-unorm": 0x00000032,
+  "bc4-r-snorm": 0x00000033,
+  "bc5-rg-unorm": 0x00000034,
+  "bc5-rg-snorm": 0x00000035,
+  "bc6h-rgb-ufloat": 0x00000036,
+  "bc6h-rgb-float": 0x00000037,
+  "bc7-rgba-unorm": 0x00000038,
+  "bc7-rgba-unorm-srgb": 0x00000039,
+
+  // ETC2/EAC compressed formats
+  "etc2-rgb8unorm": 0x0000003A,
+  "etc2-rgb8unorm-srgb": 0x0000003B,
+  "etc2-rgb8a1unorm": 0x0000003C,
+  "etc2-rgb8a1unorm-srgb": 0x0000003D,
+  "etc2-rgba8unorm": 0x0000003E,
+  "etc2-rgba8unorm-srgb": 0x0000003F,
+  "eac-r11unorm": 0x00000040,
+  "eac-r11snorm": 0x00000041,
+  "eac-rg11unorm": 0x00000042,
+  "eac-rg11snorm": 0x00000043,
+
+  // ASTC compressed formats
+  "astc-4x4-unorm": 0x00000044,
+  "astc-4x4-unorm-srgb": 0x00000045,
+  "astc-5x4-unorm": 0x00000046,
+  "astc-5x4-unorm-srgb": 0x00000047,
+  "astc-5x5-unorm": 0x00000048,
+  "astc-5x5-unorm-srgb": 0x00000049,
+  "astc-6x5-unorm": 0x0000004A,
+  "astc-6x5-unorm-srgb": 0x0000004B,
+  "astc-6x6-unorm": 0x0000004C,
+  "astc-6x6-unorm-srgb": 0x0000004D,
+  "astc-8x5-unorm": 0x0000004E,
+  "astc-8x5-unorm-srgb": 0x0000004F,
+  "astc-8x6-unorm": 0x00000050,
+  "astc-8x6-unorm-srgb": 0x00000051,
+  "astc-8x8-unorm": 0x00000052,
+  "astc-8x8-unorm-srgb": 0x00000053,
+  "astc-10x5-unorm": 0x00000054,
+  "astc-10x5-unorm-srgb": 0x00000055,
+  "astc-10x6-unorm": 0x00000056,
+  "astc-10x6-unorm-srgb": 0x00000057,
+  "astc-10x8-unorm": 0x00000058,
+  "astc-10x8-unorm-srgb": 0x00000059,
+  "astc-10x10-unorm": 0x0000005A,
+  "astc-10x10-unorm-srgb": 0x0000005B,
+  "astc-12x10-unorm": 0x0000005C,
+  "astc-12x10-unorm-srgb": 0x0000005D,
+  "astc-12x12-unorm": 0x0000005E,
+  "astc-12x12-unorm-srgb": 0x0000005F,
+
+  // Dawn-specific formats (0x00050000 range)
+  r16unorm: 0x00050000,
+  rg16unorm: 0x00050001,
+  rgba16unorm: 0x00050002,
+  r16snorm: 0x00050003,
+  rg16snorm: 0x00050004,
+  rgba16snorm: 0x00050005,
+  "r8bg8-biplanar-420unorm": 0x00050006,
+  "r10x6bg10x6-biplanar-420unorm": 0x00050007,
+  "r8bg8a8-triplanar-420unorm": 0x00050008,
+  "r8bg8-biplanar-422unorm": 0x00050009,
+  "r8bg8-biplanar-444unorm": 0x0005000A,
+  "r10x6bg10x6-biplanar-422unorm": 0x0005000B,
+  "r10x6bg10x6-biplanar-444unorm": 0x0005000C,
+  external: 0x0005000D,
 } as const, 'u32');
 
 export const WGPUSupportedFeaturesStruct = defineStruct([
