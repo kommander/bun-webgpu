@@ -50,7 +50,7 @@ export class GPUBufferImpl implements GPUBuffer {
       }
       
       this._mapCallback = new JSCallback(
-        (status: number, messagePtr: Pointer | null, messageSize: bigint, _userdata1: Pointer | null, _userdata2: Pointer | null) => {   
+        (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
           this._pendingMap = null;
           
@@ -64,7 +64,21 @@ export class GPUBufferImpl implements GPUBuffer {
               const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
               const message = decodeCallbackMessage(messagePtr, messageSize);
 
-              this._mapCallbackReject?.(new AbortError(`WGPU Buffer Map Error (${statusName}): ${message}`));
+              const userDataBuffer = toArrayBuffer(userdata1, 0, 4);
+              const userDataView = new DataView(userDataBuffer);
+              const wasAlreadyMapped = userDataView.getUint32(0) === 1;
+
+              if (wasAlreadyMapped) {
+                this._mapState = 'mapped';
+              }
+
+              switch (status) {
+                case BufferMapAsyncStatus.Error:
+                  this._mapCallbackReject?.(new OperationError(`WGPU Buffer Map Error (${statusName}): ${message}`));
+                  break;
+                default:
+                  this._mapCallbackReject?.(new AbortError(`WGPU Buffer Map Error (${statusName}): ${message}`));
+              }
           }
 
           this._mapCallbackResolve = null;
@@ -122,6 +136,8 @@ export class GPUBufferImpl implements GPUBuffer {
         return Promise.reject(new OperationError('Buffer mapping is already pending'));
       }
 
+      const originalMapState = this._mapState;
+
       this._mode = mode;
       this._mapState = 'pending';
       this._pendingMap = new Promise((resolve, reject) => {
@@ -137,9 +153,14 @@ export class GPUBufferImpl implements GPUBuffer {
             fatalError('Could not create buffer map callback');
           }
 
+          const userDataBuffer = new ArrayBuffer(4);
+          const userDataView = new DataView(userDataBuffer);
+          userDataView.setUint32(0, originalMapState === 'mapped' ? 1 : 0);
+
           const callbackInfo = WGPUCallbackInfoStruct.pack({
             mode: 'AllowProcessEvents',
             callback: this._mapCallback.ptr,
+            userdata1: ptr(userDataBuffer),
           });
 
           try {
@@ -181,7 +202,7 @@ export class GPUBufferImpl implements GPUBuffer {
 
     getMappedRangePtr(offset?: GPUSize64, size?: GPUSize64): Pointer {
       if (this._destroyed) {
-        throw new Error('Buffer is destroyed');
+        throw new OperationError('Buffer is destroyed');
       }
 
       const mappedOffset = offset ?? 0;
@@ -225,7 +246,7 @@ export class GPUBufferImpl implements GPUBuffer {
 
     getMappedRange(offset?: GPUSize64, size?: GPUSize64): ArrayBuffer {
       if (this._destroyed) {
-        throw new Error('Buffer is destroyed');
+        throw new OperationError('Buffer is destroyed');
       }
 
       if (this._mapState !== 'mapped') {
