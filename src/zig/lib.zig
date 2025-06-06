@@ -190,6 +190,10 @@ pub export fn zwgpuDeviceDestroy(device: c.WGPUDevice) void {
     c.wgpuDeviceDestroy(device);
 }
 
+pub export fn zwgpuDeviceInjectError(device: c.WGPUDevice, error_type: c.WGPUErrorType, message_view_ptr: *const c.WGPUStringView) void {
+    c.wgpuDeviceInjectError(device, error_type, message_view_ptr.*);
+}
+
 // --- Queue Functions ---
 
 pub export fn zwgpuQueueRelease(queue: c.WGPUQueue) void {

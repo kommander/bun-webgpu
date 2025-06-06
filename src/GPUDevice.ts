@@ -1,7 +1,28 @@
-
 import { FFIType, JSCallback, type Pointer, ptr, toArrayBuffer } from "bun:ffi";
 import { BufferUsageFlags } from "./common";
-import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct, WGPUErrorType, WGPUExternalTextureBindingLayoutStruct, normalizeGPUExtent3DStrict } from "./structs_def";
+import { 
+    WGPUSupportedFeaturesStruct, 
+    WGPUFragmentStateStruct, 
+    WGPUBindGroupLayoutDescriptorStruct, 
+    WGPUShaderModuleDescriptorStruct, 
+    WGPUSType, 
+    WGPUShaderSourceWGSLStruct, 
+    WGPUPipelineLayoutDescriptorStruct, 
+    WGPUBindGroupDescriptorStruct, 
+    WGPURenderPipelineDescriptorStruct, 
+    WGPUVertexStateStruct, 
+    WGPUComputeStateStruct, 
+    UINT64_MAX, 
+    WGPUCommandEncoderDescriptorStruct, 
+    WGPUQuerySetDescriptorStruct, 
+    WGPUAdapterInfoStruct, 
+    WGPUErrorFilter, 
+    WGPUCallbackInfoStruct, 
+    WGPUErrorType, 
+    WGPUExternalTextureBindingLayoutStruct, 
+    normalizeGPUExtent3DStrict, 
+    WGPUStringView,
+} from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
 import { type FFISymbols } from "./ffi";
@@ -225,6 +246,22 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         });
     }
 
+    injectError(type: 'validation' | 'out-of-memory' | 'internal', message: string): undefined {
+        if (this._destroyed) {
+            fatalError('injectError on destroyed GPUDevice');
+        }
+
+        const errorType = WGPUErrorType[type];
+        if (errorType === undefined) {
+            fatalError(`Invalid error type for injectError: ${type}`);
+        }
+
+        const messageView = WGPUStringView.pack(message);
+        
+        this.lib.wgpuDeviceInjectError(this.devicePtr, errorType, ptr(messageView));
+        return undefined;
+    }
+
     set onuncapturederror(listener: DeviceErrorCallback | null) {
         this._userUncapturedErrorCallback = listener;
     }
@@ -369,21 +406,12 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     }
 
     createBuffer(descriptor: GPUBufferDescriptor): GPUBuffer {
-        // Perform basic usage validation
-        // const usage = descriptor.usage;
-        // const hasMapWrite = (usage & BufferUsageFlags.MAP_WRITE) !== 0;
-        // const hasMapRead = (usage & BufferUsageFlags.MAP_READ) !== 0;
-        // const otherFlags = usage & ~(BufferUsageFlags.MAP_WRITE | BufferUsageFlags.MAP_READ);
-
-        // if (hasMapWrite && otherFlags !== 0 && otherFlags !== BufferUsageFlags.COPY_SRC) {
-        //     fatalError("Invalid BufferUsage: MAP_WRITE can only be combined with COPY_SRC.");
-        // }
-        // if (hasMapRead && otherFlags !== 0 && otherFlags !== BufferUsageFlags.COPY_DST) {
-        //     fatalError("Invalid BufferUsage: MAP_READ can only be combined with COPY_DST.");
-        // }
-
         if (descriptor.size < 0) {
             fatalError("Buffer size must be greater than or equal to 0");
+        }
+
+        if (descriptor.mappedAtCreation && descriptor.size % 4 !== 0) {
+            throw new RangeError("Buffer size must be a multiple of 4");
         }
 
         const packedDescriptor = WGPUBufferDescriptorStruct.pack(descriptor);

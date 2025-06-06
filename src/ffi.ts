@@ -214,6 +214,10 @@ function _loadLibrary(libPath?: string) {
           args: [FFIType.pointer], // device: WGPUDevice
           returns: FFIType.void,
       },
+      zwgpuDeviceInjectError: {
+        args: [FFIType.pointer, FFIType.u32, FFIType.pointer], // device: WGPUDevice, type: WGPUErrorType, message: *const WGPUStringView
+        returns: FFIType.void,
+      },
       zwgpuDeviceDestroy: {
           args: [FFIType.pointer], // device: WGPUDevice
           returns: FFIType.void,
