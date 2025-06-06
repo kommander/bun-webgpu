@@ -41,6 +41,13 @@ export class GPUValidationError extends Error {
     }
 }
 
+export class AbortError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'AbortError';
+    }
+}
+
 export function createWGPUError(type: number, message: string) {
     switch (type) {
         case WGPUErrorType['out-of-memory']:

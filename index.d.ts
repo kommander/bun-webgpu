@@ -102,5 +102,14 @@ declare global {
     interface GPUDeviceDescriptor {
         requiredLimits: Record<keyof GPUSupportedLimits, GPUSize64 | undefined>;
     }
+
+    interface AbortError {
+       message: string;
+    }
+
+    declare var AbortError: {
+        prototype: AbortError;
+        new (message: string): never;
+    };
 }
 

@@ -26,6 +26,7 @@ export class GPUBufferImpl implements GPUBuffer {
     private _destroyed = false;
     private _mappedOffset: number = 0;
     private _mappedSize: number = 0;
+    private _returnedRanges: Array<{offset: number, size: number}> = [];
 
     __brand: "GPUBuffer" = "GPUBuffer";
     label: string = '';
@@ -54,13 +55,14 @@ export class GPUBufferImpl implements GPUBuffer {
           
           if (status === BufferMapAsyncStatus.Success) {
               this._mapState = 'mapped';
+              this._returnedRanges = [];
               this._mapCallbackResolve?.(undefined);
           } else {
               this._mapState = 'unmapped';
               const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
               const message = decodeCallbackMessage(messagePtr, messageSize);
 
-              this._mapCallbackReject?.(new Error(`WGPU Buffer Map Error (${statusName}): ${message}`));
+              this._mapCallbackReject?.(new AbortError(`WGPU Buffer Map Error (${statusName}): ${message}`));
           }
 
           this._mapCallbackResolve = null;
@@ -75,6 +77,24 @@ export class GPUBufferImpl implements GPUBuffer {
             returns: FFIType.void,
         }
       );
+    }
+
+    private _checkRangeOverlap(newOffset: number, newSize: number): boolean {
+      if (newSize === 0) return false;
+      
+      const newEnd = newOffset + newSize;
+      
+      for (const range of this._returnedRanges) {
+        if (range.size === 0) continue;
+        
+        const rangeEnd = range.offset + range.size;
+        
+        if (newOffset < rangeEnd && range.offset < newEnd) {
+          return true;
+        }
+      }
+      
+      return false;
     }
 
     get size(): GPUSize64 {
@@ -148,12 +168,18 @@ export class GPUBufferImpl implements GPUBuffer {
         throw new Error('Buffer is destroyed');
       }
 
-      if (this._descriptor.usage & BufferUsageFlags.MAP_READ) {
-        return this._getConstMappedRangePtr(offset, size);
-      }
-
       const mappedOffset = offset ?? 0;
       const mappedSize = size ?? (this._size - mappedOffset);
+
+      if (this._checkRangeOverlap(mappedOffset, mappedSize)) {
+        throw new OperationError("getMappedRangePtr: Requested range overlaps with an existing range.");
+      }
+
+      this._returnedRanges.push({ offset: mappedOffset, size: mappedSize });
+
+      if (this._descriptor.usage & BufferUsageFlags.MAP_READ) {
+        return this._getConstMappedRangePtr(mappedOffset, mappedSize);
+      }
       
       const readOffset = BigInt(mappedOffset);
       const readSize = BigInt(mappedSize);
@@ -166,12 +192,9 @@ export class GPUBufferImpl implements GPUBuffer {
       return dataPtr;
     }
 
-    _getConstMappedRangePtr(offset?: GPUSize64, size?: GPUSize64): Pointer {
-      const mappedOffset = offset ?? 0;
-      const mappedSize = size ?? (this._size - mappedOffset);
-      
-      const readOffset = BigInt(mappedOffset);
-      const readSize = BigInt(mappedSize);
+    _getConstMappedRangePtr(offset: GPUSize64, size: GPUSize64): Pointer {
+      const readOffset = BigInt(offset);
+      const readSize = BigInt(size);
 
       const dataPtr = this.lib.wgpuBufferGetConstMappedRange(this.bufferPtr, readOffset, readSize);
       
@@ -195,6 +218,12 @@ export class GPUBufferImpl implements GPUBuffer {
           requestedOffset + requestedSize > this._mappedOffset + this._mappedSize) {
         throw new OperationError("getMappedRange: Requested range is outside the mapped region.");
       }
+
+      if (this._checkRangeOverlap(requestedOffset, requestedSize)) {
+        throw new OperationError("getMappedRange: Requested range overlaps with an existing range.");
+      }
+
+      this._returnedRanges.push({ offset: requestedOffset, size: requestedSize });
 
       if (requestedSize === 0) {
         return new ArrayBuffer(0);
@@ -229,14 +258,13 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     unmap(): undefined {
-      if (this._destroyed) {
-        throw new Error('Buffer is destroyed');
-      }
-
+      // NOTE: It is valid to call unmap on a buffer that is destroyed 
+      // (at creation, or after mappedAtCreation or mapAsync)
       this.lib.wgpuBufferUnmap(this.bufferPtr);
       this._mapState = 'unmapped';
       this._mappedOffset = 0;
       this._mappedSize = 0;
+      this._returnedRanges = [];
       return undefined;
     }
 
