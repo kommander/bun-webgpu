@@ -35,4 +35,4 @@ echo "DEBUG=$debug_flag bun \"$SCRIPT_TO_RUN\" -- \"--gpu-provider\" \"$(pwd)/..
 echo ""
 echo "Executing command..."
 
-DEBUG=$debug_flag bun "$SCRIPT_TO_RUN" -- "--gpu-provider" "$(pwd)/../tools/setup.ts" $@ 
+DEBUG=$debug_flag bun "$SCRIPT_TO_RUN" -- "--expectations" "$(pwd)/../tools/expectations.ts" "--gpu-provider" "$(pwd)/../tools/setup.ts" $@ 
