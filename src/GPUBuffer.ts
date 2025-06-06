@@ -119,8 +119,7 @@ export class GPUBufferImpl implements GPUBuffer {
       }
 
       if (this._pendingMap) {
-        // TODO: Should throw an error?
-        return this._pendingMap;
+        return Promise.reject(new OperationError('Buffer mapping is already pending'));
       }
 
       this._mode = mode;
