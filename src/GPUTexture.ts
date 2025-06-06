@@ -61,12 +61,6 @@ export class GPUTextureImpl implements GPUTexture {
         
         const mergedDescriptor = {
             ...descriptor,
-            format: descriptor?.format ?? this.format,
-            dimension: descriptor?.dimension || this.dimension,
-            baseMipLevel: descriptor?.baseMipLevel || 0,
-            mipLevelCount: descriptor?.mipLevelCount || this.mipLevelCount,
-            baseArrayLayer: descriptor?.baseArrayLayer || 0,
-            usage: descriptor?.usage || this.usage,
             label
         };
         
