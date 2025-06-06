@@ -382,8 +382,8 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         //     fatalError("Invalid BufferUsage: MAP_READ can only be combined with COPY_DST.");
         // }
 
-        if (descriptor.size <= 0) {
-            fatalError("Buffer size must be greater than 0");
+        if (descriptor.size < 0) {
+            fatalError("Buffer size must be greater than or equal to 0");
         }
 
         const packedDescriptor = WGPUBufferDescriptorStruct.pack(descriptor);
