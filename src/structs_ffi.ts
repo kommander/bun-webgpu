@@ -3,13 +3,19 @@ import { fatalError } from "./utils/error";
 
 export const pointerSize = process.arch === 'x64' || process.arch === 'arm64' ? 8 : 4;
 
-type PrimitiveType = 'u8' | 'u16' | 'u32' | 'u64' | 'f32' | 'f64' | 'pointer' | 'i32' | 'bool_u8' | 'bool_u32';
+type PrimitiveType = 
+  'u8' | 'u16' | 'u32' | 'u64' | 
+  'f32' | 'f64' | 
+  'pointer' | 
+  'i32' | 'i16' |
+  'bool_u8' | 'bool_u32';
 
 const typeSizes: Record<PrimitiveType, number> = {
   u8: 1,
   bool_u8: 1,
   bool_u32: 4,
   u16: 2,
+  i16: 2,
   u32: 4,
   u64: 8,
   f32: 4,
@@ -25,11 +31,12 @@ function isPrimitiveType(type: any): type is PrimitiveType {
 
 const typeAlignments: Record<PrimitiveType, number> = { ...typeSizes };
 
-const typeGetters = {
+const typeGetters: Record<PrimitiveType, (view: DataView, offset: number) => any> = {
   u8: (view: DataView, offset: number) => view.getUint8(offset),
   bool_u8: (view: DataView, offset: number) => Boolean(view.getUint8(offset)),
   bool_u32: (view: DataView, offset: number) => Boolean(view.getUint32(offset, true)),
   u16: (view: DataView, offset: number) => view.getUint16(offset, true),
+  i16: (view: DataView, offset: number) => view.getInt16(offset, true),
   u32: (view: DataView, offset: number) => view.getUint32(offset, true),
   u64: (view: DataView, offset: number) => view.getBigUint64(offset, true),
   f32: (view: DataView, offset: number) => view.getFloat32(offset, true),
@@ -77,7 +84,7 @@ type Simplify<T> = T extends (...args: any[]) => any
   : T;
 
 type PrimitiveToTSType<T extends PrimitiveType> =
-  T extends 'u8' | 'u16' | 'u32' | 'i32' | 'f32' | 'f64' ? number :
+  T extends 'u8' | 'u16' | 'u32' | 'i16' | 'i32' | 'f32' | 'f64' ? number :
   T extends 'u64' ? bigint | number : // typescript webgpu types currently use numbers for u64
   T extends 'bool_u8' | 'bool_u32' ? boolean :
   T extends 'pointer' ? number | bigint : // Represent pointers as numbers or bigints
@@ -256,6 +263,10 @@ function primitivePackers(type: PrimitiveType) {
     case 'u16':
       pack = (view: DataView, off: number, val: number) => view.setUint16(off, val, true);
       unpack = (view: DataView, off: number) => view.getUint16(off, true);
+      break;
+    case 'i16':
+      pack = (view: DataView, off: number, val: number) => view.setInt16(off, val, true);
+      unpack = (view: DataView, off: number) => view.getInt16(off, true);
       break;
     case 'u32':
       pack = (view: DataView, off: number, val: number) => view.setUint32(off, val, true);

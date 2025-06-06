@@ -663,7 +663,7 @@ export const WGPUSamplerDescriptorStruct = defineStruct([
     ['lodMinClamp', 'f32', { default: 0.0 }],
     ['lodMaxClamp', 'f32', { default: 32.0 }],
     ['compare', WGPUCompareFunction, { default: 'undefined' }],
-    ['maxAnisotropy', 'u16', { default: 1 }],
+    ['maxAnisotropy', 'u16', { default: 1, packTransform: (val: number) => val < 0 ? 0 : val  }],
 ]);
 
 export const WGPUBufferBindingType = defineEnum({
