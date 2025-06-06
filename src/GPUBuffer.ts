@@ -27,6 +27,7 @@ export class GPUBufferImpl implements GPUBuffer {
     private _mappedOffset: number = 0;
     private _mappedSize: number = 0;
     private _returnedRanges: Array<{offset: number, size: number}> = [];
+    private _detachableArrayBuffers: Array<ArrayBuffer> = [];
 
     __brand: "GPUBuffer" = "GPUBuffer";
     label: string = '';
@@ -56,6 +57,7 @@ export class GPUBufferImpl implements GPUBuffer {
           if (status === BufferMapAsyncStatus.Success) {
               this._mapState = 'mapped';
               this._returnedRanges = [];
+              this._detachableArrayBuffers = [];
               this._mapCallbackResolve?.(undefined);
           } else {
               this._mapState = 'unmapped';
@@ -92,6 +94,11 @@ export class GPUBufferImpl implements GPUBuffer {
       }
       
       return false;
+    }
+
+    private _createDetachableArrayBuffer(actualArrayBuffer: ArrayBuffer): ArrayBuffer {
+      this._detachableArrayBuffers.push(actualArrayBuffer);
+      return actualArrayBuffer;
     }
 
     get size(): GPUSize64 {
@@ -222,6 +229,10 @@ export class GPUBufferImpl implements GPUBuffer {
         throw new Error('Buffer is destroyed');
       }
 
+      if (this._mapState !== 'mapped') {
+        throw new OperationError("getMappedRange: Buffer is not in mapped state.");
+      }
+
       const requestedOffset = offset ?? 0;
       const requestedSize = size ?? (this._size - requestedOffset);
 
@@ -244,7 +255,8 @@ export class GPUBufferImpl implements GPUBuffer {
       }
 
       if (this._descriptor.usage & BufferUsageFlags.MAP_READ) {
-        return this._getConstMappedRange(requestedOffset, requestedSize);
+        const actualArrayBuffer = this._getConstMappedRange(requestedOffset, requestedSize);
+        return this._createDetachableArrayBuffer(actualArrayBuffer);
       }
       
       const readOffset = BigInt(requestedOffset);
@@ -255,7 +267,8 @@ export class GPUBufferImpl implements GPUBuffer {
           throw new OperationError("getMappedRange: Received null pointer (buffer likely not mapped or range invalid).");
       }
       
-      return toArrayBuffer(dataPtr, 0, Number(readSize));
+      const actualArrayBuffer = toArrayBuffer(dataPtr, 0, Number(readSize));
+      return this._createDetachableArrayBuffer(actualArrayBuffer);
     }
 
     _getConstMappedRange(offset: GPUSize64, size: GPUSize64): ArrayBuffer {
@@ -274,6 +287,13 @@ export class GPUBufferImpl implements GPUBuffer {
     unmap(): undefined {
       // NOTE: It is valid to call unmap on a buffer that is destroyed 
       // (at creation, or after mappedAtCreation or mapAsync)
+      
+      for (const buffer of this._detachableArrayBuffers) {
+        // Workaround to detach the ArrayBuffer
+        structuredClone(buffer, { transfer: [buffer] });
+      }
+      this._detachableArrayBuffers = [];
+      
       this.lib.wgpuBufferUnmap(this.bufferPtr);
       this._mapState = 'unmapped';
       this._mappedOffset = 0;
