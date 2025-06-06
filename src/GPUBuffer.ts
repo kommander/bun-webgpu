@@ -80,16 +80,13 @@ export class GPUBufferImpl implements GPUBuffer {
     }
 
     private _checkRangeOverlap(newOffset: number, newSize: number): boolean {
-      if (newSize === 0) return false;
-      
       const newEnd = newOffset + newSize;
       
       for (const range of this._returnedRanges) {
-        if (range.size === 0) continue;
-        
         const rangeEnd = range.offset + range.size;
+        const disjoint = (newOffset >= rangeEnd) || (range.offset >= newEnd);
         
-        if (newOffset < rangeEnd && range.offset < newEnd) {
+        if (!disjoint) {
           return true;
         }
       }
