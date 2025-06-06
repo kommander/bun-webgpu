@@ -160,6 +160,19 @@ export class GPUBufferImpl implements GPUBuffer {
       return this._pendingMap;
     }
 
+    private _validateAlignment(offset: GPUSize64, size: GPUSize64): void {
+      const kOffsetAlignment = 8;
+      const kSizeAlignment = 4;
+      
+      if (offset % kOffsetAlignment !== 0) {
+        throw new OperationError(`offset (${offset}) is not aligned to ${kOffsetAlignment} bytes.`);
+      }
+      
+      if (size % kSizeAlignment !== 0) {
+        throw new OperationError(`size (${size}) is not aligned to ${kSizeAlignment} bytes.`);
+      }
+    }
+
     getMappedRangePtr(offset?: GPUSize64, size?: GPUSize64): Pointer {
       if (this._destroyed) {
         throw new Error('Buffer is destroyed');
@@ -167,6 +180,8 @@ export class GPUBufferImpl implements GPUBuffer {
 
       const mappedOffset = offset ?? 0;
       const mappedSize = size ?? (this._size - mappedOffset);
+
+      this._validateAlignment(mappedOffset, mappedSize);
 
       if (this._checkRangeOverlap(mappedOffset, mappedSize)) {
         throw new OperationError("getMappedRangePtr: Requested range overlaps with an existing range.");
@@ -209,6 +224,8 @@ export class GPUBufferImpl implements GPUBuffer {
 
       const requestedOffset = offset ?? 0;
       const requestedSize = size ?? (this._size - requestedOffset);
+
+      this._validateAlignment(requestedOffset, requestedSize);
 
       if (requestedOffset < this._mappedOffset ||
           requestedOffset > this._size ||
