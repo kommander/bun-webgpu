@@ -1,7 +1,7 @@
 
 import { FFIType, JSCallback, type Pointer, ptr, toArrayBuffer } from "bun:ffi";
 import { BufferUsageFlags } from "./common";
-import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct, WGPUErrorType } from "./structs_def";
+import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct, WGPUErrorType, WGPUExternalTextureBindingLayoutStruct } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
 import { type FFISymbols } from "./ffi";
@@ -24,6 +24,7 @@ import type { InstanceTicker } from "./GPU";
 import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage } from "./shared";
 import { GPUAdapterInfoImpl } from "./shared";
 import { EventEmitter } from "events";
+import { GPUTextureViewImpl } from "./GPUTextureView";
 
 type EventListenerOptions = any;
 export type DeviceErrorCallback = (this: GPUDevice, ev: GPUUncapturedErrorEvent) => any;
@@ -484,8 +485,27 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         if (!descriptor.entries) { // || Array.from(descriptor.entries).length === 0) {
             fatalError('createBindGroupLayout: descriptor.entries is missing');
         }
+        
+        const entries = Array.from(descriptor.entries).map((e) => {
+            if (e.externalTexture) {
+                const chainedStruct = WGPUExternalTextureBindingLayoutStruct.pack({
+                    chain: {
+                        next: null,
+                        sType: WGPUSType.ExternalTextureBindingLayout
+                    }
+                })
+                return {
+                    ...e,
+                    nextInChain: ptr(chainedStruct)
+                }
+            }
+            return e;
+        });
 
-        const packedDescriptorBuffer = WGPUBindGroupLayoutDescriptorStruct.pack(descriptor);
+        const packedDescriptorBuffer = WGPUBindGroupLayoutDescriptorStruct.pack({
+            ...descriptor,
+            entries
+        });
         const packedDescriptorPtr = ptr(packedDescriptorBuffer);
 
         const layoutPtr = this.lib.wgpuDeviceCreateBindGroupLayout(
@@ -556,6 +576,11 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
                     offset: e.resource.offset ?? 0n,
                     size: e.resource.size ?? UINT64_MAX
                 }
+            } else if (e.resource instanceof GPUTextureViewImpl) {
+                return {
+                    ...e,
+                    textureView: e.resource
+                }
             } else if (isBufferBinding(e.resource)) {
                 return {
                     ...e,
@@ -577,7 +602,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             return e;
         });
         const descriptorBuffer = WGPUBindGroupDescriptorStruct.pack({ ...descriptor, entries });
-
+        
         try {
             const groupPtr = this.lib.wgpuDeviceCreateBindGroup(
                 this.devicePtr,

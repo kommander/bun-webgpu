@@ -205,6 +205,11 @@ export const WGPUCallbackInfoStruct = defineStruct([
     ['userdata2', 'pointer', { optional: true }],
 ]);
 
+export const WGPUChainedStructStruct = defineStruct([
+    ['next', 'pointer', { optional: true }],
+    ['sType', 'u32']
+]);
+
 // TODO: Align with https://gpuweb.github.io/gpuweb/#enumdef-gpufeaturename
 export const WGPUFeatureNameDef = defineEnum({
     'depth-clip-control': 0x00000001,
@@ -288,8 +293,8 @@ export const WGPUFeatureNameDef = defineEnum({
 }, 'u32');
 
 export const WGPUTextureFormat = defineEnum({
-  // Unsupported formats, setting to undefined (0)
-  rgb10a2uint: 0x00000000,
+  // 
+  rgb10a2uint: 0x00000019,
 
   // Basic formats
   r8unorm: 0x00000001,           // r8_unorm
@@ -746,6 +751,10 @@ export const WGPUTextureViewDescriptorStruct = defineStruct([
     ['usage', 'u64', { default: 0n }], // WGPUTextureUsage_None - C definition uses flags (u64)
 ]);
 
+export const WGPUExternalTextureBindingLayoutStruct = defineStruct([
+    ['chain', WGPUChainedStructStruct],
+]);
+
 export const WGPUBindGroupLayoutEntryStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['binding', 'u32'],
@@ -797,12 +806,6 @@ export const WGPUPipelineLayoutDescriptorStruct = defineStruct([
 export const WGPUShaderModuleDescriptorStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['label', WGPUStringView, { optional: true }]
-]);
-
-// For WGSL shader source chain object
-export const WGPUChainedStructStruct = defineStruct([
-    ['next', 'pointer', { optional: true }],
-    ['sType', 'u32']
 ]);
 
 // For WGSL shader source
