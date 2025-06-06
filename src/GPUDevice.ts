@@ -1,7 +1,7 @@
 
 import { FFIType, JSCallback, type Pointer, ptr, toArrayBuffer } from "bun:ffi";
 import { BufferUsageFlags } from "./common";
-import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct } from "./structs_def";
+import { WGPUSupportedFeaturesStruct, WGPUFragmentStateStruct, WGPUBindGroupLayoutDescriptorStruct, WGPUShaderModuleDescriptorStruct, WGPUSType, WGPUShaderSourceWGSLStruct, WGPUPipelineLayoutDescriptorStruct, WGPUBindGroupDescriptorStruct, WGPURenderPipelineDescriptorStruct, WGPUVertexStateStruct, WGPUComputeStateStruct, UINT64_MAX, WGPUCommandEncoderDescriptorStruct, WGPUQuerySetDescriptorStruct, WGPUAdapterInfoStruct, WGPUErrorFilter, WGPUCallbackInfoStruct, WGPUErrorType } from "./structs_def";
 import { WGPUComputePipelineDescriptorStruct } from "./structs_def";
 import { allocStruct } from "./structs_ffi";
 import { type FFISymbols } from "./ffi";
@@ -17,7 +17,7 @@ import { GPUShaderModuleImpl } from "./GPUShaderModule";
 import { GPUPipelineLayoutImpl } from "./GPUPipelineLayout";
 import { GPUComputePipelineImpl } from "./GPUComputePipeline";
 import { GPURenderPipelineImpl } from "./GPURenderPipeline";
-import { fatalError, GPUErrorImpl } from "./utils/error";
+import { createWGPUError, fatalError, GPUErrorImpl, OperationError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
@@ -128,12 +128,11 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
                 if (messageSize === 0n) {
                     promise.resolve(null);
                 } else if (status === PopErrorScopeStatus.Error) {
-                    promise.resolve(null);
+                    const message = decodeCallbackMessage(messagePtr, messageSize);
+                    promise.reject(new OperationError(message));
                 } else {
                     const message = decodeCallbackMessage(messagePtr, messageSize);
-                    const error = Object.assign(Object.create(GPUErrorImpl.prototype), {
-                        message,
-                    });
+                    const error = createWGPUError(errorType, message);
                     promise.resolve(error);
                 }
             } else {
@@ -370,17 +369,17 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
 
     createBuffer(descriptor: GPUBufferDescriptor): GPUBuffer {
         // Perform basic usage validation
-        const usage = descriptor.usage;
-        const hasMapWrite = (usage & BufferUsageFlags.MAP_WRITE) !== 0;
-        const hasMapRead = (usage & BufferUsageFlags.MAP_READ) !== 0;
-        const otherFlags = usage & ~(BufferUsageFlags.MAP_WRITE | BufferUsageFlags.MAP_READ);
+        // const usage = descriptor.usage;
+        // const hasMapWrite = (usage & BufferUsageFlags.MAP_WRITE) !== 0;
+        // const hasMapRead = (usage & BufferUsageFlags.MAP_READ) !== 0;
+        // const otherFlags = usage & ~(BufferUsageFlags.MAP_WRITE | BufferUsageFlags.MAP_READ);
 
-        if (hasMapWrite && otherFlags !== 0 && otherFlags !== BufferUsageFlags.COPY_SRC) {
-            fatalError("Invalid BufferUsage: MAP_WRITE can only be combined with COPY_SRC.");
-        }
-        if (hasMapRead && otherFlags !== 0 && otherFlags !== BufferUsageFlags.COPY_DST) {
-            fatalError("Invalid BufferUsage: MAP_READ can only be combined with COPY_DST.");
-        }
+        // if (hasMapWrite && otherFlags !== 0 && otherFlags !== BufferUsageFlags.COPY_SRC) {
+        //     fatalError("Invalid BufferUsage: MAP_WRITE can only be combined with COPY_SRC.");
+        // }
+        // if (hasMapRead && otherFlags !== 0 && otherFlags !== BufferUsageFlags.COPY_DST) {
+        //     fatalError("Invalid BufferUsage: MAP_READ can only be combined with COPY_DST.");
+        // }
 
         if (descriptor.size <= 0) {
             fatalError("Buffer size must be greater than 0");

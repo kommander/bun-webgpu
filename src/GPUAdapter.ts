@@ -12,7 +12,7 @@ import {
     WGPUAdapterInfoStruct,
     WGPUDeviceLostReasonDef
 } from "./structs_def";
-import { fatalError, GPUErrorImpl, OperationError } from "./utils/error";
+import { createWGPUError, fatalError, GPUErrorImpl, OperationError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
 import { allocStruct } from "./structs_ffi";
 import { GPUAdapterInfoImpl, normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage } from "./shared";
@@ -169,22 +169,7 @@ export class GPUAdapterImpl implements GPUAdapter {
 
     private handleUncapturedError(devicePtr: Pointer, typeInt: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) {
         const message = decodeCallbackMessage(messagePtr, messageSize);
-        let error: GPUError | null = null;
-        
-        switch (typeInt) {
-            case WGPUErrorType['out-of-memory']:
-                error = new GPUOutOfMemoryError(message);
-                break;
-            case WGPUErrorType.internal:
-                error = new GPUInternalError(message);
-                break;
-            case WGPUErrorType.validation:
-                error = new GPUValidationError(message);
-                break;
-            default:
-                error = new GPUErrorImpl(message);
-                break;
-        }
+        const error = createWGPUError(typeInt, message);
         if (this._device) {
             const event: GPUUncapturedErrorEvent = new GPUUncapturedErrorEventImpl(error);
             this._device.handleUncapturedError(event);

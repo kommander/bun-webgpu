@@ -1,3 +1,5 @@
+import { WGPUErrorType } from "../structs_def";
+
 export function fatalError(...args: any[]): never {
     const message = args.join(' ');
     console.error('FATAL ERROR:', message);
@@ -36,5 +38,18 @@ export class GPUValidationError extends Error {
     constructor(message: string) {
         super(message);
         this.name = 'GPUValidationError';
+    }
+}
+
+export function createWGPUError(type: number, message: string) {
+    switch (type) {
+        case WGPUErrorType['out-of-memory']:
+            return new GPUOutOfMemoryError(message);
+        case WGPUErrorType.internal:
+            return new GPUInternalError(message);
+        case WGPUErrorType.validation:
+            return new GPUValidationError(message);
+        default:
+            return new GPUErrorImpl(message);
     }
 }
