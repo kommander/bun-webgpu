@@ -5,6 +5,7 @@ import { fatalError, OperationError } from "./utils/error";
 import { WGPUCallbackInfoStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
 import { decodeCallbackMessage } from "./shared";
+import type { GPUDeviceImpl } from "./GPUDevice";
 
 const BufferMapAsyncStatus = {
   Success: 1,
@@ -34,7 +35,8 @@ export class GPUBufferImpl implements GPUBuffer {
     ptr: Pointer;
 
     constructor(
-      public readonly bufferPtr: Pointer, 
+      public readonly bufferPtr: Pointer,
+      private readonly device: GPUDeviceImpl,
       private lib: FFISymbols, 
       descriptor: GPUBufferDescriptor,
       private instanceTicker: InstanceTicker
@@ -60,24 +62,26 @@ export class GPUBufferImpl implements GPUBuffer {
               this._detachableArrayBuffers = [];
               this._mapCallbackResolve?.(undefined);
           } else {
-              this._mapState = 'unmapped';
               const statusName = Object.keys(BufferMapAsyncStatus).find(key => BufferMapAsyncStatus[key as keyof typeof BufferMapAsyncStatus] === status) || 'Unknown Map Error';
               const message = decodeCallbackMessage(messagePtr, messageSize);
-
+              const errorMessage = `WGPU Buffer Map Error (${statusName}): ${message}`;
               const userDataBuffer = toArrayBuffer(userdata1, 0, 4);
               const userDataView = new DataView(userDataBuffer);
               const wasAlreadyMapped = userDataView.getUint32(0) === 1;
+              const wasPending = this._mapState === 'pending';
 
-              if (wasAlreadyMapped) {
-                this._mapState = 'mapped';
-              }
+              this._mapState = wasAlreadyMapped ? 'mapped' : 'unmapped';
 
               switch (status) {
                 case BufferMapAsyncStatus.Error:
-                  this._mapCallbackReject?.(new OperationError(`WGPU Buffer Map Error (${statusName}): ${message}`));
+                  if (wasPending) {
+                    this._mapCallbackReject?.(new OperationError(errorMessage));
+                  } else {
+                    this._mapCallbackReject?.(new AbortError(errorMessage));
+                  }
                   break;
                 default:
-                  this._mapCallbackReject?.(new AbortError(`WGPU Buffer Map Error (${statusName}): ${message}`));
+                  this._mapCallbackReject?.(new AbortError(errorMessage));
               }
           }
 
@@ -129,7 +133,12 @@ export class GPUBufferImpl implements GPUBuffer {
 
     mapAsync(mode: GPUMapModeFlags, offset?: GPUSize64, size?: GPUSize64): Promise<undefined> {
       if (this._destroyed) {
-        return Promise.reject(new Error('Buffer is destroyed'));
+        this.device.injectError('validation', 'Buffer is destroyed');
+        return new Promise((_, reject) => {
+          process.nextTick(() => {
+            reject(new OperationError('Buffer is destroyed'));
+          });
+        });
       }
 
       if (this._pendingMap) {
@@ -319,6 +328,9 @@ export class GPUBufferImpl implements GPUBuffer {
       this._mappedOffset = 0;
       this._mappedSize = 0;
       this._returnedRanges = [];
+      
+      this.instanceTicker.processEvents();
+      
       return undefined;
     }
 

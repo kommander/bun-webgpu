@@ -426,7 +426,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
                 fatalError("Failed to create buffer");
             }
 
-            return new GPUBufferImpl(bufferPtr, this.lib, descriptor, this.instanceTicker);
+            return new GPUBufferImpl(bufferPtr, this, this.lib, descriptor, this.instanceTicker);
         } catch (e) {
             fatalError("Error creating buffer:", e);
         }
