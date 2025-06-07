@@ -8,6 +8,7 @@ import {
   WGPUSupportedWGSLLanguageFeaturesStruct,
 } from "./structs_def";
 import { fatalError } from "./utils/error";
+import { allocStruct } from "./structs_ffi";
 
 const RequestAdapterStatus = {
   Success: 1,
@@ -72,19 +73,15 @@ export class GPUImpl implements GPU {
       console.warn("Accessing wgslLanguageFeatures on destroyed GPU instance");
       return Object.freeze(new Set<string>());
     }
-    
+
     if (this._wgslLanguageFeatures === null) {
       try {
-        const structSize = 16;
-        const featuresArraySize = 256; 
-        const structBuffer = new ArrayBuffer(structSize);
-        const featuresBuffer = new ArrayBuffer(featuresArraySize);
-        const structPtr = ptr(new Uint8Array(structBuffer));
-        
-        const structView = new DataView(structBuffer);
-        structView.setBigUint64(8, BigInt(ptr(new Uint8Array(featuresBuffer))), true);
-
-        const status = this.lib.wgpuInstanceGetWGSLLanguageFeatures(this.instancePtr, structPtr);
+        const { buffer: structBuffer } = allocStruct(WGPUSupportedWGSLLanguageFeaturesStruct, {
+          lengths: {
+            features: 32,
+          },
+        });
+        const status = this.lib.wgpuInstanceGetWGSLLanguageFeatures(this.instancePtr, ptr(structBuffer));
         
         if (status !== 1 /* WGPUStatus_Success */) {
           console.error(`wgpuInstanceGetWGSLLanguageFeatures failed with status: ${status}`);

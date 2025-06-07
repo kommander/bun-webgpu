@@ -349,12 +349,12 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         if (this._features === null) {
             let supportedFeaturesStructPtr: Pointer | null = null;
             try {
-                const featuresStructBuffer = new ArrayBuffer(16);
-                const featuresBuffer = new ArrayBuffer(256);
-                const featuresView = new DataView(featuresStructBuffer);
-                const featuresPtr = ptr(featuresBuffer);
+                const { buffer: featuresStructBuffer } = allocStruct(WGPUSupportedFeaturesStruct, {
+                    lengths: {
+                        features: 64,
+                    }
+                });
                 
-                featuresView.setBigUint64(8, BigInt(featuresPtr), true);
                 this.lib.wgpuDeviceGetFeatures(this.devicePtr, ptr(featuresStructBuffer));
                 
                 const supportedFeaturesData = WGPUSupportedFeaturesStruct.unpack(featuresStructBuffer);

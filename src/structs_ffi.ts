@@ -150,10 +150,49 @@ type DefineStructReturnType<Fields extends readonly StructField[], Options exten
     >;
 // --- END: types ---
 
-export function allocStruct(structDef: { size: number }): { buffer: ArrayBuffer; view: DataView } {
+interface AllocStructOptions {
+  lengths?: Record<string, number>;
+}
+
+interface AllocStructResult {
+  buffer: ArrayBuffer;
+  view: DataView;
+  subBuffers?: Record<string, ArrayBuffer>;
+}
+
+export function allocStruct(
+  structDef: StructDef<any, any>, 
+  options?: AllocStructOptions
+): AllocStructResult {
   const buffer = new ArrayBuffer(structDef.size);
   const view = new DataView(buffer);
-  return { buffer, view };
+  const result: AllocStructResult = { buffer, view };
+  const { pack: pointerPacker } = primitivePackers('pointer');
+
+  if (options?.lengths) {
+    const subBuffers: Record<string, ArrayBuffer> = {};
+    
+    // Allocate sub-buffers
+    for (const [arrayFieldName, length] of Object.entries(options.lengths)) {
+      const arrayMeta = structDef.arrayFields.get(arrayFieldName);
+      if (!arrayMeta) {
+        throw new Error(`Field '${arrayFieldName}' is not an array field with a lengthOf field`);
+      }
+      
+      const subBuffer = new ArrayBuffer(length * arrayMeta.elementSize);
+      subBuffers[arrayFieldName] = subBuffer;
+      
+      const pointer = length > 0 ? ptr(subBuffer) : null;
+      pointerPacker(view, arrayMeta.arrayOffset, pointer);
+      arrayMeta.lengthPack(view, arrayMeta.lengthOffset, length);
+    }
+    
+    if (Object.keys(subBuffers).length > 0) {
+      result.subBuffers = subBuffers;
+    }
+  }
+
+  return result;
 }
 
 function alignOffset(offset: number, align: number): number {
@@ -229,6 +268,25 @@ interface StructLayoutField {
   validate?: ValidationFunction[];
   pack: (view: DataView, offset: number, value: any, obj: any, options?: StructFieldPackOptions) => void;
   unpack: (view: DataView, offset: number) => any;
+  type: PrimitiveType | EnumDef<any> | StructDef<any> | 'cstring' | 'char*' | ObjectPointerDef<any> | readonly [any];
+  lengthOf?: string;
+}
+
+interface StructFieldDescription { 
+  name: string; 
+  offset: number; 
+  size: number; 
+  align: number; 
+  optional: boolean; 
+  type: PrimitiveType | EnumDef<any> | StructDef<any> | 'cstring' | 'char*' | ObjectPointerDef<any> | readonly [any]; 
+  lengthOf?: string 
+}
+
+interface ArrayFieldMetadata {
+  elementSize: number;
+  arrayOffset: number;
+  lengthOffset: number;
+  lengthPack: (view: DataView, offset: number, value: number) => void;
 }
 
 interface StructDef<OutputType, InputType = OutputType> {
@@ -236,10 +294,12 @@ interface StructDef<OutputType, InputType = OutputType> {
   size: number;
   align: number;
   hasMapValue: boolean;
+  layoutByName: Map<string, StructFieldDescription>;
+  arrayFields: Map<string, ArrayFieldMetadata>;
   pack(obj: Simplify<InputType>, options?: StructFieldPackOptions): ArrayBuffer;
   packInto(obj: Simplify<InputType>, view: DataView, offset: number, options?: StructFieldPackOptions): void;
   unpack(buf: ArrayBuffer | SharedArrayBuffer): Simplify<OutputType>;
-  describe(): { name: string; offset: number; size: number; align: number; optional: boolean }[];
+  describe(): StructFieldDescription[];
 }
 
 function isStruct(type: any): type is StructDef<any> {
@@ -343,6 +403,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
   const layout: StructLayoutField[] = [];
   const lengthOfFields: Record<string, StructLayoutField> = {};
   const lengthOfRequested: { requester: StructLayoutField, def: EnumDef<any> | PrimitiveType }[] = [];
+  const arrayFieldsMetadata: Record<string, ArrayFieldMetadata> = {};
 
   for (const [name, typeOrStruct, options = {}] of fields) {
     if (options.condition && !options.condition()) {
@@ -452,24 +513,25 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       };
 
     // Array ([EnumType], [StructType], [PrimitiveType], ...)
-    } else if (Array.isArray(typeOrStruct) && typeOrStruct.length === 1) {
+    } else if (Array.isArray(typeOrStruct) && typeOrStruct.length === 1 && typeOrStruct[0] !== undefined) {
       const [def] = typeOrStruct;
       size = pointerSize; // Arrays are always represented by a pointer to the data
       align = pointerSize;
+      let arrayElementSize: number;
 
       if (isEnum(def)) {
         // Packing an array of enums
-        const elemSize = def.type === 'u32' ? 4 : 8;
+        arrayElementSize = typeSizes[def.type];
         pack = (view, off, val: string[], obj) => {
           if (!val || val.length === 0) {
             pointerPacker(view, off, null);
             return;
           }
-          const buffer = new ArrayBuffer(val.length * elemSize);
+          const buffer = new ArrayBuffer(val.length * arrayElementSize);
           const bufferView = new DataView(buffer);
           for (let i = 0; i < val.length; i++) {
             const num = def.to(val[i]!);
-            bufferView.setUint32(i * elemSize, num, true);
+            bufferView.setUint32(i * arrayElementSize, num, true);
           }
           pointerPacker(view, off, ptr(buffer));
         };
@@ -478,16 +540,16 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         lengthOfDef = def;
       } else if (isStruct(def)) {
         // Array of Structs
-        const elemSize = def.size;
+        arrayElementSize = def.size;
         pack = (view, off, val: any[], obj, options) => {
           if (!val || val.length === 0) {
             pointerPacker(view, off, null);
             return;
           }
-          const buffer = new ArrayBuffer(val.length * elemSize);
+          const buffer = new ArrayBuffer(val.length * arrayElementSize);
           const bufferView = new DataView(buffer);
           for (let i = 0; i < val.length; i++) {
-            def.packInto(val[i], bufferView, i * elemSize, options);
+            def.packInto(val[i], bufferView, i * arrayElementSize, options);
           }
           pointerPacker(view, off, ptr(buffer));
         };
@@ -496,7 +558,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         };
       } else if (isPrimitiveType(def)) {
         // Array of Primitives
-        const elemSize = typeSizes[def];
+        arrayElementSize = typeSizes[def];
         const { pack: primitivePack } = primitivePackers(def);
          // Ensure 'val' type matches the expected primitive array type
         pack = (view, off, val: PrimitiveToTSType<typeof def>[]) => {
@@ -504,17 +566,17 @@ export function defineStruct<const Fields extends readonly StructField[], const 
             pointerPacker(view, off, null);
             return;
           }
-          const buffer = new ArrayBuffer(val.length * elemSize);
+          const buffer = new ArrayBuffer(val.length * arrayElementSize);
           const bufferView = new DataView(buffer);
           for (let i = 0; i < val.length; i++) {
-            primitivePack(bufferView, i * elemSize, val[i]);
+            primitivePack(bufferView, i * arrayElementSize, val[i]);
           }
           pointerPacker(view, off, ptr(buffer));
         };
         unpack = null!;
         // TODO: Implement unpack for primitve array
       } else if (isObjectPointerDef(def)) {
-        const elemSize = pointerSize; // Each element is a pointer
+        arrayElementSize = pointerSize;
         pack = (view, off, val) => {
           if (!val || val.length === 0) {
               pointerPacker(view, off, null);
@@ -530,6 +592,18 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         }
       } else {
         throw new Error(`Unsupported array element type for ${name}: ${JSON.stringify(def)}`);
+      }
+
+      // Used for allocStruct
+      const lengthOfField = Object.values(lengthOfFields).find(f => f.lengthOf === name);
+      if (lengthOfField && isPrimitiveType(lengthOfField.type)) {
+        const { pack: lengthPack } = primitivePackers(lengthOfField.type);
+        arrayFieldsMetadata[name] = {
+          elementSize: arrayElementSize,
+          arrayOffset: offset,
+          lengthOffset: lengthOfField.offset,
+          lengthPack
+        };
       }
     } else {
       throw new Error(`Unsupported field type for ${name}: ${JSON.stringify(typeOrStruct)}`);
@@ -580,7 +654,9 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       optional: !!options.optional || !!options.lengthOf || options.default !== undefined,
       default: options.default,
       pack,
-      unpack
+      unpack,
+      type: typeOrStruct,
+      lengthOf: options.lengthOf
     };
     layout.push(layoutField);
 
@@ -632,12 +708,25 @@ export function defineStruct<const Fields extends readonly StructField[], const 
   }
 
   const totalSize = alignOffset(offset, maxAlign);
+  const description = layout.map(f => ({
+    name: f.name,
+    offset: f.offset,
+    size: f.size,
+    align: f.align,
+    optional: f.optional,
+    type: f.type,
+    lengthOf: f.lengthOf,
+  }));
+  const layoutByName = new Map(description.map(f => [f.name, f]));
+  const arrayFields = new Map(Object.entries(arrayFieldsMetadata));
 
   return {
     __type: 'struct',
     size: totalSize,
     align: maxAlign,
     hasMapValue: !!structDefOptions?.mapValue,
+    layoutByName,
+    arrayFields,
 
     pack(obj: Simplify<StructObjectInputType<Fields>>, options?: StructFieldPackOptions): ArrayBuffer {
       const buf = new ArrayBuffer(totalSize);
@@ -716,13 +805,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     },
 
     describe() {
-      return layout.map(f => ({
-        name: f.name,
-        offset: f.offset,
-        size: f.size,
-        align: f.align,
-        optional: f.optional,
-      }));
+      return description;
     }
   } as DefineStructReturnType<Fields, Opts>;
 }
