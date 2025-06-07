@@ -1,7 +1,7 @@
 import { toArrayBuffer, type Pointer } from "bun:ffi";
 import { fatalError, OperationError } from "./utils/error";
 import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
-import { DEFAULT_SUPPORTED_LIMITS } from "./shared";
+import { DEFAULT_SUPPORTED_LIMITS, WGPUErrorType } from "./shared";
 
 export const WGPUBool = 'bool_u32';
 export const UINT64_MAX = 0xFFFFFFFFFFFFFFFFn;
@@ -14,16 +14,6 @@ export const WGPUCallbackMode = {
     Force32: 0x7FFFFFFF
 };
 export const WGPUCallbackModeDef = defineEnum(WGPUCallbackMode);
-
-export const WGPUErrorType = {
-    "no-error": 1,
-    "validation": 2,
-    "out-of-memory": 3,
-    "internal": 4,
-    "unknown": 5,
-    // "device-lost": 6,
-    "force-32": 0x7FFFFFFF
-} as const;
 export const WGPUErrorTypeDef = defineEnum(WGPUErrorType);
 
 export const WGPUDeviceLostReason = {

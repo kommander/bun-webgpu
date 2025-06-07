@@ -206,10 +206,6 @@ function _loadLibrary(libPath?: string) {
           args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, callbackInfo: WGPUPopErrorScopeCallbackInfo
           returns: FFIType.u64, // WGPUFuture (id)
       },
-      // wgpuDeviceSetUncapturedErrorCallback: {
-      //     args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, callbackInfo: WGPUUncapturedErrorCallbackInfo
-      //     returns: FFIType.void,
-      // },
       zwgpuDeviceTick: {
           args: [FFIType.pointer], // device: WGPUDevice
           returns: FFIType.void,

@@ -1,4 +1,4 @@
-import { WGPUErrorType } from "../structs_def";
+import { WGPUErrorType } from "../shared";
 
 export function fatalError(...args: any[]): never {
     const message = args.join(' ');

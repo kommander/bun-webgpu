@@ -8,6 +8,16 @@ export const AsyncStatus = {
     Force32: 0x7FFFFFFF,
 } as const;
 
+export const WGPUErrorType = {
+    "no-error": 1,
+    "validation": 2,
+    "out-of-memory": 3,
+    "internal": 4,
+    "unknown": 5,
+    // "device-lost": 6,
+    "force-32": 0x7FFFFFFF
+} as const;
+
 export function packUserDataId(id: number): ArrayBuffer {
     const userDataBuffer = new Uint32Array(1);
     userDataBuffer[0] = id;

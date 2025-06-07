@@ -18,7 +18,6 @@ import {
     WGPUAdapterInfoStruct, 
     WGPUErrorFilter, 
     WGPUCallbackInfoStruct, 
-    WGPUErrorType, 
     WGPUExternalTextureBindingLayoutStruct, 
     normalizeGPUExtent3DStrict, 
     WGPUStringView,
@@ -43,7 +42,7 @@ import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
 import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage, AsyncStatus, unpackUserDataId, packUserDataId } from "./shared";
-import { GPUAdapterInfoImpl } from "./shared";
+import { GPUAdapterInfoImpl, WGPUErrorType } from "./shared";
 import { EventEmitter } from "events";
 import { GPUTextureViewImpl } from "./GPUTextureView";
 
