@@ -5,7 +5,6 @@ import { GPUDeviceImpl } from "./GPUDevice";
 import { 
     WGPUCallbackInfoStruct, 
     WGPUDeviceDescriptorStruct, 
-    WGPUErrorType, 
     type WGPUUncapturedErrorCallbackInfo, 
     WGPULimitsStruct, 
     WGPUSupportedFeaturesStruct,

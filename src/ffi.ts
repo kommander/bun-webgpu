@@ -90,6 +90,10 @@ function _loadLibrary(libPath?: string) {
           ],
           returns: FFIType.u32, // -> WGPUWaitStatus (enum)
       },
+      zwgpuInstanceGetWGSLLanguageFeatures: {
+        args: [FFIType.pointer, FFIType.pointer], // instance: WGPUInstance, features: *mut WGPUSupportedWGSLLanguageFeatures
+        returns: FFIType.u32, // -> WGPUStatus
+      },
       zwgpuInstanceRelease: {
         args: [FFIType.pointer], // instance: WGPUInstance
         returns: FFIType.void,
@@ -644,6 +648,10 @@ function _loadLibrary(libPath?: string) {
       },
       zwgpuSharedTextureMemoryEndAccessStateFreeMembers: {
         args: [FFIType.pointer], // value: WGPUSharedTextureMemoryEndAccessState
+        returns: FFIType.void,
+      },
+      zwgpuSupportedWGSLLanguageFeaturesFreeMembers: {
+        args: [FFIType.pointer], // value: WGPUSupportedWGSLLanguageFeatures (passed by pointer)
         returns: FFIType.void,
       },
       // Add other FreeMembers functions as needed...

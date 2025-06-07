@@ -424,9 +424,28 @@ export const WGPUTextureFormat = defineEnum({
   external: 0x0005000D,
 } as const, 'u32');
 
+export const WGPUWGSLLanguageFeatureNameDef = defineEnum({
+    readonly_and_readwrite_storage_textures: 0x00000001,
+    packed_4x8_integer_dot_product: 0x00000002,
+    unrestricted_pointer_parameters: 0x00000003,
+    pointer_composite_access: 0x00000004,
+    sized_binding_array: 0x00000005,
+    chromium_testing_unimplemented: 0x00050000,
+    chromium_testing_unsafe_experimental: 0x00050001,
+    chromium_testing_experimental: 0x00050002,
+    chromium_testing_shipped_with_killswitch: 0x00050003,
+    chromium_testing_shipped: 0x00050004,
+    force_32: 0x7FFFFFFF
+}, 'u32');
+
 export const WGPUSupportedFeaturesStruct = defineStruct([
     ['featureCount', 'u64', { unpackTransform: (val: bigint) => Number(val), lengthOf: 'features' }],
     ['features', [WGPUFeatureNameDef]],
+]);
+
+export const WGPUSupportedWGSLLanguageFeaturesStruct = defineStruct([
+    ['featureCount', 'u64', { unpackTransform: (val: bigint) => Number(val), lengthOf: 'features' }],
+    ['features', [WGPUWGSLLanguageFeatureNameDef]],
 ]);
 
 function validateMutipleOf(val: number, multipleOf: number) {

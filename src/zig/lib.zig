@@ -40,6 +40,28 @@ pub export fn zwgpuInstanceAddRef(instance: c.WGPUInstance) void {
     c.wgpuInstanceAddRef(instance);
 }
 
+pub export fn zwgpuInstanceGetWGSLLanguageFeatures(instance: c.WGPUInstance, js_features_struct_ptr: *c.WGPUSupportedWGSLLanguageFeatures) c.WGPUStatus {
+    var temp_dawn_features_struct: c.WGPUSupportedWGSLLanguageFeatures = undefined;
+    const status = c.wgpuInstanceGetWGSLLanguageFeatures(instance, &temp_dawn_features_struct);
+    if (status != c.WGPUStatus_Success) {
+        return status;
+    }
+
+    if (temp_dawn_features_struct.featureCount > 0 and temp_dawn_features_struct.features != null) {
+        const dawn_features_slice = temp_dawn_features_struct.features[0..temp_dawn_features_struct.featureCount];
+
+        js_features_struct_ptr.featureCount = temp_dawn_features_struct.featureCount;
+        const mutable_features: [*]c.WGPUWGSLLanguageFeatureName = @ptrCast(@constCast(js_features_struct_ptr.features));
+        @memcpy(mutable_features[0..temp_dawn_features_struct.featureCount], dawn_features_slice);
+    } else {
+        js_features_struct_ptr.featureCount = 0;
+        js_features_struct_ptr.features = null;
+    }
+
+    c.wgpuSupportedWGSLLanguageFeaturesFreeMembers(temp_dawn_features_struct);
+    return c.WGPUStatus_Success;
+}
+
 // --- Adapter Functions ---
 
 pub export fn zwgpuAdapterRelease(adapter: c.WGPUAdapter) void {
@@ -503,4 +525,8 @@ pub export fn zwgpuSharedBufferMemoryEndAccessStateFreeMembers(value_ptr: *const
 
 pub export fn zwgpuSharedTextureMemoryEndAccessStateFreeMembers(value_ptr: *const c.WGPUSharedTextureMemoryEndAccessState) void {
     c.wgpuSharedTextureMemoryEndAccessStateFreeMembers(value_ptr.*);
+}
+
+pub export fn zwgpuSupportedWGSLLanguageFeaturesFreeMembers(value_ptr: *const c.WGPUSupportedWGSLLanguageFeatures) void {
+    c.wgpuSupportedWGSLLanguageFeaturesFreeMembers(value_ptr.*);
 }

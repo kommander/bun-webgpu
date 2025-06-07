@@ -5,6 +5,7 @@ import { GPUAdapterImpl } from "./GPUAdapter";
 import { 
   WGPUCallbackInfoStruct, 
   WGPURequestAdapterOptionsStruct,
+  WGPUSupportedWGSLLanguageFeaturesStruct,
 } from "./structs_def";
 import { fatalError } from "./utils/error";
 
@@ -56,6 +57,7 @@ export class GPUImpl implements GPU {
   __brand: "GPU" = "GPU";
   private _destroyed = false;
   private _ticker: InstanceTicker;
+  private _wgslLanguageFeatures: WGSLLanguageFeatures | null = null;
 
   constructor(private instancePtr: Pointer, private lib: FFISymbols) {
     this._ticker = new InstanceTicker(instancePtr, lib);
@@ -66,8 +68,45 @@ export class GPUImpl implements GPU {
   }
 
   get wgslLanguageFeatures(): WGSLLanguageFeatures {
-    console.error('wgslLanguageFeatures not implemented');
-    throw new Error("Not implemented");
+    if (this._destroyed) {
+      console.warn("Accessing wgslLanguageFeatures on destroyed GPU instance");
+      return Object.freeze(new Set<string>());
+    }
+    
+    if (this._wgslLanguageFeatures === null) {
+      try {
+        const structSize = 16;
+        const featuresArraySize = 256; 
+        const structBuffer = new ArrayBuffer(structSize);
+        const featuresBuffer = new ArrayBuffer(featuresArraySize);
+        const structPtr = ptr(new Uint8Array(structBuffer));
+        
+        const structView = new DataView(structBuffer);
+        structView.setBigUint64(8, BigInt(ptr(new Uint8Array(featuresBuffer))), true);
+
+        const status = this.lib.wgpuInstanceGetWGSLLanguageFeatures(this.instancePtr, structPtr);
+        
+        if (status !== 1 /* WGPUStatus_Success */) {
+          console.error(`wgpuInstanceGetWGSLLanguageFeatures failed with status: ${status}`);
+          this._wgslLanguageFeatures = Object.freeze(new Set<string>());
+          return this._wgslLanguageFeatures;
+        }
+
+        const unpacked = WGPUSupportedWGSLLanguageFeaturesStruct.unpack(structBuffer);
+        const supportedFeatures = new Set<string>();
+
+        if (unpacked.features) {
+            for (const featureName of unpacked.features) {
+                supportedFeatures.add(featureName as string);
+            }
+        }
+        this._wgslLanguageFeatures = Object.freeze(supportedFeatures);
+      } catch (e) {
+         console.error("Error in wgslLanguageFeatures getter:", e);
+         this._wgslLanguageFeatures = Object.freeze(new Set<string>());
+      }
+    }
+    return this._wgslLanguageFeatures;
   }
 
   requestAdapter(options?: GPURequestAdapterOptions & { featureLevel?: 'core' | 'compatibility' }): Promise<GPUAdapter | null> {
