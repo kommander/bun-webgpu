@@ -196,6 +196,8 @@ type ValidationFunction = (value: any, fieldName: string, hints?: any) => void |
 
 interface StructFieldOptions {
   optional?: boolean,
+  // Call mapValue even if the value is undefined for inline structs.
+  mapOptionalInline?: boolean, 
   unpackTransform?: (value: any) => any,
   packTransform?: (value: any) => any,
   lengthOf?: string,
@@ -233,6 +235,7 @@ interface StructDef<OutputType, InputType = OutputType> {
   __type: 'struct';
   size: number;
   align: number;
+  hasMapValue: boolean;
   pack(obj: Simplify<InputType>, options?: StructFieldPackOptions): ArrayBuffer;
   packInto(obj: Simplify<InputType>, view: DataView, offset: number, options?: StructFieldPackOptions): void;
   unpack(buf: ArrayBuffer | SharedArrayBuffer): Simplify<OutputType>;
@@ -546,9 +549,9 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       const originalPack = pack;
       if (isStruct(typeOrStruct) && !options.asPointer) {
         pack = (view, off, val, obj, packOptions) => {
-          if (!val) {
-            // no-op, just skip the inline range
-          } else {
+          // Given mapOptionalInline, we execute the pack even if the value is undefined,
+          // as the mapValue function can handle undefined values if needed.
+          if (val || options.mapOptionalInline) {
             originalPack(view, off, val, obj, packOptions);
           }
         };
@@ -613,10 +616,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       if (ptrAddress === 0n && length > 0) {
         throw new Error(`Array field ${requester.name} has null pointer but length ${length}.`);
       }
-      if (ptrAddress === 0n && length === 0) {
-        return [];
-      }
-      if (length === 0) {
+      if (ptrAddress === 0n || length === 0) {
         return [];
       }
 
@@ -637,14 +637,16 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     __type: 'struct',
     size: totalSize,
     align: maxAlign,
+    hasMapValue: !!structDefOptions?.mapValue,
 
     pack(obj: Simplify<StructObjectInputType<Fields>>, options?: StructFieldPackOptions): ArrayBuffer {
+      const buf = new ArrayBuffer(totalSize);
+      const view = new DataView(buf);
+      
       let mappedObj: any = obj;
       if (structDefOptions?.mapValue) {
         mappedObj = structDefOptions.mapValue(obj);
       }
-      const buf = new ArrayBuffer(totalSize);
-      const view = new DataView(buf);
 
       for (const field of layout) {
         const value = (mappedObj as any)[field.name] ?? field.default;
@@ -662,8 +664,13 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     },
 
     packInto(obj: Simplify<StructObjectInputType<Fields>>, view: DataView, offset: number, options?: StructFieldPackOptions): void {
+      let mappedObj: any = obj;
+      if (structDefOptions?.mapValue) {
+        mappedObj = structDefOptions.mapValue(obj);
+      }
+
       for (const field of layout) {
-        const value = (obj as any)[field.name] ?? field.default;
+        const value = (mappedObj as any)[field.name] ?? field.default;
         if (!field.optional && value === undefined) {
           console.warn(`packInto missing value for non-optional field '${field.name}' at offset ${offset + field.offset}. Writing default or zero.`);
         }
@@ -672,7 +679,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
             validateFn(value, field.name, options?.validationHints);
           }
         }
-        field.pack(view, offset + field.offset, value, obj, options);
+        field.pack(view, offset + field.offset, value, mappedObj, options);
       }
     },
 

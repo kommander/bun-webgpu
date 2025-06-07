@@ -6,6 +6,7 @@ import { DEFAULT_SUPPORTED_LIMITS, WGPUErrorType } from "./shared";
 export const WGPUBool = 'bool_u32';
 export const UINT64_MAX = 0xFFFFFFFFFFFFFFFFn;
 export const WGPU_WHOLE_SIZE = 0xFFFFFFFFFFFFFFFFn;
+export const WGPU_STRLEN = UINT64_MAX;
 
 export const WGPUCallbackMode = {
     WaitAnyOnly: 0x00000001,
@@ -131,15 +132,26 @@ export const WGPUErrorFilter = defineEnum({
 });
 
 export const WGPUStringView = defineStruct([
-    ['data', 'char*'],
+    ['data', 'char*', { optional: true }],
     ['length', 'u64'],
 ], {
-    mapValue: (v: string) => ({
-        data: v,
-        length: Buffer.byteLength(v),
-    }),
-    reduceValue: (v: { data: Pointer; length: bigint }) => {
-        const buffer = toArrayBuffer(v.data, 0, Number(v.length));
+    mapValue: (v: string | null | undefined) => {
+        if (!v) {
+            return {
+                data: null,
+                length: WGPU_STRLEN,
+            };
+        }
+        return {
+            data: v,
+            length: Buffer.byteLength(v),
+        };
+    },
+    reduceValue: (v: { data: Pointer | null; length: bigint }) => {
+        if (v.data === null || v.length === 0n) {
+            return '';
+        }
+        const buffer = toArrayBuffer(v.data, 0, Number(v.length) || 0);
         return new TextDecoder().decode(buffer);
     },
 });
@@ -981,7 +993,7 @@ export const WGPUVertexBufferLayoutStruct = defineStruct([
 export const WGPUVertexStateStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['module', objectPtr<GPUShaderModule>()],
-    ['entryPoint', WGPUStringView, { default: 'main' }],
+    ['entryPoint', WGPUStringView, { optional: true, mapOptionalInline: true }],
     ['constantCount', 'u64', { lengthOf: 'constants' }],
     ['constants', [WGPUConstantEntryStruct], { optional: true }],
     ['bufferCount', 'u64', { lengthOf: 'buffers' }],
@@ -1046,7 +1058,7 @@ export const WGPUColorTargetStateStruct = defineStruct([
 export const WGPUFragmentStateStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['module', objectPtr<GPUShaderModule>()],
-    ['entryPoint', WGPUStringView, { default: 'main' }],
+    ['entryPoint', WGPUStringView, { optional: true, mapOptionalInline: true }],
     ['constantCount', 'u64', { lengthOf: 'constants' }],
     ['constants', [WGPUConstantEntryStruct], { optional: true }],
     ['targetCount', 'u64', { lengthOf: 'targets' }],
@@ -1071,7 +1083,7 @@ export const WGPURenderPipelineDescriptorStruct = defineStruct([
 export const WGPUComputeStateStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['module', objectPtr<GPUShaderModule>()],
-    ['entryPoint', WGPUStringView, { default: 'main' }],
+    ['entryPoint', WGPUStringView, { optional: true, mapOptionalInline: true }],
     ['constantCount', 'u64', { lengthOf: 'constants' }],
     ['constants', [WGPUConstantEntryStruct], { optional: true }],
 ]);
