@@ -360,7 +360,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             try {
                 const { buffer: featuresStructBuffer } = allocStruct(WGPUSupportedFeaturesStruct, {
                     lengths: {
-                        features: 64,
+                        features: 128, // 77 known features + some room for unknown features or future features
                     }
                 });
                 
