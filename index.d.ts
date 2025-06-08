@@ -94,6 +94,15 @@ declare global {
         destroy(): undefined;
     }
 
+    interface GPURenderBundleEncoder {
+        readonly ptr: Pointer;
+    }
+
+    interface GPURenderBundle {
+        readonly ptr: Pointer;
+        destroy(): undefined;
+    }
+
     interface GPUTexelCopyBufferInfo {
         bytesPerRow: number;
         rowsPerImage: number;

@@ -1281,3 +1281,19 @@ export const ZWGPUWorkaroundCopyTextureAndMapStruct = defineStruct([
     ['output_buffer', 'pointer'],
     ['buffer_size', 'u64'],
 ]);
+
+export const WGPURenderBundleDescriptorStruct = defineStruct([
+    ['nextInChain', 'pointer', { optional: true }],
+    ['label', WGPUStringView, { optional: true }],
+]);
+
+export const WGPURenderBundleEncoderDescriptorStruct = defineStruct([
+    ['nextInChain', 'pointer', { optional: true }],
+    ['label', WGPUStringView, { optional: true }],
+    ['colorFormatCount', 'u64', { lengthOf: 'colorFormats' }],
+    ['colorFormats', [WGPUTextureFormat]],
+    ['depthStencilFormat', WGPUTextureFormat, { default: 'undefined' }],
+    ['sampleCount', 'u32', { default: 1 }],
+    ['depthReadOnly', WGPUBool, { default: false }],
+    ['stencilReadOnly', WGPUBool, { default: false }],
+]);

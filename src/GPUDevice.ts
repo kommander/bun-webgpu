@@ -39,12 +39,13 @@ import { GPUComputePipelineImpl } from "./GPUComputePipeline";
 import { GPURenderPipelineImpl } from "./GPURenderPipeline";
 import { createWGPUError, fatalError, GPUPipelineErrorImpl, OperationError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
-import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
+import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct, WGPURenderBundleEncoderDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
 import { normalizeIdentifier, DEFAULT_SUPPORTED_LIMITS, GPUSupportedLimitsImpl, decodeCallbackMessage, AsyncStatus, unpackUserDataId, packUserDataId } from "./shared";
 import { GPUAdapterInfoImpl, WGPUErrorType } from "./shared";
 import { EventEmitter } from "events";
 import { GPUTextureViewImpl } from "./GPUTextureView";
+import { GPURenderBundleEncoderImpl } from "./GPURenderBundleEncoder";
 
 type EventListenerOptions = any;
 export type DeviceErrorCallback = (this: GPUDevice, ev: GPUUncapturedErrorEvent) => any;
@@ -910,7 +911,19 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     }
 
     createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): GPURenderBundleEncoder {
-        fatalError('createRenderBundleEncoder not implemented', descriptor);
+        if (this._destroyed) {
+            fatalError("Cannot call createRenderBundleEncoder on a destroyed GPUDevice");
+        }
+        const colorFormats = Array.from(descriptor.colorFormats).filter(f => f !== null && f !== undefined) as GPUTextureFormat[];
+        const packedDescriptor = WGPURenderBundleEncoderDescriptorStruct.pack({
+            ...descriptor,
+            colorFormats,
+        });
+        const encoderPtr = this.lib.wgpuDeviceCreateRenderBundleEncoder(this.devicePtr, ptr(packedDescriptor));
+        if (!encoderPtr) {
+            fatalError("Failed to create render bundle encoder");
+        }
+        return new GPURenderBundleEncoderImpl(encoderPtr, this.lib, descriptor);
     }
 
     createQuerySet(descriptor: GPUQuerySetDescriptor): GPUQuerySet {

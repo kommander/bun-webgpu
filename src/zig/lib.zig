@@ -158,6 +158,10 @@ pub export fn zwgpuDeviceCreateComputePipeline(device: c.WGPUDevice, descriptor:
     return c.wgpuDeviceCreateComputePipeline(device, descriptor);
 }
 
+pub export fn zwgpuDeviceCreateRenderBundleEncoder(device: c.WGPUDevice, descriptor: *const c.WGPURenderBundleEncoderDescriptor) c.WGPURenderBundleEncoder {
+    return c.wgpuDeviceCreateRenderBundleEncoder(device, descriptor);
+}
+
 pub export fn zwgpuDeviceCreateCommandEncoder(device: c.WGPUDevice, descriptor: ?*const c.WGPUCommandEncoderDescriptor) c.WGPUCommandEncoder {
     return c.wgpuDeviceCreateCommandEncoder(device, descriptor);
 }
@@ -443,6 +447,18 @@ pub export fn zwgpuRenderPassEncoderDrawIndexed(encoder: c.WGPURenderPassEncoder
     c.wgpuRenderPassEncoderDrawIndexed(encoder, index_count, instance_count, first_index, base_vertex, first_instance);
 }
 
+pub export fn zwgpuRenderPassEncoderDrawIndirect(encoder: c.WGPURenderPassEncoder, indirect_buffer: c.WGPUBuffer, indirect_offset: u64) void {
+    c.wgpuRenderPassEncoderDrawIndirect(encoder, indirect_buffer, indirect_offset);
+}
+
+pub export fn zwgpuRenderPassEncoderDrawIndexedIndirect(encoder: c.WGPURenderPassEncoder, indirect_buffer: c.WGPUBuffer, indirect_offset: u64) void {
+    c.wgpuRenderPassEncoderDrawIndexedIndirect(encoder, indirect_buffer, indirect_offset);
+}
+
+pub export fn zwgpuRenderPassEncoderExecuteBundles(encoder: c.WGPURenderPassEncoder, bundle_count: u64, bundles: [*]const c.WGPURenderBundle) void {
+    c.wgpuRenderPassEncoderExecuteBundles(encoder, @intCast(bundle_count), bundles);
+}
+
 pub export fn zwgpuRenderPassEncoderEnd(encoder: c.WGPURenderPassEncoder) void {
     c.wgpuRenderPassEncoderEnd(encoder);
 }
@@ -529,4 +545,52 @@ pub export fn zwgpuSharedTextureMemoryEndAccessStateFreeMembers(value_ptr: *cons
 
 pub export fn zwgpuSupportedWGSLLanguageFeaturesFreeMembers(value_ptr: *const c.WGPUSupportedWGSLLanguageFeatures) void {
     c.wgpuSupportedWGSLLanguageFeaturesFreeMembers(value_ptr.*);
+}
+
+// --- RenderBundle Functions ---
+
+pub export fn zwgpuRenderBundleRelease(bundle: c.WGPURenderBundle) void {
+    c.wgpuRenderBundleRelease(bundle);
+}
+
+// --- RenderBundleEncoder Functions ---
+
+pub export fn zwgpuRenderBundleEncoderDraw(encoder: c.WGPURenderBundleEncoder, vertex_count: u32, instance_count: u32, first_vertex: u32, first_instance: u32) void {
+    c.wgpuRenderBundleEncoderDraw(encoder, vertex_count, instance_count, first_vertex, first_instance);
+}
+
+pub export fn zwgpuRenderBundleEncoderDrawIndexed(encoder: c.WGPURenderBundleEncoder, index_count: u32, instance_count: u32, first_index: u32, base_vertex: i32, first_instance: u32) void {
+    c.wgpuRenderBundleEncoderDrawIndexed(encoder, index_count, instance_count, first_index, base_vertex, first_instance);
+}
+
+pub export fn zwgpuRenderBundleEncoderDrawIndirect(encoder: c.WGPURenderBundleEncoder, indirect_buffer: c.WGPUBuffer, indirect_offset: u64) void {
+    c.wgpuRenderBundleEncoderDrawIndirect(encoder, indirect_buffer, indirect_offset);
+}
+
+pub export fn zwgpuRenderBundleEncoderDrawIndexedIndirect(encoder: c.WGPURenderBundleEncoder, indirect_buffer: c.WGPUBuffer, indirect_offset: u64) void {
+    c.wgpuRenderBundleEncoderDrawIndexedIndirect(encoder, indirect_buffer, indirect_offset);
+}
+
+pub export fn zwgpuRenderBundleEncoderFinish(encoder: c.WGPURenderBundleEncoder, descriptor: ?*const c.WGPURenderBundleDescriptor) c.WGPURenderBundle {
+    return c.wgpuRenderBundleEncoderFinish(encoder, descriptor);
+}
+
+pub export fn zwgpuRenderBundleEncoderSetBindGroup(encoder: c.WGPURenderBundleEncoder, group_index: u32, group: c.WGPUBindGroup, dynamic_offset_count: u64, dynamic_offsets: ?*const u32) void {
+    c.wgpuRenderBundleEncoderSetBindGroup(encoder, group_index, group, @intCast(dynamic_offset_count), dynamic_offsets);
+}
+
+pub export fn zwgpuRenderBundleEncoderSetIndexBuffer(encoder: c.WGPURenderBundleEncoder, buffer: c.WGPUBuffer, format: c.WGPUIndexFormat, offset: u64, size: u64) void {
+    c.wgpuRenderBundleEncoderSetIndexBuffer(encoder, buffer, format, offset, size);
+}
+
+pub export fn zwgpuRenderBundleEncoderSetPipeline(encoder: c.WGPURenderBundleEncoder, pipeline: c.WGPURenderPipeline) void {
+    c.wgpuRenderBundleEncoderSetPipeline(encoder, pipeline);
+}
+
+pub export fn zwgpuRenderBundleEncoderSetVertexBuffer(encoder: c.WGPURenderBundleEncoder, slot: u32, buffer: c.WGPUBuffer, offset: u64, size: u64) void {
+    c.wgpuRenderBundleEncoderSetVertexBuffer(encoder, slot, buffer, offset, size);
+}
+
+pub export fn zwgpuRenderBundleEncoderRelease(encoder: c.WGPURenderBundleEncoder) void {
+    c.wgpuRenderBundleEncoderRelease(encoder);
 }

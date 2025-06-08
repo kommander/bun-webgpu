@@ -178,6 +178,10 @@ function _loadLibrary(libPath?: string) {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUComputePipelineDescriptor
         returns: FFIType.pointer, // -> WGPUComputePipeline
       },
+      zwgpuDeviceCreateRenderBundleEncoder: {
+        args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPURenderBundleEncoderDescriptor
+        returns: FFIType.pointer, // -> WGPURenderBundleEncoder
+      },
       zwgpuDeviceCreateCommandEncoder: {
         args: [FFIType.pointer, FFIType.pointer], // device: WGPUDevice, descriptor: *const WGPUCommandEncoderDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUCommandEncoder
@@ -505,6 +509,30 @@ function _loadLibrary(libPath?: string) {
         ],
         returns: FFIType.void,
       },
+      zwgpuRenderPassEncoderDrawIndirect: {
+        args: [
+            FFIType.pointer, // encoder: WGPURenderPassEncoder
+            FFIType.pointer, // indirectBuffer: WGPUBuffer
+            FFIType.u64,     // indirectOffset: uint64_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderPassEncoderDrawIndexedIndirect: {
+        args: [
+            FFIType.pointer, // encoder: WGPURenderPassEncoder
+            FFIType.pointer, // indirectBuffer: WGPUBuffer
+            FFIType.u64,     // indirectOffset: uint64_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderPassEncoderExecuteBundles: {
+        args: [
+            FFIType.pointer, // encoder: WGPURenderPassEncoder
+            FFIType.u64,     // bundleCount: size_t
+            FFIType.pointer, // bundles: *const WGPURenderBundle
+        ],
+        returns: FFIType.void,
+      },
       zwgpuRenderPassEncoderEnd: {
         args: [FFIType.pointer], // encoder: WGPURenderPassEncoder
         returns: FFIType.void,
@@ -658,6 +686,93 @@ function _loadLibrary(libPath?: string) {
 
       // NOTE: This is not exhaustive. Many more functions exist in webgpu.h
       // Add more bindings here as needed, following the patterns above.
+
+      // --- RenderBundle Functions ---
+      zwgpuRenderBundleRelease: {
+        args: [FFIType.pointer], // bundle: WGPURenderBundle
+        returns: FFIType.void,
+      },
+
+      // --- RenderBundleEncoder Functions ---
+      zwgpuRenderBundleEncoderDraw: {
+        args: [
+          FFIType.pointer, // encoder: WGPURenderBundleEncoder
+          FFIType.u32,     // vertexCount: uint32_t
+          FFIType.u32,     // instanceCount: uint32_t
+          FFIType.u32,     // firstVertex: uint32_t
+          FFIType.u32,     // firstInstance: uint32_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderDrawIndexed: {
+        args: [
+          FFIType.pointer, // encoder: WGPURenderBundleEncoder
+          FFIType.u32,     // indexCount: uint32_t
+          FFIType.u32,     // instanceCount: uint32_t
+          FFIType.u32,     // firstIndex: uint32_t
+          FFIType.i32,     // baseVertex: int32_t
+          FFIType.u32,     // firstInstance: uint32_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderDrawIndirect: {
+        args: [
+          FFIType.pointer, // encoder: WGPURenderBundleEncoder
+          FFIType.pointer, // indirectBuffer: WGPUBuffer
+          FFIType.u64,     // indirectOffset: uint64_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderDrawIndexedIndirect: {
+        args: [
+          FFIType.pointer, // encoder: WGPURenderBundleEncoder
+          FFIType.pointer, // indirectBuffer: WGPUBuffer
+          FFIType.u64,     // indirectOffset: uint64_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderFinish: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderBundleEncoder, descriptor: *const WGPURenderBundleDescriptor (nullable)
+        returns: FFIType.pointer, // -> WGPURenderBundle
+      },
+      zwgpuRenderBundleEncoderSetBindGroup: {
+        args: [
+            FFIType.pointer, // encoder: WGPURenderBundleEncoder
+            FFIType.u32,     // groupIndex: uint32_t
+            FFIType.pointer, // group: WGPUBindGroup (nullable)
+            FFIType.u64,     // dynamicOffsetCount: size_t
+            FFIType.pointer, // dynamicOffsets: *const uint32_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderSetIndexBuffer: {
+        args: [
+            FFIType.pointer, // encoder: WGPURenderBundleEncoder
+            FFIType.pointer, // buffer: WGPUBuffer
+            FFIType.u32,     // format: WGPUIndexFormat (enum)
+            FFIType.u64,     // offset: uint64_t
+            FFIType.u64,     // size: uint64_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderSetPipeline: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderBundleEncoder, pipeline: WGPURenderPipeline
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderSetVertexBuffer: {
+        args: [
+            FFIType.pointer, // encoder: WGPURenderBundleEncoder
+            FFIType.u32,     // slot: uint32_t
+            FFIType.pointer, // buffer: WGPUBuffer (nullable)
+            FFIType.u64,     // offset: uint64_t
+            FFIType.u64,     // size: uint64_t
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderRelease: {
+        args: [FFIType.pointer], // encoder: WGPURenderBundleEncoder
+        returns: FFIType.void,
+      },
     });
     return symbols;
 }

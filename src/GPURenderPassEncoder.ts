@@ -1,12 +1,7 @@
 import { type Pointer, ptr } from "bun:ffi";
 import { type FFISymbols } from "./ffi";
 import { fatalError } from "./utils/error";
-import { WGPU_WHOLE_SIZE } from "./structs_def";
-
-const IndexFormat: Record<GPUIndexFormat, number> = { // NEW
-  uint16: 1,
-  uint32: 2,
-} as const;
+import { WGPU_WHOLE_SIZE, WGPUIndexFormat } from "./structs_def";
 
 export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   __brand: "GPURenderPassEncoder" = "GPURenderPassEncoder";
@@ -34,7 +29,12 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   executeBundles(bundles: Iterable<GPURenderBundle>): undefined {
-    fatalError('executeBundles not implemented');
+    const bundleArray = Array.from(bundles);
+    const bundlePtrs = bundleArray.map(b => b.ptr);
+    const bundlesBuffer = new BigUint64Array(bundlePtrs.map(p => BigInt(p)));
+    
+    this.lib.wgpuRenderPassEncoderExecuteBundles(this.ptr, BigInt(bundleArray.length), ptr(bundlesBuffer));
+    return undefined;
   }
 
   setPipeline(pipeline: GPURenderPipeline): undefined {
@@ -64,7 +64,7 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
       }
 
       try {
-          this.lib.wgpuRenderPassEncoderSetBindGroup(this.ptr, index, bindGroup.ptr, offsetPtr, BigInt(offsetCount));
+          this.lib.wgpuRenderPassEncoderSetBindGroup(this.ptr, index, bindGroup.ptr, BigInt(offsetCount), offsetPtr);
       } catch (e) { console.error("FFI Error: renderPassEncoderSetBindGroup", e); }
   }
 
@@ -83,7 +83,7 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
            console.warn("RenderPassEncoder.setIndexBuffer: null buffer pointer.");
            return;
       }
-      const formatValue = IndexFormat[format];
+      const formatValue = WGPUIndexFormat.to(format);
       // Use WGPU_WHOLE_SIZE equivalent if size is not provided
       const bufferSize = size ?? WGPU_WHOLE_SIZE; 
       this.lib.wgpuRenderPassEncoderSetIndexBuffer(this.ptr, buffer.ptr, formatValue, BigInt(offset), BigInt(bufferSize)); 
@@ -112,11 +112,12 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number | bigint): undefined {
-    fatalError('drawIndirect not implemented');
+    this.lib.wgpuRenderPassEncoderDrawIndirect(this.ptr, indirectBuffer.ptr, BigInt(indirectOffset));
   }
 
-  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number | bigint): undefined {
-    fatalError('drawIndexedIndirect not implemented');
+  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): undefined {
+    this.lib.wgpuRenderPassEncoderDrawIndexedIndirect(this.ptr, indirectBuffer.ptr, BigInt(indirectOffset));
+    return undefined;
   }
 
   end(): undefined {
