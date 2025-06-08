@@ -9,7 +9,7 @@ import {
     WGPULimitsStruct, 
     WGPUSupportedFeaturesStruct,
     WGPUAdapterInfoStruct,
-    WGPUDeviceLostReasonDef
+    WGPUDeviceLostReasonDef,
 } from "./structs_def";
 import { createWGPUError, fatalError, GPUErrorImpl, OperationError } from "./utils/error";
 import type { InstanceTicker } from "./GPU";
@@ -101,16 +101,16 @@ export class GPUAdapterImpl implements GPUAdapter {
         }
         if (this._features === null) {
              try {
-                const featuresStructBuffer = new ArrayBuffer(16);
-                const featuresBuffer = new ArrayBuffer(256);
-                const featuresView = new DataView(featuresStructBuffer);
-                const featuresPtr = ptr(featuresStructBuffer);
+                const { buffer: featuresStructBuffer, subBuffers } = allocStruct(WGPUSupportedFeaturesStruct, {
+                    lengths: {
+                        features: 128, // 77 known features + some room for unknown features or future features
+                    },
+                });
                 
-                featuresView.setBigUint64(8, BigInt(featuresPtr), true);
-                this.lib.wgpuAdapterGetFeatures(this.adapterPtr, featuresPtr);
+                this.lib.wgpuAdapterGetFeatures(this.adapterPtr, ptr(featuresStructBuffer));
                 const supportedFeatures = new Set<GPUFeatureName>();
 
-                const unpacked = WGPUSupportedFeaturesStruct.unpack(featuresBuffer);
+                const unpacked = WGPUSupportedFeaturesStruct.unpack(featuresStructBuffer);
                 if (unpacked.features && unpacked.featureCount && unpacked.featureCount > 0) {
                     for (const feature of unpacked.features) {
                         supportedFeatures.add(feature as GPUFeatureName);
@@ -274,10 +274,12 @@ export class GPUAdapterImpl implements GPUAdapter {
               }
               
               try {
+                const limits = this.limits;
+                const features = this.features;
                 const descBuffer = WGPUDeviceDescriptorStruct.pack(fullDescriptor, { 
                     validationHints: {
-                        limits: this._limits,
-                        features: this._features,
+                        limits,
+                        features,
                     }
                 });
                 packedDescriptorPtr = ptr(descBuffer);
