@@ -55,6 +55,14 @@ const PopErrorScopeStatus = {
     Error: 3,
 } as const;
 
+function isDepthTextureFormat(format: string): boolean {
+    return format === 'depth16unorm' || 
+           format === 'depth24plus' || 
+           format === 'depth24plus-stencil8' || 
+           format === 'depth32float' || 
+           format === 'depth32float-stencil8';
+}
+
 export class DeviceTicker {
     private _waiting: number = 0;
     private _ticking = false;
@@ -779,6 +787,30 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     }
 
     createRenderPipeline(descriptor: GPURenderPipelineDescriptor): GPURenderPipeline {
+        // Validate depthStencil state
+        if (descriptor.depthStencil) {
+            const format = descriptor.depthStencil.format;
+            const isDepthFormat = isDepthTextureFormat(format);
+            
+            if (isDepthFormat && descriptor.depthStencil.depthWriteEnabled === undefined) {
+                this.injectError('validation', 'depthWriteEnabled is required for depth formats');
+            }
+
+            // Check if depthCompare is required
+            if (isDepthFormat) {
+                const depthWriteEnabled = descriptor.depthStencil.depthWriteEnabled;
+                const stencilFront = descriptor.depthStencil.stencilFront;
+                const stencilBack = descriptor.depthStencil.stencilBack;
+                
+                const frontDepthFailOp = stencilFront?.depthFailOp || 'keep';
+                const backDepthFailOp = stencilBack?.depthFailOp || 'keep';
+                const depthFailOpsAreKeep = frontDepthFailOp === 'keep' && backDepthFailOp === 'keep';
+                
+                if ((depthWriteEnabled || !depthFailOpsAreKeep) && descriptor.depthStencil.depthCompare === undefined) {
+                    this.injectError('validation', 'depthCompare is required when depthWriteEnabled is true or stencil depth fail operations are not keep');
+                }
+            }
+        }
         const packedPipelineDescriptor = this._prepareRenderPipelineDescriptor(descriptor);
 
         let pipelinePtr: Pointer | null = null;
@@ -830,6 +862,31 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     createRenderPipelineAsync(descriptor: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
         if (this._destroyed) {
             return Promise.reject(new Error('createRenderPipelineAsync on destroyed GPUDevice'));
+        }
+
+        // Validate depthStencil state
+        if (descriptor.depthStencil) {
+            const format = descriptor.depthStencil.format;
+            const isDepthFormat = isDepthTextureFormat(format);
+            
+            if (isDepthFormat && descriptor.depthStencil.depthWriteEnabled === undefined) {
+                return Promise.reject(new GPUPipelineErrorImpl('depthWriteEnabled is required for depth formats', { reason: 'validation' }));
+            }
+
+            // Check if depthCompare is required
+            if (isDepthFormat) {
+                const depthWriteEnabled = descriptor.depthStencil.depthWriteEnabled;
+                const stencilFront = descriptor.depthStencil.stencilFront;
+                const stencilBack = descriptor.depthStencil.stencilBack;
+                
+                const frontDepthFailOp = stencilFront?.depthFailOp || 'keep';
+                const backDepthFailOp = stencilBack?.depthFailOp || 'keep';
+                const depthFailOpsAreKeep = frontDepthFailOp === 'keep' && backDepthFailOp === 'keep';
+                
+                if ((depthWriteEnabled || !depthFailOpsAreKeep) && descriptor.depthStencil.depthCompare === undefined) {
+                    return Promise.reject(new GPUPipelineErrorImpl('depthCompare is required when depthWriteEnabled is true or stencil depth fail operations are not keep', { reason: 'validation' }));
+                }
+            }
         }
 
         return new Promise((resolve, reject) => {

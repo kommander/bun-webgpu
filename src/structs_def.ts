@@ -1,5 +1,5 @@
 import { toArrayBuffer, type Pointer } from "bun:ffi";
-import { fatalError, GPUPipelineErrorImpl, OperationError } from "./utils/error";
+import { fatalError, OperationError } from "./utils/error";
 import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
 import { DEFAULT_SUPPORTED_LIMITS, WGPUErrorType } from "./shared";
 
@@ -481,14 +481,6 @@ function validateLimitField(val: number, fieldName: string, { hints }: { hints?:
         const maxValue = hints.limits[fieldName as keyof GPUSupportedLimits] as number;
         validateRange(val, 0, maxValue);
     }
-}
-
-function isDepthTextureFormat(format: string): boolean {
-    return format === 'depth16unorm' || 
-           format === 'depth24plus' || 
-           format === 'depth24plus-stencil8' || 
-           format === 'depth32float' || 
-           format === 'depth32float-stencil8';
 }
 
 // WGPULimits struct mirroring C layout
@@ -1050,11 +1042,7 @@ export const WGPUStencilFaceStateStruct = defineStruct([
 export const WGPUDepthStencilStateStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['format', WGPUTextureFormat],
-    ['depthWriteEnabled', WGPUBool, { default: false, validate: (val: boolean, fieldName: string, { input }: { input?: any } = {}) => {
-        if (input && isDepthTextureFormat(input.format) && input.depthWriteEnabled === undefined) {
-            throw new GPUPipelineErrorImpl('depthWriteEnabled is required for depth formats', { reason: 'validation' });
-        }
-    } }],
+    ['depthWriteEnabled', WGPUBool, { default: false }],
     ['depthCompare', WGPUCompareFunction, { default: 'always' }],
     ['stencilFront', WGPUStencilFaceStateStruct, { default: {} }], // Inline struct
     ['stencilBack', WGPUStencilFaceStateStruct, { default: {} }], // Inline struct
