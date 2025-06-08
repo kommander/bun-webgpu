@@ -13,8 +13,11 @@ export class GPUBufferImpl implements GPUBuffer {
     private _mapState: GPUBufferMapState = 'unmapped';
     private _pendingMap: Promise<undefined> | null = null;
     private _mapCallback: JSCallback;
-    private _mapCallbackResolve: ((value: undefined) => void) | null = null;
-    private _mapCallbackReject: ((reason?: any) => void) | null = null;
+    private _mapCallbackPromiseData: {
+      resolve: (value: undefined) => void;
+      reject: (reason?: any) => void;
+      userDataBuffer: ArrayBuffer;
+    } | null = null;
     private _destroyed = false;
     private _mappedOffset: number = 0;
     private _mappedSize: number = 0;
@@ -51,7 +54,7 @@ export class GPUBufferImpl implements GPUBuffer {
               this._mapState = 'mapped';
               this._returnedRanges = [];
               this._detachableArrayBuffers = [];
-              this._mapCallbackResolve?.(undefined);
+              this._mapCallbackPromiseData?.resolve(undefined);
           } else {
               const statusName = Object.keys(AsyncStatus).find(key => AsyncStatus[key as keyof typeof AsyncStatus] === status) || 'Unknown Map Error';
               const message = decodeCallbackMessage(messagePtr, messageSize);
@@ -64,18 +67,17 @@ export class GPUBufferImpl implements GPUBuffer {
               switch (status) {
                 case AsyncStatus.Error:
                   if (wasPending) {
-                    this._mapCallbackReject?.(new OperationError(errorMessage));
+                    this._mapCallbackPromiseData?.reject(new OperationError(errorMessage));
                   } else {
-                    this._mapCallbackReject?.(new AbortError(errorMessage));
+                    this._mapCallbackPromiseData?.reject(new AbortError(errorMessage));
                   }
                   break;
                 default:
-                  this._mapCallbackReject?.(new AbortError(errorMessage));
+                  this._mapCallbackPromiseData?.reject(new AbortError(errorMessage));
               }
           }
 
-          this._mapCallbackResolve = null;
-          this._mapCallbackReject = null;
+          this._mapCallbackPromiseData = null;
 
           if (this._destroyed) {
             this._mapCallback.close();
@@ -143,14 +145,19 @@ export class GPUBufferImpl implements GPUBuffer {
           const mapOffset = BigInt(mapOffsetValue);
           const mapSize = BigInt(mapSizeValue);
 
-          this._mapCallbackResolve = resolve;
-          this._mapCallbackReject = reject;
+          const userDataBuffer = packUserDataId(originalMapState === 'mapped' ? 1 : 0);
+          const userDataPtr = ptr(userDataBuffer);
+          
+          this._mapCallbackPromiseData = {
+            resolve,
+            reject,
+            userDataBuffer,
+          };
 
           if (!this._mapCallback.ptr) {
             fatalError('Could not create buffer map callback');
           }
 
-          const userDataPtr = ptr(packUserDataId(originalMapState === 'mapped' ? 1 : 0));
 
           const callbackInfo = WGPUCallbackInfoStruct.pack({
             mode: 'AllowProcessEvents',
