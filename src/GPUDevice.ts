@@ -37,7 +37,7 @@ import { GPUShaderModuleImpl } from "./GPUShaderModule";
 import { GPUPipelineLayoutImpl } from "./GPUPipelineLayout";
 import { GPUComputePipelineImpl } from "./GPUComputePipeline";
 import { GPURenderPipelineImpl } from "./GPURenderPipeline";
-import { createWGPUError, fatalError, GPUErrorImpl, GPUPipelineErrorImpl, OperationError } from "./utils/error";
+import { createWGPUError, fatalError, GPUPipelineErrorImpl, OperationError } from "./utils/error";
 import { WGPULimitsStruct } from "./structs_def";
 import { WGPUBufferDescriptorStruct, WGPUTextureDescriptorStruct, WGPUSamplerDescriptorStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";

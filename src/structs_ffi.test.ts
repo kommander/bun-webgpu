@@ -1891,10 +1891,10 @@ describe("Structs FFI", () => {
         it("should pass validation hints to validators", () => {
             const TestStruct = defineStruct([
                 ['value', 'u32', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const maxValue = hints?.maxValue || 100;
                         if (value > maxValue) {
-                            throw new Error(`${fieldName} must be <= ${maxValue} (hint: ${hints?.context})`);
+                            throw new Error(`${fieldName} must be <= ${maxValue} (hint: ${hints?.context || 'no context'})`);
                         }
                     }
                 }]
@@ -1923,7 +1923,7 @@ describe("Structs FFI", () => {
         it("should validate nested structs and propagate hints", () => {
             const InnerStruct = defineStruct([
                 ['x', 'f32', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const range = hints?.coordinateRange || [-100, 100];
                         if (value < range[0] || value > range[1]) {
                             throw new Error(`${fieldName} must be within range [${range[0]}, ${range[1]}]`);
@@ -1931,7 +1931,7 @@ describe("Structs FFI", () => {
                     }
                 }],
                 ['y', 'f32', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const range = hints?.coordinateRange || [-100, 100];
                         if (value < range[0] || value > range[1]) {
                             throw new Error(`${fieldName} must be within range [${range[0]}, ${range[1]}]`);
@@ -1942,7 +1942,7 @@ describe("Structs FFI", () => {
 
             const OuterStruct = defineStruct([
                 ['name', 'cstring', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const prefix = hints?.namePrefix || "";
                         if (prefix && !value.startsWith(prefix)) {
                             throw new Error(`${fieldName} must start with '${prefix}'`);
@@ -1950,7 +1950,7 @@ describe("Structs FFI", () => {
                     }
                 }],
                 ['position', InnerStruct, {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         if (!value || typeof value !== 'object') {
                             throw new Error(`${fieldName} must be a valid position object`);
                         }
@@ -2006,7 +2006,7 @@ describe("Structs FFI", () => {
         it("should validate multiple nested levels with hint propagation", () => {
             const Level3Struct = defineStruct([
                 ['value', 'u32', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const multiplier = hints?.multiplier || 1;
                         if (value % multiplier !== 0) {
                             throw new Error(`${fieldName} must be divisible by ${multiplier}`);
@@ -2017,7 +2017,7 @@ describe("Structs FFI", () => {
 
             const Level2Struct = defineStruct([
                 ['data', Level3Struct, {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         if (!value || typeof value !== 'object') {
                             throw new Error(`${fieldName} must be a valid data object`);
                         }
@@ -2027,7 +2027,7 @@ describe("Structs FFI", () => {
 
             const Level1Struct = defineStruct([
                 ['nested', Level2Struct, {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         if (!value || typeof value !== 'object') {
                             throw new Error(`${fieldName} must be a valid nested object`);
                         }
@@ -2070,7 +2070,7 @@ describe("Structs FFI", () => {
         it("should validate struct arrays with hint propagation", () => {
             const ItemStruct = defineStruct([
                 ['id', 'u32', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const minId = hints?.minId || 0;
                         if (value < minId) {
                             throw new Error(`${fieldName} must be >= ${minId}`);
@@ -2083,7 +2083,7 @@ describe("Structs FFI", () => {
             const ContainerStruct = defineStruct([
                 ['itemCount', 'u32', { lengthOf: 'items' }],
                 ['items', [ItemStruct], {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const maxItems = hints?.maxItems || 10;
                         if (value.length > maxItems) {
                             throw new Error(`${fieldName} cannot have more than ${maxItems} items`);
@@ -2167,7 +2167,7 @@ describe("Structs FFI", () => {
             const BufferLayoutStruct = defineStruct([
                 ['type', 'u32', { 
                     default: 2,
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const validTypes = hints?.validBufferTypes || [0, 1, 2];
                         if (!validTypes.includes(value)) {
                             throw new Error(`${fieldName} must be one of: ${validTypes.join(', ')}`);
@@ -2176,7 +2176,7 @@ describe("Structs FFI", () => {
                 }],
                 ['minBindingSize', 'u64', { 
                     default: 0,
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const maxSize = hints?.maxBufferSize || 1024 * 1024;
                         if (value > maxSize) {
                             throw new Error(`${fieldName} cannot exceed ${maxSize} bytes`);
@@ -2207,7 +2207,7 @@ describe("Structs FFI", () => {
             const BindGroupLayoutDescriptorStruct = defineStruct([
                 ['entryCount', 'u64', { lengthOf: 'entries' }],
                 ['entries', [BindGroupLayoutEntryStruct], {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         const maxEntries = hints?.maxBindings || 8;
                         if (value.length > maxEntries) {
                             throw new Error(`${fieldName} cannot exceed ${maxEntries} bindings`);
@@ -2285,7 +2285,7 @@ describe("Structs FFI", () => {
 
             const Level3Struct = defineStruct([
                 ['deepValue', 'u32', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         capturedHints.push({ level: 'level3', field: fieldName, hints: { ...hints } });
                         if (hints?.enforceLevel3 && value !== 999) {
                             throw new Error(`${fieldName} must be 999 when enforceLevel3 is set`);
@@ -2296,7 +2296,7 @@ describe("Structs FFI", () => {
 
             const Level2Struct = defineStruct([
                 ['level3', Level3Struct, {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         capturedHints.push({ level: 'level2', field: fieldName, hints: { ...hints } });
                         if (hints?.enforceLevel2 && !value.deepValue) {
                             throw new Error(`${fieldName} must have deepValue when enforceLevel2 is set`);
@@ -2307,7 +2307,7 @@ describe("Structs FFI", () => {
 
             const Level1Struct = defineStruct([
                 ['level2', Level2Struct, {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         capturedHints.push({ level: 'level1', field: fieldName, hints: { ...hints } });
                         if (hints?.enforceLevel1 && !value.level3) {
                             throw new Error(`${fieldName} must have level3 when enforceLevel1 is set`);
@@ -2387,7 +2387,7 @@ describe("Structs FFI", () => {
 
             const ItemStruct = defineStruct([
                 ['itemId', 'u32', {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         capturedArrayHints.push({ 
                             field: fieldName, 
                             value, 
@@ -2405,7 +2405,7 @@ describe("Structs FFI", () => {
             const ArrayStruct = defineStruct([
                 ['count', 'u32', { lengthOf: 'items' }],
                 ['items', [ItemStruct], {
-                    validate: (value, fieldName, hints) => {
+                    validate: (value, fieldName, { hints }) => {
                         capturedArrayHints.push({ 
                             field: fieldName, 
                             arrayLength: value.length, 
@@ -2484,7 +2484,7 @@ describe("Structs FFI", () => {
         it("should propagate hints to nested structs with asPointer: true (real WGPULimits scenario)", () => {
             const capturedValidations: any[] = [];
 
-            function validateLimitField(val: number, fieldName: string, hints?: any) {
+            function validateLimitField(val: number, fieldName: string, { hints }: { hints?: any } = {}) {
                 capturedValidations.push({ field: fieldName, value: val, hints: { ...hints } });
             }
 
@@ -2553,7 +2553,7 @@ describe("Structs FFI", () => {
         it("should propagate hints to nested structs with asPointer: false (inline structs)", () => {
             const capturedInlineValidations: any[] = [];
 
-            function validateInlineField(val: number, fieldName: string, hints?: any) {
+            function validateInlineField(val: number, fieldName: string, { hints }: { hints?: any } = {}) {
                 capturedInlineValidations.push({ field: fieldName, value: val, hints: { ...hints } });
             }
 
@@ -2590,7 +2590,7 @@ describe("Structs FFI", () => {
         });
 
         it("should handle validation failure in asPointer nested struct with hints", () => {
-            function validateWithHints(val: number, fieldName: string, hints?: any) {
+            function validateWithHints(val: number, fieldName: string, { hints }: { hints?: any } = {}) {
                 const maxValue = hints?.maxAllowed || 1000;
                 if (val > maxValue) {
                     throw new Error(`${fieldName} exceeds maximum allowed value ${maxValue} (got ${val})`);
@@ -2778,21 +2778,21 @@ describe("Structs FFI", () => {
             const TestStruct = defineStruct([
                 ['value', 'u32', {
                     validate: [
-                        (value, fieldName, hints) => {
+                        (value, fieldName, { hints }) => {
                             capturedHints.push({ validator: 1, field: fieldName, value, hints: { ...hints } });
                             const min = hints?.minValue || 0;
                             if (value < min) {
                                 throw new Error(`${fieldName} must be >= ${min} (validator 1)`);
                             }
                         },
-                        (value, fieldName, hints) => {
+                        (value, fieldName, { hints }) => {
                             capturedHints.push({ validator: 2, field: fieldName, value, hints: { ...hints } });
                             const max = hints?.maxValue || 1000;
                             if (value > max) {
                                 throw new Error(`${fieldName} must be <= ${max} (validator 2)`);
                             }
                         },
-                        (value, fieldName, hints) => {
+                        (value, fieldName, { hints }) => {
                             capturedHints.push({ validator: 3, field: fieldName, value, hints: { ...hints } });
                             const multiplier = hints?.mustBeMultipleOf || 1;
                             if (value % multiplier !== 0) {
@@ -2995,7 +2995,7 @@ describe("Structs FFI", () => {
                 }
             }
 
-            function validateLimitField(val: number, fieldName: string, hints?: any) {
+            function validateLimitField(val: number, fieldName: string, { hints }: { hints?: any } = {}) {
                 capturedValidations.push({ validator: 'limitField', field: fieldName, value: val, hints });
                 if (hints && fieldName in hints) {
                     const maxValue = hints[fieldName as keyof typeof hints] as number;

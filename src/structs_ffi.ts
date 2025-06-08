@@ -231,7 +231,7 @@ function isEnum<T extends Record<string, number>>(type: any): type is EnumDef<T>
   return typeof type === 'object' && type.__type === 'enum';
 }
 
-type ValidationFunction = (value: any, fieldName: string, hints?: any) => void | never;
+type ValidationFunction = (value: any, fieldName: string, options: { hints?: any, input?: any }) => void | never;
 
 interface StructFieldOptions {
   optional?: boolean,
@@ -744,7 +744,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         }
         if (field.validate) {
           for (const validateFn of field.validate) {
-            validateFn(value, field.name, options?.validationHints);
+            validateFn(value, field.name, { hints: options?.validationHints, input: mappedObj });
           }
         }
         field.pack(view, field.offset, value, mappedObj, options);
@@ -765,7 +765,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         }
         if (field.validate) {
           for (const validateFn of field.validate) {
-            validateFn(value, field.name, options?.validationHints);
+            validateFn(value, field.name, { hints: options?.validationHints, input: mappedObj });
           }
         }
         field.pack(view, offset + field.offset, value, mappedObj, options);

@@ -1,5 +1,5 @@
 import { toArrayBuffer, type Pointer } from "bun:ffi";
-import { fatalError, OperationError } from "./utils/error";
+import { fatalError, GPUPipelineErrorImpl, OperationError } from "./utils/error";
 import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
 import { DEFAULT_SUPPORTED_LIMITS, WGPUErrorType } from "./shared";
 
@@ -464,7 +464,7 @@ function validateRange(val: number, min: number, max: number) {
     }
 }
 
-function minValidator(val: number, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) {
+function minValidator(val: number, fieldName: string, { hints }: { hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures } } = {}) {
     if (val < 0 || val > Number.MAX_SAFE_INTEGER) {
         throw new TypeError(`Value must be between 0 and ${Number.MAX_SAFE_INTEGER}, got ${val}`);
     }
@@ -476,11 +476,19 @@ function minValidator(val: number, fieldName: string, hints?: { limits: GPUSuppo
     }
 }
 
-function validateLimitField(val: number, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) {
+function validateLimitField(val: number, fieldName: string, { hints }: { hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures } } = {}) {
     if (hints && fieldName in hints.limits) {
         const maxValue = hints.limits[fieldName as keyof GPUSupportedLimits] as number;
         validateRange(val, 0, maxValue);
     }
+}
+
+function isDepthTextureFormat(format: string): boolean {
+    return format === 'depth16unorm' || 
+           format === 'depth24plus' || 
+           format === 'depth24plus-stencil8' || 
+           format === 'depth32float' || 
+           format === 'depth32float-stencil8';
 }
 
 // WGPULimits struct mirroring C layout
@@ -575,7 +583,7 @@ export const WGPUDeviceDescriptorStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['label', WGPUStringView, { optional: true }],
     ['requiredFeatureCount', 'u64', { lengthOf: 'requiredFeatures' }], // Assuming 64-bit size_t
-    ['requiredFeatures', [WGPUFeatureNameDef], { optional: true, validate: (val: string[] | undefined, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) => {
+    ['requiredFeatures', [WGPUFeatureNameDef], { optional: true, validate: (val: string[] | undefined, fieldName: string, { hints }: { hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures } } = {}) => {
         if (!val) {
             return;
         }
@@ -585,7 +593,7 @@ export const WGPUDeviceDescriptorStruct = defineStruct([
             }
         }
     } }],
-    ['requiredLimits', WGPULimitsStruct, { optional: true, asPointer: true, validate: (val: WGPULimits | undefined, fieldName: string, hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures }) => {
+    ['requiredLimits', WGPULimitsStruct, { optional: true, asPointer: true, validate: (val: WGPULimits | undefined, fieldName: string, { hints }: { hints?: { limits: GPUSupportedLimits, features: GPUSupportedFeatures } } = {}) => {
         if (!val) {
             return;
         }
@@ -991,7 +999,11 @@ export const WGPUVertexFormat = defineEnum({
 export const WGPUConstantEntryStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['key', WGPUStringView],
-    ['value', 'f64'] // C struct uses double
+    ['value', 'f64', { validate: (val: number) => {
+        if (!Number.isFinite(val)) {
+            throw new TypeError(`Pipeline constant value must be finite, got ${val}`);
+        }
+    } }]
 ]);
 
 export const WGPUVertexAttributeStruct = defineStruct([
@@ -1038,7 +1050,11 @@ export const WGPUStencilFaceStateStruct = defineStruct([
 export const WGPUDepthStencilStateStruct = defineStruct([
     ['nextInChain', 'pointer', { optional: true }],
     ['format', WGPUTextureFormat],
-    ['depthWriteEnabled', WGPUBool, { default: false }],
+    ['depthWriteEnabled', WGPUBool, { default: false, validate: (val: boolean, fieldName: string, { input }: { input?: any } = {}) => {
+        if (input && isDepthTextureFormat(input.format) && input.depthWriteEnabled === undefined) {
+            throw new GPUPipelineErrorImpl('depthWriteEnabled is required for depth formats', { reason: 'validation' });
+        }
+    } }],
     ['depthCompare', WGPUCompareFunction, { default: 'always' }],
     ['stencilFront', WGPUStencilFaceStateStruct, { default: {} }], // Inline struct
     ['stencilBack', WGPUStencilFaceStateStruct, { default: {} }], // Inline struct
