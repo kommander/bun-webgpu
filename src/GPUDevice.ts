@@ -1,5 +1,4 @@
-import { FFIType, JSCallback, type Pointer, ptr, toArrayBuffer } from "bun:ffi";
-import { BufferUsageFlags } from "./common";
+import { FFIType, JSCallback, type Pointer, ptr } from "bun:ffi";
 import { 
     WGPUSupportedFeaturesStruct, 
     WGPUFragmentStateStruct, 
@@ -99,7 +98,6 @@ export class DeviceTicker {
 const EMPTY_ADAPTER_INFO: Readonly<GPUAdapterInfo> = Object.create(GPUAdapterInfoImpl.prototype);
 const DEFAULT_LIMITS = Object.assign(Object.create(GPUSupportedLimitsImpl.prototype), DEFAULT_SUPPORTED_LIMITS);
 
-let erroScopePopId = 0;
 let createComputePipelineAsyncId = 0;
 let createRenderPipelineAsyncId = 0;
 
@@ -115,22 +113,27 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     private _limits: GPUSupportedLimits = DEFAULT_LIMITS;
     private _info: GPUAdapterInfo = EMPTY_ADAPTER_INFO;
     private _destroyed = false;
+    private _errorScopePopId = 0;
     private _popErrorScopeCallback: JSCallback;
     private _popErrorScopePromises: Map<number, {
         resolve: (value: GPUError | null) => void,
         reject: (reason?: any) => void,
+        // Note: Need to keep the userDataBuffer alive until the promise is resolved or rejected
+        userDataBuffer: ArrayBuffer,
     }> = new Map();
 
     private _createComputePipelineAsyncCallback: JSCallback;
     private _createComputePipelineAsyncPromises: Map<number, {
         resolve: (value: GPUComputePipeline) => void,
         reject: (reason?: any) => void,
+        userDataBuffer: ArrayBuffer,
     }> = new Map();
 
     private _createRenderPipelineAsyncCallback: JSCallback;
     private _createRenderPipelineAsyncPromises: Map<number, {
         resolve: (value: GPURenderPipeline) => void,
         reject: (reason?: any) => void,
+        userDataBuffer: ArrayBuffer,
     }> = new Map();
 
     __brand: "GPUDevice" = "GPUDevice";
@@ -162,23 +165,23 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             }
 
             const popId = unpackUserDataId(userdata1);
-            const promise = this._popErrorScopePromises.get(popId);
+            const promiseData = this._popErrorScopePromises.get(popId);
             
             this._popErrorScopePromises.delete(popId);
             
-            if (promise) {
+            if (promiseData) {
                 if (messageSize === 0n) {
-                    promise.resolve(null);
+                    promiseData.resolve(null);
                 } else if (status === PopErrorScopeStatus.Error) {
                     const message = decodeCallbackMessage(messagePtr, messageSize);
-                    promise.reject(new OperationError(message));
+                    promiseData.reject(new OperationError(message));
                 } else {
                     const message = decodeCallbackMessage(messagePtr, messageSize);
                     const error = createWGPUError(errorType, message);
-                    promise.resolve(error);
+                    promiseData.resolve(error);
                 }
             } else {
-                console.error('[POP ERROR SCOPE CALLBACK] promise not found');
+                console.error('[POP ERROR SCOPE CALLBACK] promise not found for ID:', popId, 'Map size:', this._popErrorScopePromises.size);
             }
         },
         {
@@ -191,21 +194,21 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             this.instanceTicker.unregister();
             
             const asyncId = unpackUserDataId(userdata1);
-            const promise = this._createComputePipelineAsyncPromises.get(asyncId);
+            const promiseData = this._createComputePipelineAsyncPromises.get(asyncId);
             
             this._createComputePipelineAsyncPromises.delete(asyncId);
             
-            if (promise) {
+            if (promiseData) {
                 if (status === AsyncStatus.Success) {
                     if (pipeline) {
                         const computePipeline = new GPUComputePipelineImpl(pipeline, this.lib, "async-compute-pipeline");
-                        promise.resolve(computePipeline);
+                        promiseData.resolve(computePipeline);
                     } else {
-                        promise.reject(new Error("Pipeline creation succeeded but pipeline is null"));
+                        promiseData.reject(new Error("Pipeline creation succeeded but pipeline is null"));
                     }
                 } else {
                     const message = messagePtr ? decodeCallbackMessage(messagePtr, messageSize) : "Unknown error";
-                    promise.reject(new GPUPipelineErrorImpl(message, { reason: 'validation' }));
+                    promiseData.reject(new GPUPipelineErrorImpl(message, { reason: 'validation' }));
                 }
             } else {
                 console.error('[CREATE COMPUTE PIPELINE ASYNC CALLBACK] promise not found');
@@ -221,21 +224,21 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             this.instanceTicker.unregister();
             
             const asyncId = unpackUserDataId(userdata1);
-            const promise = this._createRenderPipelineAsyncPromises.get(asyncId);
+            const promiseData = this._createRenderPipelineAsyncPromises.get(asyncId);
             
             this._createRenderPipelineAsyncPromises.delete(asyncId);
             
-            if (promise) {
+            if (promiseData) {
                 if (status === AsyncStatus.Success) {
                     if (pipeline) {
                         const renderPipeline = new GPURenderPipelineImpl(pipeline, this.lib, "async-render-pipeline");
-                        promise.resolve(renderPipeline);
+                        promiseData.resolve(renderPipeline);
                     } else {
-                        promise.reject(new Error("Pipeline creation succeeded but pipeline is null"));
+                        promiseData.reject(new Error("Pipeline creation succeeded but pipeline is null"));
                     }
                 } else {
                     const message = messagePtr ? decodeCallbackMessage(messagePtr, messageSize) : "Unknown error";
-                    promise.reject(new GPUPipelineErrorImpl(message, { reason: 'validation' }));
+                    promiseData.reject(new GPUPipelineErrorImpl(message, { reason: 'validation' }));
                 }
             } else {
                 console.error('[CREATE RENDER PIPELINE ASYNC CALLBACK] promise not found');
@@ -310,11 +313,10 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         }
 
         return new Promise((resolve, reject) => {
-            const id = erroScopePopId++;
-            this._popErrorScopePromises.set(id, { resolve, reject });
-            const userDataBuffer = new Uint32Array(1);
-            userDataBuffer[0] = id;
-            const userDataPtr = ptr(userDataBuffer.buffer);
+            const id = this._errorScopePopId++;
+            const userDataBuffer = packUserDataId(id);
+            const userDataPtr = ptr(userDataBuffer);
+            this._popErrorScopePromises.set(id, { resolve, reject, userDataBuffer });
 
             const callbackInfo = WGPUCallbackInfoStruct.pack({
                 mode: 'AllowProcessEvents',
@@ -842,8 +844,9 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
 
         return new Promise((resolve, reject) => {
             const id = createComputePipelineAsyncId++;
-            this._createComputePipelineAsyncPromises.set(id, { resolve, reject });
-            const userDataPtr = ptr(packUserDataId(id));
+            const userDataBuffer = packUserDataId(id);
+            this._createComputePipelineAsyncPromises.set(id, { resolve, reject, userDataBuffer });
+            const userDataPtr = ptr(userDataBuffer);
             const packedPipelineDescriptor = this._prepareComputePipelineDescriptor(descriptor);
             const callbackInfo = WGPUCallbackInfoStruct.pack({
                 mode: 'AllowProcessEvents',
@@ -892,8 +895,9 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
 
         return new Promise((resolve, reject) => {
             const id = createRenderPipelineAsyncId++;
-            this._createRenderPipelineAsyncPromises.set(id, { resolve, reject });
-            const userDataPtr = ptr(packUserDataId(id));
+            const userDataBuffer = packUserDataId(id);
+            this._createRenderPipelineAsyncPromises.set(id, { resolve, reject, userDataBuffer });
+            const userDataPtr = ptr(userDataBuffer);
             const packedPipelineDescriptor = this._prepareRenderPipelineDescriptor(descriptor);
             const callbackInfo = WGPUCallbackInfoStruct.pack({
                 mode: 'AllowProcessEvents',
