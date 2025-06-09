@@ -425,6 +425,17 @@ function _loadLibrary(libPath?: string) {
           ],
           returns: FFIType.void,
       },
+      zwgpuCommandEncoderResolveQuerySet: {
+        args: [
+            FFIType.pointer, // commandEncoder
+            FFIType.pointer, // querySet
+            FFIType.u32,     // firstQuery
+            FFIType.u32,     // queryCount
+            FFIType.pointer, // destination
+            FFIType.u64,     // destinationOffset
+        ],
+        returns: FFIType.void,
+      },
       zwgpuCommandEncoderFinish: {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPUCommandEncoder, descriptor: *const WGPUCommandBufferDescriptor (nullable)
         returns: FFIType.pointer, // -> WGPUCommandBuffer

@@ -187,7 +187,15 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
         if (this._destroyed) {
             fatalError("Cannot call resolveQuerySet on destroyed command encoder");
         }
-        fatalError('resolveQuerySet not implemented', this.encoderPtr, querySet, firstQuery, queryCount, destination, destinationOffset);
+        this.lib.wgpuCommandEncoderResolveQuerySet(
+            this.encoderPtr,
+            querySet.ptr,
+            firstQuery,
+            queryCount,
+            destination.ptr,
+            BigInt(destinationOffset)
+        );
+        return undefined;
     }
 
     finish(descriptor?: GPUCommandBufferDescriptor): GPUCommandBuffer {

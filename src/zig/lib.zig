@@ -409,6 +409,10 @@ pub export fn zwgpuCommandEncoderCopyTextureToTexture(encoder: c.WGPUCommandEnco
     c.wgpuCommandEncoderCopyTextureToTexture(encoder, source, destination, copy_size);
 }
 
+pub export fn zwgpuCommandEncoderResolveQuerySet(encoder: c.WGPUCommandEncoder, query_set: c.WGPUQuerySet, first_query: u32, query_count: u32, destination: c.WGPUBuffer, destination_offset: u64) void {
+    c.wgpuCommandEncoderResolveQuerySet(encoder, query_set, first_query, query_count, destination, destination_offset);
+}
+
 pub export fn zwgpuCommandEncoderFinish(encoder: c.WGPUCommandEncoder, descriptor: ?*const c.WGPUCommandBufferDescriptor) c.WGPUCommandBuffer {
     return c.wgpuCommandEncoderFinish(encoder, descriptor);
 }
