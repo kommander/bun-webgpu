@@ -463,6 +463,13 @@ function _loadLibrary(libPath?: string) {
         ],
         returns: FFIType.void,
       },
+      zwgpuRenderPassEncoderSetBlendConstant: {
+        args: [
+          FFIType.pointer, // renderPassEncoder: WGPURenderPassEncoder
+          FFIType.pointer, // color: *const WGPUColor
+        ],
+        returns: FFIType.void,
+      },
       // Add other command encoder functions...
 
       // --- RenderPassEncoder Functions ---

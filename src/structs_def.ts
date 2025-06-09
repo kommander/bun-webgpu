@@ -1145,7 +1145,7 @@ export const WGPUColorStruct = defineStruct([
 ], {
     default: { r: 0, g: 0, b: 0, a: 0 },
     mapValue: (v?: GPUColor) => {
-        if (!v) return null; // Handle null case explicitly
+        if (!v) return null;
         const clearValue = v ?? { r: 0, g: 0, b: 0, a: 0 };
         let mappedClearValue = { r: 0, g: 0, b: 0, a: 0 };
         if (typeof clearValue === 'object' && 'r' in clearValue) {

@@ -491,6 +491,10 @@ pub export fn zwgpuRenderPassEncoderInsertDebugMarker(encoder: c.WGPURenderPassE
     c.wgpuRenderPassEncoderInsertDebugMarker(encoder, marker_label.*);
 }
 
+pub export fn zwgpuRenderPassEncoderSetBlendConstant(encoder: c.WGPURenderPassEncoder, color: *const c.WGPUColor) void {
+    c.wgpuRenderPassEncoderSetBlendConstant(encoder, color);
+}
+
 // --- ComputePassEncoder Functions ---
 
 pub export fn zwgpuComputePassEncoderSetPipeline(encoder: c.WGPUComputePassEncoder, pipeline: c.WGPUComputePipeline) void {

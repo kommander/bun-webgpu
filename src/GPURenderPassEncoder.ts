@@ -1,7 +1,7 @@
 import { type Pointer, ptr } from "bun:ffi";
 import { type FFISymbols } from "./ffi";
 import { fatalError } from "./utils/error";
-import { WGPU_WHOLE_SIZE, WGPUIndexFormat, WGPUStringView } from "./structs_def";
+import { WGPU_WHOLE_SIZE, WGPUIndexFormat, WGPUStringView, WGPUColorStruct } from "./structs_def";
 
 export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   __brand: "GPURenderPassEncoder" = "GPURenderPassEncoder";
@@ -13,7 +13,9 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   setBlendConstant(color: GPUColor): undefined {
-    fatalError('setBlendConstant not implemented');
+    const packedColor = WGPUColorStruct.pack(color);
+    this.lib.wgpuRenderPassEncoderSetBlendConstant(this.ptr, ptr(packedColor));
+    return undefined;
   }
 
   setStencilReference(reference: GPUStencilValue): undefined {
