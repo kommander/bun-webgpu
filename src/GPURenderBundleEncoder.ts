@@ -100,7 +100,8 @@ export class GPURenderBundleEncoderImpl implements GPURenderBundleEncoder {
         if (!bundlePtr) {
             fatalError("wgpuRenderBundleEncoderFinish returned a null pointer");
         }
-        this._destroy();
+        // Apparently render bundle encoders are not destroyed automatically like command encoders on finish?
+        // this._destroy();
         return new GPURenderBundleImpl(bundlePtr, this._lib, descriptor?.label);
     }
     
@@ -111,14 +112,14 @@ export class GPURenderBundleEncoderImpl implements GPURenderBundleEncoder {
     }
 
     pushDebugGroup(groupLabel: string): undefined {
-        console.warn("pushDebugGroup not implemented", groupLabel);
+        console.warn("renderBundleEncoder pushDebugGroup not implemented", groupLabel);
     }
 
     popDebugGroup(): undefined {
-        console.warn("popDebugGroup not implemented");
+        console.warn("renderBundleEncoder popDebugGroup not implemented");
     }
 
     insertDebugMarker(markerLabel: string): undefined {
-        console.warn("insertDebugMarker not implemented", markerLabel);
+        console.warn("renderBundleEncoder insertDebugMarker not implemented", markerLabel);
     }
 } 

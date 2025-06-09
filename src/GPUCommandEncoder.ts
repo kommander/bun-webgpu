@@ -206,17 +206,17 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
 
     pushDebugGroup(message: string): undefined {
         if (this._destroyed) return;
-        console.warn('pushDebugGroup not implemented', this.encoderPtr, message);
+        console.warn('commandEncoder pushDebugGroup not implemented', this.encoderPtr, message);
     }
 
     popDebugGroup(): undefined {
         if (this._destroyed) return;
-        console.warn('popDebugGroup not implemented', this.encoderPtr);
+        console.warn('commandEncoder popDebugGroup not implemented', this.encoderPtr);
     }
 
     insertDebugMarker(markerLabel: string): undefined {
         if (this._destroyed) return;
-        console.warn('insertDebugMarker not implemented', this.encoderPtr, markerLabel);
+        console.warn('commandEncoder insertDebugMarker not implemented', this.encoderPtr, markerLabel);
     }
 
     /**

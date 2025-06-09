@@ -126,15 +126,15 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   pushDebugGroup(message: string): undefined {
-    fatalError('pushDebugGroup not implemented');
+    fatalError('renderPassEncoder pushDebugGroup not implemented');
   }
 
   popDebugGroup(): undefined {
-    fatalError('popDebugGroup not implemented');
+    fatalError('renderPassEncoder popDebugGroup not implemented');
   }
 
   insertDebugMarker(markerLabel: string): undefined {
-    fatalError('insertDebugMarker not implemented');
+    fatalError('renderPassEncoder insertDebugMarker not implemented');
   }
 
   destroy(): undefined {

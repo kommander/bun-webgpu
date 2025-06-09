@@ -72,17 +72,17 @@ export class GPUComputePassEncoderImpl implements GPUComputePassEncoder {
   }
 
   pushDebugGroup(message: string): undefined {
-    console.error('pushDebugGroup', this.ptr, message);
+    console.error('computePassEncoder pushDebugGroup', this.ptr, message);
     throw new Error("Not implemented");
   }
 
   popDebugGroup(): undefined {
-    console.error('popDebugGroup', this.ptr);
+    console.error('computePassEncoder popDebugGroup', this.ptr);
     throw new Error("Not implemented");
   }
 
   insertDebugMarker(markerLabel: string): undefined {
-    console.error('insertDebugMarker', this.ptr, markerLabel);
+    console.error('computePassEncoder insertDebugMarker', this.ptr, markerLabel);
     throw new Error("Not implemented");
   }
 
