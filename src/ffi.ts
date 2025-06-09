@@ -429,6 +429,18 @@ function _loadLibrary(libPath?: string) {
         args: [FFIType.pointer], // commandEncoder: WGPUCommandEncoder
         returns: FFIType.void,
       },
+      zwgpuCommandEncoderPushDebugGroup: {
+        args: [FFIType.pointer, FFIType.pointer], // commandEncoder: WGPUCommandEncoder, groupLabel: *const WGPUStringView
+        returns: FFIType.void,
+      },
+      zwgpuCommandEncoderPopDebugGroup: {
+        args: [FFIType.pointer], // commandEncoder: WGPUCommandEncoder
+        returns: FFIType.void,
+      },
+      zwgpuCommandEncoderInsertDebugMarker: {
+        args: [FFIType.pointer, FFIType.pointer], // commandEncoder: WGPUCommandEncoder, markerLabel: *const WGPUStringView
+        returns: FFIType.void,
+      },
       zwgpuRenderPassEncoderSetScissorRect: {
         args: [
           FFIType.pointer, // renderPassEncoder: WGPURenderPassEncoder
@@ -541,6 +553,18 @@ function _loadLibrary(libPath?: string) {
         args: [FFIType.pointer], // encoder: WGPURenderPassEncoder
         returns: FFIType.void,
       },
+      zwgpuRenderPassEncoderPushDebugGroup: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderPassEncoder, groupLabel: *const WGPUStringView
+        returns: FFIType.void,
+      },
+      zwgpuRenderPassEncoderPopDebugGroup: {
+        args: [FFIType.pointer], // encoder: WGPURenderPassEncoder
+        returns: FFIType.void,
+      },
+      zwgpuRenderPassEncoderInsertDebugMarker: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderPassEncoder, markerLabel: *const WGPUStringView
+        returns: FFIType.void,
+      },
       // Add other render pass functions...
 
       // --- ComputePassEncoder Functions ---
@@ -581,6 +605,18 @@ function _loadLibrary(libPath?: string) {
       },
       zwgpuComputePassEncoderRelease: {
         args: [FFIType.pointer], // encoder: WGPUComputePassEncoder
+        returns: FFIType.void,
+      },
+      zwgpuComputePassEncoderPushDebugGroup: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPUComputePassEncoder, groupLabel: *const WGPUStringView
+        returns: FFIType.void,
+      },
+      zwgpuComputePassEncoderPopDebugGroup: {
+        args: [FFIType.pointer], // encoder: WGPUComputePassEncoder
+        returns: FFIType.void,
+      },
+      zwgpuComputePassEncoderInsertDebugMarker: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPUComputePassEncoder, markerLabel: *const WGPUStringView
         returns: FFIType.void,
       },
       // Add other compute pass functions...
@@ -771,6 +807,18 @@ function _loadLibrary(libPath?: string) {
       },
       zwgpuRenderBundleEncoderRelease: {
         args: [FFIType.pointer], // encoder: WGPURenderBundleEncoder
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderPushDebugGroup: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderBundleEncoder, groupLabel: *const WGPUStringView
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderPopDebugGroup: {
+        args: [FFIType.pointer], // encoder: WGPURenderBundleEncoder
+        returns: FFIType.void,
+      },
+      zwgpuRenderBundleEncoderInsertDebugMarker: {
+        args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderBundleEncoder, markerLabel: *const WGPUStringView
         returns: FFIType.void,
       },
     });

@@ -1,7 +1,7 @@
 import { type Pointer, ptr } from "bun:ffi";
 import type { FFISymbols } from "./ffi";
 import { GPURenderBundleImpl } from "./GPURenderBundle";
-import { WGPURenderBundleDescriptorStruct, WGPUIndexFormat } from "./structs_def";
+import { WGPURenderBundleDescriptorStruct, WGPUIndexFormat, WGPUStringView } from "./structs_def";
 import { fatalError } from "./utils/error";
 import { GPUBufferImpl } from "./GPUBuffer";
 import { GPURenderPipelineImpl } from "./GPURenderPipeline";
@@ -112,14 +112,16 @@ export class GPURenderBundleEncoderImpl implements GPURenderBundleEncoder {
     }
 
     pushDebugGroup(groupLabel: string): undefined {
-        console.warn("renderBundleEncoder pushDebugGroup not implemented", groupLabel);
+        const packedLabel = WGPUStringView.pack(groupLabel);
+        this._lib.wgpuRenderBundleEncoderPushDebugGroup(this.ptr, ptr(packedLabel));
     }
 
     popDebugGroup(): undefined {
-        console.warn("renderBundleEncoder popDebugGroup not implemented");
+        this._lib.wgpuRenderBundleEncoderPopDebugGroup(this.ptr);
     }
 
     insertDebugMarker(markerLabel: string): undefined {
-        console.warn("renderBundleEncoder insertDebugMarker not implemented", markerLabel);
+        const packedLabel = WGPUStringView.pack(markerLabel);
+        this._lib.wgpuRenderBundleEncoderInsertDebugMarker(this.ptr, ptr(packedLabel));
     }
 } 

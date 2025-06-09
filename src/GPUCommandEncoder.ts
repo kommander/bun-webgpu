@@ -12,6 +12,7 @@ import {
     WGPUTexelCopyTextureInfoStruct,
     WGPUExtent3DStruct,
     UINT64_MAX,
+    WGPUStringView,
 } from "./structs_def";
 import { GPUBufferImpl } from "./GPUBuffer";
 
@@ -206,17 +207,19 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
 
     pushDebugGroup(message: string): undefined {
         if (this._destroyed) return;
-        console.warn('commandEncoder pushDebugGroup not implemented', this.encoderPtr, message);
+        const packedMessage = WGPUStringView.pack(message);
+        this.lib.wgpuCommandEncoderPushDebugGroup(this.encoderPtr, ptr(packedMessage));
     }
 
     popDebugGroup(): undefined {
         if (this._destroyed) return;
-        console.warn('commandEncoder popDebugGroup not implemented', this.encoderPtr);
+        this.lib.wgpuCommandEncoderPopDebugGroup(this.encoderPtr);
     }
 
     insertDebugMarker(markerLabel: string): undefined {
         if (this._destroyed) return;
-        console.warn('commandEncoder insertDebugMarker not implemented', this.encoderPtr, markerLabel);
+        const packedMarker = WGPUStringView.pack(markerLabel);
+        this.lib.wgpuCommandEncoderInsertDebugMarker(this.encoderPtr, ptr(packedMarker));
     }
 
     /**

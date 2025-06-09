@@ -413,6 +413,18 @@ pub export fn zwgpuCommandEncoderRelease(encoder: c.WGPUCommandEncoder) void {
     c.wgpuCommandEncoderRelease(encoder);
 }
 
+pub export fn zwgpuCommandEncoderPushDebugGroup(encoder: c.WGPUCommandEncoder, group_label: *const c.WGPUStringView) void {
+    c.wgpuCommandEncoderPushDebugGroup(encoder, group_label.*);
+}
+
+pub export fn zwgpuCommandEncoderPopDebugGroup(encoder: c.WGPUCommandEncoder) void {
+    c.wgpuCommandEncoderPopDebugGroup(encoder);
+}
+
+pub export fn zwgpuCommandEncoderInsertDebugMarker(encoder: c.WGPUCommandEncoder, marker_label: *const c.WGPUStringView) void {
+    c.wgpuCommandEncoderInsertDebugMarker(encoder, marker_label.*);
+}
+
 // --- RenderPassEncoder Functions ---
 
 pub export fn zwgpuRenderPassEncoderSetScissorRect(encoder: c.WGPURenderPassEncoder, x: u32, y: u32, width: u32, height: u32) void {
@@ -467,6 +479,18 @@ pub export fn zwgpuRenderPassEncoderRelease(encoder: c.WGPURenderPassEncoder) vo
     c.wgpuRenderPassEncoderRelease(encoder);
 }
 
+pub export fn zwgpuRenderPassEncoderPushDebugGroup(encoder: c.WGPURenderPassEncoder, group_label: *const c.WGPUStringView) void {
+    c.wgpuRenderPassEncoderPushDebugGroup(encoder, group_label.*);
+}
+
+pub export fn zwgpuRenderPassEncoderPopDebugGroup(encoder: c.WGPURenderPassEncoder) void {
+    c.wgpuRenderPassEncoderPopDebugGroup(encoder);
+}
+
+pub export fn zwgpuRenderPassEncoderInsertDebugMarker(encoder: c.WGPURenderPassEncoder, marker_label: *const c.WGPUStringView) void {
+    c.wgpuRenderPassEncoderInsertDebugMarker(encoder, marker_label.*);
+}
+
 // --- ComputePassEncoder Functions ---
 
 pub export fn zwgpuComputePassEncoderSetPipeline(encoder: c.WGPUComputePassEncoder, pipeline: c.WGPUComputePipeline) void {
@@ -491,6 +515,18 @@ pub export fn zwgpuComputePassEncoderEnd(encoder: c.WGPUComputePassEncoder) void
 
 pub export fn zwgpuComputePassEncoderRelease(encoder: c.WGPUComputePassEncoder) void {
     c.wgpuComputePassEncoderRelease(encoder);
+}
+
+pub export fn zwgpuComputePassEncoderPushDebugGroup(encoder: c.WGPUComputePassEncoder, group_label: *const c.WGPUStringView) void {
+    c.wgpuComputePassEncoderPushDebugGroup(encoder, group_label.*);
+}
+
+pub export fn zwgpuComputePassEncoderPopDebugGroup(encoder: c.WGPUComputePassEncoder) void {
+    c.wgpuComputePassEncoderPopDebugGroup(encoder);
+}
+
+pub export fn zwgpuComputePassEncoderInsertDebugMarker(encoder: c.WGPUComputePassEncoder, marker_label: *const c.WGPUStringView) void {
+    c.wgpuComputePassEncoderInsertDebugMarker(encoder, marker_label.*);
 }
 
 // --- CommandBuffer Functions ---
@@ -593,4 +629,16 @@ pub export fn zwgpuRenderBundleEncoderSetVertexBuffer(encoder: c.WGPURenderBundl
 
 pub export fn zwgpuRenderBundleEncoderRelease(encoder: c.WGPURenderBundleEncoder) void {
     c.wgpuRenderBundleEncoderRelease(encoder);
+}
+
+pub export fn zwgpuRenderBundleEncoderPushDebugGroup(encoder: c.WGPURenderBundleEncoder, group_label: *const c.WGPUStringView) void {
+    c.wgpuRenderBundleEncoderPushDebugGroup(encoder, group_label.*);
+}
+
+pub export fn zwgpuRenderBundleEncoderPopDebugGroup(encoder: c.WGPURenderBundleEncoder) void {
+    c.wgpuRenderBundleEncoderPopDebugGroup(encoder);
+}
+
+pub export fn zwgpuRenderBundleEncoderInsertDebugMarker(encoder: c.WGPURenderBundleEncoder, marker_label: *const c.WGPUStringView) void {
+    c.wgpuRenderBundleEncoderInsertDebugMarker(encoder, marker_label.*);
 }

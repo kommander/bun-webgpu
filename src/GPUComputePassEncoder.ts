@@ -1,5 +1,6 @@
 import { type Pointer, ptr } from "bun:ffi";
 import { type FFISymbols } from "./ffi";
+import { WGPUStringView } from "./structs_def";
 
 export class GPUComputePassEncoderImpl implements GPUComputePassEncoder {
   __brand: "GPUComputePassEncoder" = "GPUComputePassEncoder";
@@ -72,18 +73,17 @@ export class GPUComputePassEncoderImpl implements GPUComputePassEncoder {
   }
 
   pushDebugGroup(message: string): undefined {
-    console.error('computePassEncoder pushDebugGroup', this.ptr, message);
-    throw new Error("Not implemented");
+    const packedMessage = WGPUStringView.pack(message);
+    this.lib.wgpuComputePassEncoderPushDebugGroup(this.ptr, ptr(packedMessage));
   }
 
   popDebugGroup(): undefined {
-    console.error('computePassEncoder popDebugGroup', this.ptr);
-    throw new Error("Not implemented");
+    this.lib.wgpuComputePassEncoderPopDebugGroup(this.ptr);
   }
 
   insertDebugMarker(markerLabel: string): undefined {
-    console.error('computePassEncoder insertDebugMarker', this.ptr, markerLabel);
-    throw new Error("Not implemented");
+    const packedMarker = WGPUStringView.pack(markerLabel);
+    this.lib.wgpuComputePassEncoderInsertDebugMarker(this.ptr, ptr(packedMarker));
   }
 
   destroy(): undefined {

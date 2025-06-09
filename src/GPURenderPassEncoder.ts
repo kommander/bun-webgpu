@@ -1,7 +1,7 @@
 import { type Pointer, ptr } from "bun:ffi";
 import { type FFISymbols } from "./ffi";
 import { fatalError } from "./utils/error";
-import { WGPU_WHOLE_SIZE, WGPUIndexFormat } from "./structs_def";
+import { WGPU_WHOLE_SIZE, WGPUIndexFormat, WGPUStringView } from "./structs_def";
 
 export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   __brand: "GPURenderPassEncoder" = "GPURenderPassEncoder";
@@ -126,15 +126,17 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   pushDebugGroup(message: string): undefined {
-    fatalError('renderPassEncoder pushDebugGroup not implemented');
+    const packedMessage = WGPUStringView.pack(message);
+    this.lib.wgpuRenderPassEncoderPushDebugGroup(this.ptr, ptr(packedMessage));
   }
 
   popDebugGroup(): undefined {
-    fatalError('renderPassEncoder popDebugGroup not implemented');
+    this.lib.wgpuRenderPassEncoderPopDebugGroup(this.ptr);
   }
 
   insertDebugMarker(markerLabel: string): undefined {
-    fatalError('renderPassEncoder insertDebugMarker not implemented');
+    const packedMarker = WGPUStringView.pack(markerLabel);
+    this.lib.wgpuRenderPassEncoderInsertDebugMarker(this.ptr, ptr(packedMarker));
   }
 
   destroy(): undefined {
