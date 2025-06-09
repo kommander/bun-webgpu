@@ -1,4 +1,5 @@
 import { type Pointer, toArrayBuffer } from "bun:ffi";
+import { BufferPool, type BlockBuffer } from "./buffer_pool";
 
 export const AsyncStatus = {
     Success: 1,
@@ -18,16 +19,23 @@ export const WGPUErrorType = {
     "force-32": 0x7FFFFFFF
 } as const;
 
+const idBufferPool = new BufferPool(64, 1024, 8);
+
 export function packUserDataId(id: number): ArrayBuffer {
-    const userDataBuffer = new Uint32Array(1);
+    const blockBuffer = idBufferPool.request();
+    const userDataBuffer = new Uint32Array(blockBuffer.buffer);
     userDataBuffer[0] = id;
-    return userDataBuffer.buffer;
+    userDataBuffer[1] = blockBuffer.index;
+    return blockBuffer.buffer;
 }
 
 export function unpackUserDataId(userDataPtr: Pointer): number {
-    const userDataBuffer = toArrayBuffer(userDataPtr, 0, 4);
-    const userDataView = new DataView(userDataBuffer);
-    return userDataView.getUint32(0, true);
+    const userDataBuffer = toArrayBuffer(userDataPtr, 0, 8);
+    const userDataView = new Uint32Array(userDataBuffer);
+    const id = userDataView[0];
+    const index = userDataView[1];
+    idBufferPool.releaseBlock(index!);
+    return id!;
 }
 
 export class GPUAdapterInfoImpl implements GPUAdapterInfo {

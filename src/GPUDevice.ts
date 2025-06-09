@@ -118,22 +118,18 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     private _popErrorScopePromises: Map<number, {
         resolve: (value: GPUError | null) => void,
         reject: (reason?: any) => void,
-        // Note: Need to keep the userDataBuffer alive until the promise is resolved or rejected
-        userDataBuffer: ArrayBuffer,
     }> = new Map();
 
     private _createComputePipelineAsyncCallback: JSCallback;
     private _createComputePipelineAsyncPromises: Map<number, {
         resolve: (value: GPUComputePipeline) => void,
         reject: (reason?: any) => void,
-        userDataBuffer: ArrayBuffer,
     }> = new Map();
 
     private _createRenderPipelineAsyncCallback: JSCallback;
     private _createRenderPipelineAsyncPromises: Map<number, {
         resolve: (value: GPURenderPipeline) => void,
         reject: (reason?: any) => void,
-        userDataBuffer: ArrayBuffer,
     }> = new Map();
 
     __brand: "GPUDevice" = "GPUDevice";
@@ -156,14 +152,9 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
       });
 
       this._popErrorScopeCallback = new JSCallback(
-        (status: number, errorType: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer | null, userdata2: Pointer | null) => {
+        (status: number, errorType: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, userdata2: Pointer | null) => {
             this.instanceTicker.unregister();
             
-            if (!userdata1) {
-                console.error('[POP ERROR SCOPE CALLBACK] userdata1 is null');
-                return;
-            }
-
             const popId = unpackUserDataId(userdata1);
             const promiseData = this._popErrorScopePromises.get(popId);
             
@@ -316,7 +307,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             const id = this._errorScopePopId++;
             const userDataBuffer = packUserDataId(id);
             const userDataPtr = ptr(userDataBuffer);
-            this._popErrorScopePromises.set(id, { resolve, reject, userDataBuffer });
+            this._popErrorScopePromises.set(id, { resolve, reject });
 
             const callbackInfo = WGPUCallbackInfoStruct.pack({
                 mode: 'AllowProcessEvents',
@@ -845,7 +836,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         return new Promise((resolve, reject) => {
             const id = createComputePipelineAsyncId++;
             const userDataBuffer = packUserDataId(id);
-            this._createComputePipelineAsyncPromises.set(id, { resolve, reject, userDataBuffer });
+            this._createComputePipelineAsyncPromises.set(id, { resolve, reject });
             const userDataPtr = ptr(userDataBuffer);
             const packedPipelineDescriptor = this._prepareComputePipelineDescriptor(descriptor);
             const callbackInfo = WGPUCallbackInfoStruct.pack({
@@ -896,7 +887,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         return new Promise((resolve, reject) => {
             const id = createRenderPipelineAsyncId++;
             const userDataBuffer = packUserDataId(id);
-            this._createRenderPipelineAsyncPromises.set(id, { resolve, reject, userDataBuffer });
+            this._createRenderPipelineAsyncPromises.set(id, { resolve, reject });
             const userDataPtr = ptr(userDataBuffer);
             const packedPipelineDescriptor = this._prepareRenderPipelineDescriptor(descriptor);
             const callbackInfo = WGPUCallbackInfoStruct.pack({

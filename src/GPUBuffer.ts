@@ -16,7 +16,6 @@ export class GPUBufferImpl implements GPUBuffer {
     private _mapCallbackPromiseData: {
       resolve: (value: undefined) => void;
       reject: (reason?: any) => void;
-      userDataBuffer: ArrayBuffer;
     } | null = null;
     private _destroyed = false;
     private _mappedOffset: number = 0;
@@ -49,6 +48,9 @@ export class GPUBufferImpl implements GPUBuffer {
         (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
           this._pendingMap = null;
+
+          // Needs to be unpacked to release buffers
+          const userData = unpackUserDataId(userdata1);
           
           if (status === AsyncStatus.Success) {
               this._mapState = 'mapped';
@@ -59,7 +61,7 @@ export class GPUBufferImpl implements GPUBuffer {
               const statusName = Object.keys(AsyncStatus).find(key => AsyncStatus[key as keyof typeof AsyncStatus] === status) || 'Unknown Map Error';
               const message = decodeCallbackMessage(messagePtr, messageSize);
               const errorMessage = `WGPU Buffer Map Error (${statusName}): ${message}`;
-              const wasAlreadyMapped = unpackUserDataId(userdata1) === 1;
+              const wasAlreadyMapped = userData === 1;
               const wasPending = this._mapState === 'pending';
 
               this._mapState = wasAlreadyMapped ? 'mapped' : 'unmapped';
@@ -151,7 +153,6 @@ export class GPUBufferImpl implements GPUBuffer {
           this._mapCallbackPromiseData = {
             resolve,
             reject,
-            userDataBuffer,
           };
 
           if (!this._mapCallback.ptr) {
