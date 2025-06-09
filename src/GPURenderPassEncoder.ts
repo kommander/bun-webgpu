@@ -24,11 +24,13 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   beginOcclusionQuery(queryIndex: GPUSize32): undefined {
-    fatalError('beginOcclusionQuery not implemented');
+    this.lib.wgpuRenderPassEncoderBeginOcclusionQuery(this.ptr, queryIndex);
+    return undefined;
   }
 
   endOcclusionQuery(): undefined {
-    fatalError('endOcclusionQuery not implemented');
+    this.lib.wgpuRenderPassEncoderEndOcclusionQuery(this.ptr);
+    return undefined;
   }
 
   executeBundles(bundles: Iterable<GPURenderBundle>): undefined {

@@ -200,6 +200,7 @@ export class GPUCommandEncoderImpl implements GPUCommandEncoder {
         if (!commandBufferPtr) {
             fatalError("wgpuCommandEncoderFinish returned null.");
         }
+        // Seems like the spec (according to the CTS) says that command encoders are not destroyed automatically when finished?
         this._destroy();
         
         return new GPUCommandBufferImpl(commandBufferPtr, this.lib, descriptor?.label);

@@ -499,6 +499,14 @@ pub export fn zwgpuRenderPassEncoderSetStencilReference(encoder: c.WGPURenderPas
     c.wgpuRenderPassEncoderSetStencilReference(encoder, reference);
 }
 
+pub export fn zwgpuRenderPassEncoderBeginOcclusionQuery(encoder: c.WGPURenderPassEncoder, query_index: u32) void {
+    c.wgpuRenderPassEncoderBeginOcclusionQuery(encoder, query_index);
+}
+
+pub export fn zwgpuRenderPassEncoderEndOcclusionQuery(encoder: c.WGPURenderPassEncoder) void {
+    c.wgpuRenderPassEncoderEndOcclusionQuery(encoder);
+}
+
 // --- ComputePassEncoder Functions ---
 
 pub export fn zwgpuComputePassEncoderSetPipeline(encoder: c.WGPUComputePassEncoder, pipeline: c.WGPUComputePipeline) void {

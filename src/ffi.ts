@@ -477,9 +477,6 @@ function _loadLibrary(libPath?: string) {
         ],
         returns: FFIType.void,
       },
-      // Add other command encoder functions...
-
-      // --- RenderPassEncoder Functions ---
       zwgpuRenderPassEncoderSetPipeline: {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderPassEncoder, pipeline: WGPURenderPipeline
         returns: FFIType.void,
@@ -579,7 +576,19 @@ function _loadLibrary(libPath?: string) {
         args: [FFIType.pointer, FFIType.pointer], // encoder: WGPURenderPassEncoder, markerLabel: *const WGPUStringView
         returns: FFIType.void,
       },
-      // Add other render pass functions...
+      zwgpuRenderPassEncoderBeginOcclusionQuery: {
+        args: [
+          FFIType.pointer, // renderPassEncoder
+          FFIType.u32,     // queryIndex
+        ],
+        returns: FFIType.void,
+      },
+      zwgpuRenderPassEncoderEndOcclusionQuery: {
+        args: [
+          FFIType.pointer, // renderPassEncoder
+        ],
+        returns: FFIType.void,
+      },
 
       // --- ComputePassEncoder Functions ---
       zwgpuComputePassEncoderSetPipeline: {
