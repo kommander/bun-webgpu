@@ -365,6 +365,10 @@ pub export fn zwgpuRenderPipelineRelease(render_pipeline: c.WGPURenderPipeline) 
     c.wgpuRenderPipelineRelease(render_pipeline);
 }
 
+pub export fn zwgpuRenderPipelineGetBindGroupLayout(render_pipeline: c.WGPURenderPipeline, group_index: u32) c.WGPUBindGroupLayout {
+    return c.wgpuRenderPipelineGetBindGroupLayout(render_pipeline, group_index);
+}
+
 // --- ComputePipeline Functions ---
 
 pub export fn zwgpuComputePipelineRelease(compute_pipeline: c.WGPUComputePipeline) void {

@@ -1,5 +1,6 @@
 import type { Pointer } from "bun:ffi";
 import type { FFISymbols } from "./ffi";
+import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout";
 import { fatalError } from "./utils/error";
 
 export class GPURenderPipelineImpl implements GPURenderPipeline {
@@ -13,7 +14,12 @@ export class GPURenderPipelineImpl implements GPURenderPipeline {
     }
 
     getBindGroupLayout(index: number): GPUBindGroupLayout {
-        fatalError('getBindGroupLayout not implemented');
+        const layoutPtr = this.lib.wgpuRenderPipelineGetBindGroupLayout(this.ptr, index);
+        if (!layoutPtr) {
+            fatalError('wgpuRenderPipelineGetBindGroupLayout returned null');
+        }
+        // The returned layout is owned by the pipeline and is valid as long as the pipeline is.
+        return new GPUBindGroupLayoutImpl(layoutPtr, this.lib);
     }
 
     destroy(): undefined {

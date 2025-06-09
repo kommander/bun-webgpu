@@ -354,6 +354,10 @@ function _loadLibrary(libPath?: string) {
         args: [FFIType.pointer], // renderPipeline: WGPURenderPipeline
         returns: FFIType.void,
       },
+      zwgpuRenderPipelineGetBindGroupLayout: {
+        args: [FFIType.pointer, FFIType.u32], // renderPipeline: WGPURenderPipeline, groupIndex: uint32_t
+        returns: FFIType.pointer, // -> WGPUBindGroupLayout
+      },
 
       // --- ComputePipeline Functions ---
       zwgpuComputePipelineRelease: {
