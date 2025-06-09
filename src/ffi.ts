@@ -470,6 +470,13 @@ function _loadLibrary(libPath?: string) {
         ],
         returns: FFIType.void,
       },
+      zwgpuRenderPassEncoderSetStencilReference: {
+        args: [
+          FFIType.pointer, // renderPassEncoder: WGPURenderPassEncoder
+          FFIType.u32,     // reference: uint32_t
+        ],
+        returns: FFIType.void,
+      },
       // Add other command encoder functions...
 
       // --- RenderPassEncoder Functions ---

@@ -19,7 +19,8 @@ export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   }
 
   setStencilReference(reference: GPUStencilValue): undefined {
-    fatalError('setStencilReference not implemented');
+    this.lib.wgpuRenderPassEncoderSetStencilReference(this.ptr, reference);
+    return undefined;
   }
 
   beginOcclusionQuery(queryIndex: GPUSize32): undefined {

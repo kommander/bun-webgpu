@@ -495,6 +495,10 @@ pub export fn zwgpuRenderPassEncoderSetBlendConstant(encoder: c.WGPURenderPassEn
     c.wgpuRenderPassEncoderSetBlendConstant(encoder, color);
 }
 
+pub export fn zwgpuRenderPassEncoderSetStencilReference(encoder: c.WGPURenderPassEncoder, reference: u32) void {
+    c.wgpuRenderPassEncoderSetStencilReference(encoder, reference);
+}
+
 // --- ComputePassEncoder Functions ---
 
 pub export fn zwgpuComputePassEncoderSetPipeline(encoder: c.WGPUComputePassEncoder, pipeline: c.WGPUComputePipeline) void {
