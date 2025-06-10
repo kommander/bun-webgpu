@@ -486,23 +486,22 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         if (descriptor.mappedAtCreation && descriptor.size % 4 !== 0) {
             throw new RangeError("Buffer size must be a multiple of 4");
         }
-
+        if (descriptor.size > this.limits.maxBufferSize) {
+            throw new RangeError(`Buffer size must be less than or equal to ${this.limits.maxBufferSize}`);
+        }
+        
         const packedDescriptor = WGPUBufferDescriptorStruct.pack(descriptor);
 
-        try {
-            const bufferPtr = this.lib.wgpuDeviceCreateBuffer(
-                this.devicePtr,
-                ptr(packedDescriptor)
-            );
+        const bufferPtr = this.lib.wgpuDeviceCreateBuffer(
+            this.devicePtr,
+            ptr(packedDescriptor)
+        );
 
-            if (!bufferPtr) {
-                fatalError("Failed to create buffer");
-            }
-
-            return new GPUBufferImpl(bufferPtr, this, this.lib, descriptor, this.instanceTicker);
-        } catch (e) {
-            fatalError("Error creating buffer:", e);
+        if (!bufferPtr) {
+            fatalError("Failed to create buffer");
         }
+
+        return new GPUBufferImpl(bufferPtr, this, this.lib, descriptor, this.instanceTicker);
     }
 
     createTexture(descriptor: GPUTextureDescriptor): GPUTexture {
