@@ -132,6 +132,8 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
         reject: (reason?: any) => void,
     }> = new Map();
 
+    private _buffers: Set<GPUBufferImpl> = new Set();
+
     __brand: "GPUDevice" = "GPUDevice";
     label: string = '';
 
@@ -468,13 +470,20 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     destroy() {
         if (this._destroyed) return;
         this._destroyed = true;
+
         // Invalidate caches
         this._features = null;
         this._queue?.destroy();
         this._queue = null;
 
+        for (const buffer of this._buffers) {
+            buffer.destroy();
+        }
+        this._buffers.clear();
+
         this.lib.wgpuDeviceDestroy(this.devicePtr);
         this.instanceTicker.processEvents();
+
         return undefined;
     }
 
@@ -501,7 +510,10 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
             fatalError("Failed to create buffer");
         }
 
-        return new GPUBufferImpl(bufferPtr, this, this.lib, descriptor, this.instanceTicker);
+        const buffer = new GPUBufferImpl(bufferPtr, this, this.lib, descriptor, this.instanceTicker);
+        this._buffers.add(buffer);
+        buffer.on('destroyed', () => this._buffers.delete(buffer));
+        return buffer;
     }
 
     createTexture(descriptor: GPUTextureDescriptor): GPUTexture {

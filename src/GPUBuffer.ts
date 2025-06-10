@@ -6,8 +6,9 @@ import { WGPUCallbackInfoStruct } from "./structs_def";
 import type { InstanceTicker } from "./GPU";
 import { AsyncStatus, decodeCallbackMessage, packUserDataId, unpackUserDataId } from "./shared";
 import type { GPUDeviceImpl } from "./GPUDevice";
+import { EventEmitter } from "events";
 
-export class GPUBufferImpl implements GPUBuffer {
+export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
     private _size: GPUSize64;
     private _descriptor: GPUBufferDescriptor;
     private _mapState: GPUBufferMapState = 'unmapped';
@@ -22,7 +23,7 @@ export class GPUBufferImpl implements GPUBuffer {
     private _mappedSize: number = 0;
     private _returnedRanges: Array<{offset: number, size: number}> = [];
     private _detachableArrayBuffers: Array<ArrayBuffer> = [];
-
+    
     __brand: "GPUBuffer" = "GPUBuffer";
     label: string = '';
     ptr: Pointer;
@@ -34,6 +35,7 @@ export class GPUBufferImpl implements GPUBuffer {
       descriptor: GPUBufferDescriptor,
       private instanceTicker: InstanceTicker
     ) {
+      super();
       this.ptr = bufferPtr;
       this._size = descriptor.size;
       this._descriptor = descriptor;
@@ -43,7 +45,7 @@ export class GPUBufferImpl implements GPUBuffer {
         this._mappedOffset = 0;
         this._mappedSize = this._size;
       }
-      
+
       this._mapCallback = new JSCallback(
         (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
@@ -307,15 +309,19 @@ export class GPUBufferImpl implements GPUBuffer {
       return toArrayBuffer(dataPtr, 0, Number(readSize));
     }
 
-    unmap(): undefined {
-      // NOTE: It is valid to call unmap on a buffer that is destroyed 
-      // (at creation, or after mappedAtCreation or mapAsync)
-      
+    _detachBuffers(): void {
       for (const buffer of this._detachableArrayBuffers) {
         // Workaround to detach the ArrayBuffer
         structuredClone(buffer, { transfer: [buffer] });
       }
       this._detachableArrayBuffers = [];
+    }
+
+    unmap(): undefined {
+      // NOTE: It is valid to call unmap on a buffer that is destroyed 
+      // (at creation, or after mappedAtCreation or mapAsync)
+      
+      this._detachBuffers();
       
       this.lib.wgpuBufferUnmap(this.bufferPtr);
       this._mapState = 'unmapped';
@@ -345,9 +351,13 @@ export class GPUBufferImpl implements GPUBuffer {
         return;
       }
 
+      this._detachBuffers();
+
       try {
         this.lib.wgpuBufferDestroy(this.bufferPtr);
         this._destroyed = true;
+        this.emit('destroyed');
+        this._mapState = 'unmapped';
       } catch (e) {
          console.error("Error calling bufferDestroy FFI function:", e);
       }
