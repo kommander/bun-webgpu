@@ -82,6 +82,7 @@ export class BufferPool {
     const buffer = this.buffers[blockIndex]!;
     this.bufferToBlockIndex.set(buffer, blockIndex);
     
+    console.log('bufferPool request returning', blockIndex);
     return { __type: "BlockBuffer", buffer, index: blockIndex };
   }
 
@@ -111,7 +112,7 @@ export class BufferPool {
     const buffer = this.buffers[blockIndex]!;
     
     if (!this.bufferToBlockIndex.has(buffer)) {
-      throw new Error('Block was not allocated or already freed');
+      throw new Error(`Block ${blockIndex} was not allocated or already freed`);
     }
 
     this.bufferToBlockIndex.delete(buffer);

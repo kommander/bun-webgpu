@@ -31,9 +31,11 @@ export function packUserDataId(id: number): ArrayBuffer {
 
 export function unpackUserDataId(userDataPtr: Pointer): number {
     const userDataBuffer = toArrayBuffer(userDataPtr, 0, 8);
+    console.log('unpackUserDataId', userDataBuffer);
     const userDataView = new Uint32Array(userDataBuffer);
     const id = userDataView[0];
     const index = userDataView[1];
+    console.log('unpackUserDataId', id, index);
     idBufferPool.releaseBlock(index!);
     return id!;
 }
