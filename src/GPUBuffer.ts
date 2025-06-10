@@ -47,16 +47,15 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
       }
 
       this._mapCallback = new JSCallback(
-        (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer) => {   
+        (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
           this._pendingMap = null;
 
           const message = decodeCallbackMessage(messagePtr, messageSize);
-          console.log('message', message);
-          console.log('mapCallback', status, messagePtr, messageSize, userdata1, _userdata2);
+          
           // Needs to be unpacked to release buffers
-          const userData = unpackUserDataId(_userdata2);
-          console.log('userData', userData);
+          const userData = unpackUserDataId(userdata1);
+
           if (status === AsyncStatus.Success) {
               this._mapState = 'mapped';
               this._returnedRanges = [];

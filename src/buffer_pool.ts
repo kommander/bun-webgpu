@@ -82,7 +82,6 @@ export class BufferPool {
     const buffer = this.buffers[blockIndex]!;
     this.bufferToBlockIndex.set(buffer, blockIndex);
     
-    console.log('bufferPool request returning', blockIndex);
     return { __type: "BlockBuffer", buffer, index: blockIndex };
   }
 
