@@ -8,7 +8,7 @@ import { program } from 'commander';
 interface Args {
   runPath: string;
   buildType: 'debug' | 'release';
-  platform?: string; // Added optional platform
+  platform?: string;
 }
 
 interface ProcessableArtifact {
@@ -22,6 +22,37 @@ const platformDirNameMap: Record<string, string> = {
   'ubuntu-latest': 'x86_64-linux',
   'windows-latest': 'x86_64-windows',
 };
+
+function getCacheDir(runPath: string): string {
+  return path.join(tmpdir(), 'gh-artifacts-cache', runPath);
+}
+
+function getArtifactCacheDir(runPath: string, artifactName: string): string {
+  return path.join(getCacheDir(runPath), artifactName);
+}
+
+async function isArtifactCached(runPath: string, artifactName: string): Promise<boolean> {
+  const cacheDir = getArtifactCacheDir(runPath, artifactName);
+  try {
+    const files = await fs.readdir(cacheDir);
+    return files.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function getCachedArtifactPath(runPath: string, artifactName: string): Promise<string | null> {
+  const cacheDir = getArtifactCacheDir(runPath, artifactName);
+  try {
+    const files = await fs.readdir(cacheDir);
+    if (files.length > 0) {
+      return path.join(cacheDir, files[0]!);
+    }
+  } catch {
+    // Directory doesn't exist or other error
+  }
+  return null;
+}
 
 async function main(args: Args) {
   console.log('Using gh CLI for GitHub API requests and artifact downloads.');
@@ -136,63 +167,75 @@ async function main(args: Args) {
         console.warn(`No directory mapping found for platformId: ${platformId}. Skipping artifact: ${artifactName}`);
         continue;
       }
-      const artifactDir = path.join(__dirname, 'libs', finalDirName); // Final directory for unpacked content
+      const artifactDir = path.join(__dirname, 'libs', finalDirName);
       
       console.log(`Processing artifact: ${artifactName}, ID: ${artifactId}, Size: ${artifactSizeBytes} bytes`);
       console.log(`Target directory: ${artifactDir}`);
 
-      let tempDownloadDir: string | undefined;
-
+      let downloadedArchivePath: string;
+      
       try {
-        tempDownloadDir = await fs.mkdtemp(path.join(tmpdir(), `gh-dl-${artifactId}-`));
-        console.log(`Created temporary download directory: ${tempDownloadDir}`);
+        const isCached = await isArtifactCached(args.runPath, artifactName);
         
-        // Ensure the final directory exists, clear it if it does to ensure fresh unpack
-        await fs.rm(artifactDir, { recursive: true, force: true }); // Clear if exists
+        if (isCached) {
+          const cachedPath = await getCachedArtifactPath(args.runPath, artifactName);
+          if (cachedPath) {
+            console.log(`Using cached artifact: ${cachedPath}`);
+            downloadedArchivePath = cachedPath;
+          } else {
+            throw new Error('Cached artifact path not found');
+          }
+        } else {
+          const artifactCacheDir = getArtifactCacheDir(args.runPath, artifactName);
+          await fs.mkdir(artifactCacheDir, { recursive: true });
+          console.log(`Created cache directory: ${artifactCacheDir}`);
+
+          console.log(`Downloading "${artifactName}" using gh run download...`);
+          const ghDownloadProc = Bun.spawnSync([
+            'gh',
+            'run',
+            'download',
+            runId.toString(), 
+            '--repo', `${owner}/${repo}`,
+            '--name', artifactName, 
+            '--dir', artifactCacheDir,
+          ], {
+            stdout: 'pipe',
+            stderr: 'pipe',
+          });
+
+          if (ghDownloadProc.exitCode !== 0) {
+            console.error(`Error downloading artifact "${artifactName}" with gh run download. Exit code: ${ghDownloadProc.exitCode}`);
+            if (ghDownloadProc.stdout) console.error(`Stdout: ${ghDownloadProc.stdout.toString()}`);
+            if (ghDownloadProc.stderr) console.error(`Stderr: ${ghDownloadProc.stderr.toString()}`);
+            continue;
+          }
+          console.log(`Artifact "${artifactName}" downloaded by gh to ${artifactCacheDir}`);
+          if (ghDownloadProc.stdout.length > 0) console.log(`gh download stdout: ${ghDownloadProc.stdout.toString()}`);
+          if (ghDownloadProc.stderr.length > 0) console.warn(`gh download stderr: ${ghDownloadProc.stderr.toString()}`);
+          
+          const filesInCacheDir = await fs.readdir(artifactCacheDir);
+          if (filesInCacheDir.length === 0) {
+            console.error(`No files found in cache directory: ${artifactCacheDir}`);
+            continue;
+          }
+          if (filesInCacheDir.length > 1) {
+            console.warn(`Multiple files found in cache directory: ${artifactCacheDir}. Using the first one: ${filesInCacheDir[0]}`);
+          }
+          const downloadedArchiveFileName = filesInCacheDir[0]!;
+          downloadedArchivePath = path.join(artifactCacheDir, downloadedArchiveFileName);
+
+          console.log(`Downloaded and cached archive: ${downloadedArchivePath}`);
+        }
+        
+        await fs.rm(artifactDir, { recursive: true, force: true });
         await fs.mkdir(artifactDir, { recursive: true });
         console.log(`Ensured final artifact directory is clean: ${artifactDir}`);
-
-        console.log(`Downloading "${artifactName}" using gh run download...`);
-        const ghDownloadProc = Bun.spawnSync([
-          'gh',
-          'run',
-          'download',
-          runId.toString(), 
-          '--repo', `${owner}/${repo}`,
-          '--name', artifactName, 
-          '--dir', tempDownloadDir,
-        ], {
-          stdout: 'pipe',
-          stderr: 'pipe',
-        });
-
-        if (ghDownloadProc.exitCode !== 0) {
-          console.error(`Error downloading artifact "${artifactName}" with gh run download. Exit code: ${ghDownloadProc.exitCode}`);
-          if (ghDownloadProc.stdout) console.error(`Stdout: ${ghDownloadProc.stdout.toString()}`);
-          if (ghDownloadProc.stderr) console.error(`Stderr: ${ghDownloadProc.stderr.toString()}`);
-          continue;
-        }
-        console.log(`Artifact "${artifactName}" downloaded by gh to ${tempDownloadDir}`);
-        if (ghDownloadProc.stdout.length > 0) console.log(`gh download stdout: ${ghDownloadProc.stdout.toString()}`);
-        if (ghDownloadProc.stderr.length > 0) console.warn(`gh download stderr: ${ghDownloadProc.stderr.toString()}`);
-        
-        const filesInTempDir = await fs.readdir(tempDownloadDir);
-        if (filesInTempDir.length === 0) {
-          console.error(`No files found in temporary download directory: ${tempDownloadDir}`);
-          continue;
-        }
-        if (filesInTempDir.length > 1) {
-          console.warn(`Multiple files found in temporary download directory: ${tempDownloadDir}. Using the first one: ${filesInTempDir[0]}`);
-        }
-        const downloadedArchiveFileName = filesInTempDir[0]!;
-        const downloadedArchivePath = path.join(tempDownloadDir, downloadedArchiveFileName);
-
-        console.log(`Downloaded archive found: ${downloadedArchivePath}`);
 
         try {
           await fs.access(downloadedArchivePath);
         } catch (e) {
-          console.error(`Downloaded archive file not found at path: ${downloadedArchivePath}`);
+          console.error(`Archive file not found at path: ${downloadedArchivePath}`);
           continue;
         }
 
@@ -216,17 +259,10 @@ async function main(args: Args) {
         }
       } catch (error) {
         console.error(`Error processing artifact ${artifactName}:`, error);
-      } finally {
-        if (tempDownloadDir) {
-          try {
-            await fs.rm(tempDownloadDir, { recursive: true, force: true });
-            console.log(`Cleaned up temporary download directory: ${tempDownloadDir}`);
-          } catch (cleanupError) {
-            console.error(`Error cleaning up temporary download directory ${tempDownloadDir}:`, cleanupError);
-          }
-        }
       }
     }
+
+    console.log(`\nArtifacts cached in: ${getCacheDir(args.runPath)}`);
   } catch (error) {
     console.error('An unexpected error occurred:', error);
     if (error instanceof Error && error.message.includes('ENOENT')) {
