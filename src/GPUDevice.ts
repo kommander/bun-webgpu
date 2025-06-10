@@ -462,7 +462,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
 
     get queue(): GPUQueue {
         if (!this._queue) {
-            fatalError("Queue not initialized");
+            throw new Error("Queue not initialized");
         }
         return this._queue;
     }
