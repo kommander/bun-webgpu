@@ -51,7 +51,7 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           this.instanceTicker.unregister();
           this._pendingMap = null;
 
-          console.log('mapCallback', userdata1, typeof userdata1);
+          console.log('mapCallback', status, messagePtr, messageSize, userdata1, _userdata2);
           // Needs to be unpacked to release buffers
           const userData = unpackUserDataId(userdata1);
           
