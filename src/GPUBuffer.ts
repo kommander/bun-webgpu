@@ -47,14 +47,16 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
       }
 
       this._mapCallback = new JSCallback(
-        (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer | null) => {   
+        (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer) => {   
           this.instanceTicker.unregister();
           this._pendingMap = null;
 
+          const message = decodeCallbackMessage(messagePtr, messageSize);
+          console.log('message', message);
           console.log('mapCallback', status, messagePtr, messageSize, userdata1, _userdata2);
           // Needs to be unpacked to release buffers
-          const userData = unpackUserDataId(userdata1);
-          
+          const userData = unpackUserDataId(_userdata2);
+          console.log('userData', userData);
           if (status === AsyncStatus.Success) {
               this._mapState = 'mapped';
               this._returnedRanges = [];
@@ -62,7 +64,6 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
               this._mapCallbackPromiseData?.resolve(undefined);
           } else {
               const statusName = Object.keys(AsyncStatus).find(key => AsyncStatus[key as keyof typeof AsyncStatus] === status) || 'Unknown Map Error';
-              const message = decodeCallbackMessage(messagePtr, messageSize);
               const errorMessage = `WGPU Buffer Map Error (${statusName}): ${message}`;
               const wasAlreadyMapped = userData === 1;
               const wasPending = this._mapState === 'pending';
