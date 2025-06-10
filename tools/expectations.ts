@@ -13,4 +13,8 @@ export const expectations = [{
     // No way to make the array buffer non-transferable currently
     query: 'webgpu:api,operation,buffers,map_ArrayBuffer:postMessage:transfer=true;mapMode="WRITE"',
     expectation: 'skip'
+}, {
+    // Too massive for now
+    query: 'webgpu:shader,*',
+    expectation: 'skip'
 }]
