@@ -32,10 +32,12 @@ export function packUserDataId(id: number): ArrayBuffer {
 export function unpackUserDataId(userDataPtr: Pointer): number {
     const userDataBuffer = toArrayBuffer(userDataPtr, 0, 8);
     const userDataView = new Uint32Array(userDataBuffer);
-    const id = userDataView[0];
-    const index = userDataView[1];
-    idBufferPool.releaseBlock(index!);
-    return id!;
+    console.log('userDataView', userDataView);
+    const view = new DataView(userDataBuffer);
+    const id = view.getUint32(0);
+    const index = view.getUint32(4);
+    idBufferPool.releaseBlock(index);
+    return id;
 }
 
 export class GPUAdapterInfoImpl implements GPUAdapterInfo {
