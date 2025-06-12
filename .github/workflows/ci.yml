@@ -149,14 +149,16 @@ jobs:
         && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
     - name: Run Example (not windows)
-      if: matrix.os != 'ubuntu-latest' && matrix.os != 'windows-latest'
+      if: matrix.os != 'windows-latest'
       run: |
         bun run src/examples/triangle.ts
 
     - name: Run Example (windows)
       if: matrix.os == 'windows-latest'
+      env:
+        TRACE_WEBGPU: true
       run: |
-        TRACE_WEBGPU=true bun run src/examples/triangle.ts
+        bun run src/examples/triangle.ts
 
     - name: Package
       run: |
