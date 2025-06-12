@@ -65,13 +65,13 @@ export function normalizeIdentifier(input: string): string {
         .replace(/^-|-$/g, '');
 }
 
-export function decodeCallbackMessage(messagePtr: Pointer | null, messageSize: number | bigint): string {
+export function decodeCallbackMessage(messagePtr: Pointer | null, messageSize?: number | bigint): string {
     if (!messagePtr || messageSize === 0n || messageSize === 0) {
         return '[empty message]';
     }
 
     let arrayBuffer: ArrayBuffer | null = null;
-    arrayBuffer = toArrayBuffer(messagePtr, 0, Number(messageSize));
+    arrayBuffer = messageSize ? toArrayBuffer(messagePtr, 0, Number(messageSize)) : toArrayBuffer(messagePtr);
 
     let message = 'Could not decode error message';
     if (arrayBuffer instanceof Error) {

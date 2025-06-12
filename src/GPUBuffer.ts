@@ -50,13 +50,20 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
         (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
           this._pendingMap = null;
-
+          
           console.log('map callback', status, messagePtr, messageSize, userdata1);
-          const message = decodeCallbackMessage(messagePtr, messageSize);
+          const message = decodeCallbackMessage(messagePtr, process.platform === 'win32' ? undefined : messageSize);
           console.log('message', message);
-
-          // Needs to be unpacked to release buffers
-          const userData = unpackUserDataId(userdata1);
+          
+          let actualUserData: Pointer;
+          if (process.platform === 'win32') {
+            // On windows, the WGPUStringView as value is not spread across multiple arguments, for some reason,
+            // so we need to pass the messageSize as the userdata1 pointer
+            actualUserData = messageSize as unknown as Pointer;
+          } else {
+            actualUserData = userdata1;
+          }
+          const userData = unpackUserDataId(actualUserData);
           console.log('userData', userData);
 
           if (status === AsyncStatus.Success) {
