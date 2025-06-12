@@ -22,7 +22,7 @@ jobs:
 
       matrix:
         package_name: [windows-x86_64, many-linux-x86_64, macos-aarch64, macos-x86_64, linux-x86_64]
-        build_type: [Release]
+        build_type: [Debug]
         include:
           - os: macos-latest
             package_name: macos-aarch64
@@ -100,7 +100,7 @@ jobs:
       shell: cmd
       run: |
         "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" && ^
-        bun run build:windows
+        bun run build:windows -BuildType ${{ matrix.build_type }}
 
     - name: Build Binaries (macOS)
       if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'

@@ -1,6 +1,12 @@
 #!/usr/bin/env pwsh
 
-Write-Host "Building WebGPU wrapper manually for Windows..."
+param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("Debug", "Release")]
+    [string]$BuildType = "Release"
+)
+
+Write-Host "Building WebGPU wrapper manually for Windows ($BuildType build)..."
 
 # Find Visual Studio installation and MSVC tools
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -28,10 +34,15 @@ $TempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemTy
 Write-Host "Using temporary directory: $TempDir"
 
 try {
+    # Determine optimization flags and output names based on build type
+    $zigOptFlag = if ($BuildType -eq "Debug") { "-ODebug" } else { "-OReleaseFast" }
+    
+    Write-Host "Using optimization: $zigOptFlag"
+    
     # Compile the Zig code to object file in temp directory
     & zig build-obj src/zig/lib.zig `
         -target x86_64-windows-msvc `
-        -OReleaseFast `
+        $zigOptFlag `
         -I dawn/libs/x86_64-windows/include `
         -I dawn/include `
         -lc `
