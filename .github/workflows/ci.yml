@@ -155,10 +155,9 @@ jobs:
 
     - name: Run Example (windows)
       if: matrix.os == 'windows-latest'
-      env:
-        TRACE_WEBGPU: true
+      shell: cmd
       run: |
-        bun run src/examples/triangle.ts
+        set TRACE_WEBGPU=true && bun run src/examples/triangle.ts
 
     - name: Package
       run: |
