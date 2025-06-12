@@ -34,8 +34,9 @@ export function unpackUserDataId(userDataPtr: Pointer): number {
     const userDataView = new Uint32Array(userDataBuffer);
     console.log('userDataView', userDataView);
     const view = new DataView(userDataBuffer);
-    const id = view.getUint32(0);
-    const index = view.getUint32(4);
+    const id = view.getUint32(0, true);
+    const index = view.getUint32(4, true);
+    console.log('id', id, 'index', index);
     idBufferPool.releaseBlock(index);
     return id;
 }
