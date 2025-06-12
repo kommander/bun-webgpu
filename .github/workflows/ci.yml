@@ -148,10 +148,16 @@ jobs:
           libXext \
         && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
-    - name: Run Example
+    - name: Run Example (not windows)
+      if: matrix.os != 'ubuntu-latest' && matrix.os != 'windows-latest'
       run: |
         bun run src/examples/triangle.ts
-      
+
+    - name: Run Example (windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        TRACE_WEBGPU=true bun run src/examples/triangle.ts
+
     - name: Package
       run: |
         cmake -E make_directory bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
