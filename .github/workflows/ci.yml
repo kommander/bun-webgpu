@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    # branches: [ "main" ]
   workflow_dispatch:
 
 concurrency:
@@ -100,7 +100,7 @@ jobs:
       shell: cmd
       run: |
         "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" && ^
-        bun run build:windows
+        bun run build:windows -BuildType ${{ matrix.build_type }}
 
     - name: Build Binaries (macOS)
       if: matrix.os == 'macos-latest' || matrix.os == 'macos-13'
@@ -149,9 +149,11 @@ jobs:
         && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
     - name: Run Example
+      env:
+        DEBUG: true
       run: |
         bun run src/examples/triangle.ts
-      
+
     - name: Package
       run: |
         cmake -E make_directory bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}

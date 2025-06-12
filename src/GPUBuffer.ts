@@ -50,12 +50,21 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
         (status: number, messagePtr: Pointer | null, messageSize: bigint, userdata1: Pointer, _userdata2: Pointer | null) => {   
           this.instanceTicker.unregister();
           this._pendingMap = null;
-
-          const message = decodeCallbackMessage(messagePtr, messageSize);
           
-          // Needs to be unpacked to release buffers
-          const userData = unpackUserDataId(userdata1);
-
+          // Note: Workaround for windows, where the message is not spread across multiple arguments
+          const message = decodeCallbackMessage(messagePtr, process.platform === 'win32' ? undefined : messageSize);
+          
+          let actualUserData: Pointer | number;
+          // TODO: The zig wrapper should probably wrap the callback as well and pass the arguemnts correctly
+          if (process.platform === 'win32') {
+            // On windows, the WGPUStringView as value is not spread across multiple arguments, for some reason,
+            // so we need to pass the messageSize as the userdata1 pointer
+            actualUserData = Number(messageSize as unknown as Pointer);
+          } else {
+            actualUserData = userdata1;
+          }
+          const userData = unpackUserDataId(actualUserData as Pointer);
+          
           if (status === AsyncStatus.Success) {
               this._mapState = 'mapped';
               this._returnedRanges = [];
@@ -161,7 +170,6 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           if (!this._mapCallback.ptr) {
             fatalError('Could not create buffer map callback');
           }
-
 
           const callbackInfo = WGPUCallbackInfoStruct.pack({
             mode: 'AllowProcessEvents',

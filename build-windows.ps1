@@ -1,6 +1,12 @@
 #!/usr/bin/env pwsh
 
-Write-Host "Building WebGPU wrapper manually for Windows..."
+param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("Debug", "Release")]
+    [string]$BuildType = "Release"
+)
+
+Write-Host "Building WebGPU wrapper manually for Windows ($BuildType build)..."
 
 # Find Visual Studio installation and MSVC tools
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -28,10 +34,15 @@ $TempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemTy
 Write-Host "Using temporary directory: $TempDir"
 
 try {
+    # Determine optimization flags and output names based on build type
+    $zigOptFlag = if ($BuildType -eq "Debug") { "-ODebug" } else { "-OReleaseFast" }
+    
+    Write-Host "Using optimization: $zigOptFlag"
+    
     # Compile the Zig code to object file in temp directory
     & zig build-obj src/zig/lib.zig `
         -target x86_64-windows-msvc `
-        -OReleaseFast `
+        $zigOptFlag `
         -I dawn/libs/x86_64-windows/include `
         -I dawn/include `
         -lc `
@@ -84,21 +95,41 @@ try {
     # Ensure the output directory exists
     New-Item -ItemType Directory -Path "src\lib\x86_64-windows" -Force | Out-Null
 
+    # Select appropriate runtime libraries and flags based on build type
+    if ($BuildType -eq "Debug") {
+        $runtimeLibs = "msvcrtd.lib vcruntimed.lib ucrtd.lib"
+        $noDefaultLibs = "/NODEFAULTLIB:MSVCRT"
+        Write-Host "Using debug runtime libraries"
+    } else {
+        $runtimeLibs = "msvcrt.lib vcruntime.lib ucrt.lib"
+        $noDefaultLibs = ""
+        Write-Host "Using release runtime libraries"
+    }
+
     # Link everything into a shared library using MSVC linker
     Write-Host "Linking with: $linkExe"
-    & "$linkExe" /DLL `
-        /OUT:src\lib\x86_64-windows\webgpu_wrapper.dll `
-        /IMPLIB:src\lib\x86_64-windows\webgpu_wrapper.lib `
-        /DEF:"$defFile" `
-        "$TempDir\webgpu_wrapper.obj" `
-        "dawn\libs\x86_64-windows\webgpu_dawn.lib" `
-        user32.lib kernel32.lib gdi32.lib ole32.lib uuid.lib `
-        d3d11.lib d3d12.lib dxgi.lib dxguid.lib `
-        msvcrt.lib vcruntime.lib ucrt.lib ntdll.lib `
-        /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64" `
-        /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" `
-        /MACHINE:X64 `
-        /SUBSYSTEM:WINDOWS
+    $linkArgs = @(
+        "/DLL"
+        "/OUT:src\lib\x86_64-windows\webgpu_wrapper.dll"
+        "/IMPLIB:src\lib\x86_64-windows\webgpu_wrapper.lib"
+        "/DEF:$defFile"
+        "$TempDir\webgpu_wrapper.obj"
+        "dawn\libs\x86_64-windows\webgpu_dawn.lib"
+        "user32.lib", "kernel32.lib", "gdi32.lib", "ole32.lib", "uuid.lib"
+        "d3d11.lib", "d3d12.lib", "dxgi.lib", "dxguid.lib"
+        $runtimeLibs.Split(' ')
+        "ntdll.lib"
+        "/LIBPATH:`"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64`""
+        "/LIBPATH:`"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64`""
+        "/MACHINE:X64"
+        "/SUBSYSTEM:WINDOWS"
+    )
+    
+    if ($noDefaultLibs) {
+        $linkArgs += $noDefaultLibs
+    }
+    
+    & "$linkExe" @linkArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to link shared library"
