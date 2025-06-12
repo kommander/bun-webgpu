@@ -55,16 +55,16 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           const message = decodeCallbackMessage(messagePtr, process.platform === 'win32' ? undefined : messageSize);
           console.log('message', message);
           
-          let actualUserData: Pointer;
+          let actualUserData: Pointer | number;
           // TODO: The zig wrapper should probably wrap the callback as well and pass the arguemnts correctly
           if (process.platform === 'win32') {
             // On windows, the WGPUStringView as value is not spread across multiple arguments, for some reason,
             // so we need to pass the messageSize as the userdata1 pointer
-            actualUserData = messageSize as unknown as Pointer;
+            actualUserData = Number(messageSize as unknown as Pointer);
           } else {
             actualUserData = userdata1;
           }
-          const userData = unpackUserDataId(actualUserData);
+          const userData = unpackUserDataId(actualUserData as Pointer);
           console.log('userData', userData);
 
           if (status === AsyncStatus.Success) {
