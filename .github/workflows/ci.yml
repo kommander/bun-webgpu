@@ -22,7 +22,7 @@ jobs:
 
       matrix:
         package_name: [windows-x86_64, many-linux-x86_64, macos-aarch64, macos-x86_64, linux-x86_64]
-        build_type: [Debug]
+        build_type: [Release]
         include:
           - os: macos-latest
             package_name: macos-aarch64
@@ -148,13 +148,7 @@ jobs:
           libXext \
         && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
 
-    - name: Run Example (not windows)
-      if: matrix.os != 'windows-latest'
-      run: |
-        bun run src/examples/triangle.ts
-
-    - name: Run Example (windows)
-      if: matrix.os == 'windows-latest'
+    - name: Run Example
       env:
         DEBUG: true
       run: |

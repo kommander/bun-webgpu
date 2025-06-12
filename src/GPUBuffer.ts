@@ -51,9 +51,8 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           this.instanceTicker.unregister();
           this._pendingMap = null;
           
-          console.log('map callback', status, messagePtr, messageSize, userdata1);
+          // Note: Workaround for windows, where the message is not spread across multiple arguments
           const message = decodeCallbackMessage(messagePtr, process.platform === 'win32' ? undefined : messageSize);
-          console.log('message', message);
           
           let actualUserData: Pointer | number;
           // TODO: The zig wrapper should probably wrap the callback as well and pass the arguemnts correctly
@@ -65,8 +64,7 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
             actualUserData = userdata1;
           }
           const userData = unpackUserDataId(actualUserData as Pointer);
-          console.log('userData', userData);
-
+          
           if (status === AsyncStatus.Success) {
               this._mapState = 'mapped';
               this._returnedRanges = [];
@@ -173,8 +171,6 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
             fatalError('Could not create buffer map callback');
           }
 
-          console.log('userData', userDataBuffer)
-          console.log('map callback info', this._mapCallback.ptr, userDataPtr);
           const callbackInfo = WGPUCallbackInfoStruct.pack({
             mode: 'AllowProcessEvents',
             callback: this._mapCallback.ptr,
@@ -182,8 +178,6 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           });
 
           try {
-            console.log('calling map async', this.bufferPtr, mode, mapOffset, mapSize, ptr(callbackInfo));
-            console.log('callback info', callbackInfo);
               this.lib.wgpuBufferMapAsync(
                   this.bufferPtr,
                   mode,
