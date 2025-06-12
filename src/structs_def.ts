@@ -794,7 +794,7 @@ export const WGPUBindGroupLayoutEntryStruct = defineStruct([
     // Need to check the gcc/g++ versions and what causes the mismatch.
     // Interestingly, it works with either u32 or u64.
     // it then fails with: "Error: Unexpected validation error occurred: BindGroupLayoutEntry had none of buffer, sampler, texture, storageTexture, or externalTexture set"
-    ['_alignment0', 'u32', { default: 0 }],
+    ['_alignment0', 'u32', { default: 0, condition: () => process.platform !== 'win32' }],
     ['buffer', WGPUBufferBindingLayoutStruct, { optional: true }],
     ['sampler', WGPUSamplerBindingLayoutStruct, { optional: true }],
     ['texture', WGPUTextureBindingLayoutStruct, { optional: true }],
