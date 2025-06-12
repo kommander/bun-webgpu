@@ -21,10 +21,14 @@ const RequestAdapterStatus = {
 export class InstanceTicker {
   private _waiting: number = 0;
   private _ticking = false;
+  private _accTime: number = 0;
+  private _lastTime: number = performance.now();
   
   constructor(public readonly instancePtr: Pointer, private lib: FFISymbols) {}
 
   register() {
+      this._lastTime = performance.now();
+      this._accTime = 0;
       this._waiting++;
       this.scheduleTick();
   }
@@ -38,14 +42,22 @@ export class InstanceTicker {
   }
 
   processEvents() {
+    this._lastTime = performance.now();
+    this._accTime = 0;
     this.lib.wgpuInstanceProcessEvents(this.instancePtr);
   }
 
   private scheduleTick() {
       if (this._ticking) return;
       this._ticking = true;
-      queueMicrotask(() => {
-          this.lib.wgpuInstanceProcessEvents(this.instancePtr);
+      setImmediate(() => {
+          const now = performance.now();
+          this._accTime += now - this._lastTime;
+          this._lastTime = now;
+          if (this._accTime > 0.05) {
+            this.lib.wgpuInstanceProcessEvents(this.instancePtr);
+            this._accTime = 0;
+          }
           this._ticking = false;
           if (this.hasWaiting()) {
               this.scheduleTick();
