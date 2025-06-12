@@ -51,10 +51,13 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           this.instanceTicker.unregister();
           this._pendingMap = null;
 
+          console.log('map callback', status, messagePtr, messageSize, userdata1);
           const message = decodeCallbackMessage(messagePtr, messageSize);
-          
+          console.log('message', message);
+
           // Needs to be unpacked to release buffers
           const userData = unpackUserDataId(userdata1);
+          console.log('userData', userData);
 
           if (status === AsyncStatus.Success) {
               this._mapState = 'mapped';
@@ -162,7 +165,8 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
             fatalError('Could not create buffer map callback');
           }
 
-
+          console.log('userData', userDataBuffer)
+          console.log('map callback info', this._mapCallback.ptr, userDataPtr);
           const callbackInfo = WGPUCallbackInfoStruct.pack({
             mode: 'AllowProcessEvents',
             callback: this._mapCallback.ptr,
@@ -170,6 +174,8 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           });
 
           try {
+            console.log('calling map async', this.bufferPtr, mode, mapOffset, mapSize, ptr(callbackInfo));
+            console.log('callback info', callbackInfo);
               this.lib.wgpuBufferMapAsync(
                   this.bufferPtr,
                   mode,
