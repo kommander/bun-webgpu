@@ -26,7 +26,7 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
     this._configuration = {
         ...descriptor,
         alphaMode: descriptor.alphaMode ?? 'premultiplied',
-        usage: descriptor.usage ?? (GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC),
+        usage: descriptor.usage ?  descriptor.usage | GPUTextureUsage.TEXTURE_BINDING : (GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC | GPUTextureUsage.TEXTURE_BINDING),
         colorSpace: descriptor.colorSpace ?? 'srgb',
     };
 		this._device = descriptor.device;
