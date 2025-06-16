@@ -42,8 +42,6 @@ export class InstanceTicker {
   }
 
   processEvents() {
-    this._lastTime = performance.now();
-    this._accTime = 0;
     this.lib.wgpuInstanceProcessEvents(this.instancePtr);
   }
 
