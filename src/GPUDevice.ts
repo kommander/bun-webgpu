@@ -665,39 +665,40 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     }
 
     createBindGroup(descriptor: GPUBindGroupDescriptor): GPUBindGroup {
-        const entries = Array.from(descriptor.entries).map((e) => {
+        const entries = Array.from(descriptor.entries)
+        for (let i = 0; i < entries.length; i++) {
+            const e = entries[i]!;
             if (e.resource instanceof GPUBufferImpl) {
-                return {
+                entries[i] = {
                     ...e,
                     buffer: e.resource,
                     offset: e.resource.offset ?? 0n,
                     size: e.resource.size ?? UINT64_MAX
-                }
+                } as GPUBindGroupEntry;
             } else if (e.resource instanceof GPUTextureViewImpl) {
-                return {
+                entries[i] = {
                     ...e,
                     textureView: e.resource
-                }
+                } as GPUBindGroupEntry;
             } else if (isBufferBinding(e.resource)) {
-                return {
+                entries[i] = {
                     ...e,
                     buffer: e.resource.buffer,
                     offset: e.resource.offset ?? 0n,
                     size: e.resource.size ?? UINT64_MAX
-                }
+                } as GPUBindGroupEntry;
             } else if (isSampler(e.resource)) {
-                return {
+                entries[i] = {
                     ...e,
                     sampler: e.resource
-                }
+                } as GPUBindGroupEntry;
             } else if (isTextureView(e.resource)) {
-                return {
+                entries[i] = {
                     ...e,
                     textureView: e.resource
-                }
+                } as GPUBindGroupEntry;
             }
-            return e;
-        });
+        }
         const descriptorBuffer = WGPUBindGroupDescriptorStruct.pack({ ...descriptor, entries });
         
         try {

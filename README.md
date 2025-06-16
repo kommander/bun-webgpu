@@ -33,6 +33,15 @@ To run the CTS, build the library first, then run the tests:
 
 Run all webgpu tests for example with `./run-cts.sh 'webgpu:*'`
 
+Current results for `webgpu:api,*` are:
+```
+** Summary **
+Passed  w/o warnings = 39994 / 51160 =  78.17%
+Passed with warnings =     0 / 51160 =   0.00%
+Skipped              =  8290 / 51160 =  16.20%
+Failed               =  2876 / 51160 =   5.62%
+```
+
 ## Testing
 
 To run tests, build the library first, then run the tests:
