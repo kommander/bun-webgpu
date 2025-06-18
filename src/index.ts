@@ -29,7 +29,24 @@ export function createGPUInstance(libPath?: string): GPUImpl {
     return new GPUImpl(instancePtr, lib);
 }
 
-export async function globals({ libPath }: { libPath?: string } = {}) {
+export const globals = {
+  GPUPipelineError: GPUPipelineErrorImpl as any,
+  AbortError: AbortError as any,
+  GPUError: GPUErrorImpl as any,
+  GPUOutOfMemoryError: GPUOutOfMemoryError as any,
+  GPUInternalError: GPUInternalError as any,
+  GPUValidationError: GPUValidationError as any,
+  GPUTextureUsage: TextureUsageFlags,
+  GPUBufferUsage: BufferUsageFlags,
+  GPUShaderStage: ShaderStageFlags,
+  GPUMapMode: MapModeFlags,
+
+  GPUDevice: GPUDeviceImpl as any,
+  GPUAdapterInfo: GPUAdapterInfoImpl as any,
+  GPUSupportedLimits: GPUSupportedLimitsImpl as any,
+};
+
+export async function setupGlobals({ libPath }: { libPath?: string } = {}) {
   if (!navigator.gpu) {
     const gpuInstance = createGPUInstance(libPath);
     global.navigator = {
@@ -37,21 +54,7 @@ export async function globals({ libPath }: { libPath?: string } = {}) {
       gpu: gpuInstance,
     };
   }
-
-  global.GPUPipelineError = GPUPipelineErrorImpl as any;
-  global.AbortError = AbortError as any;
-  global.GPUError = GPUErrorImpl as any;
-  global.GPUOutOfMemoryError = GPUOutOfMemoryError as any;
-  global.GPUInternalError = GPUInternalError as any;
-  global.GPUValidationError = GPUValidationError as any;
-  global.GPUTextureUsage = TextureUsageFlags;
-  global.GPUBufferUsage = BufferUsageFlags;
-  global.GPUShaderStage = ShaderStageFlags;
-  global.GPUMapMode = MapModeFlags;
-
-  global.GPUDevice = GPUDeviceImpl as any;
-  global.GPUAdapterInfo = GPUAdapterInfoImpl as any;
-  global.GPUSupportedLimits = GPUSupportedLimitsImpl as any;
+  Object.assign(globalThis, globals);
 }
 
 export async function createWebGPUDevice() {

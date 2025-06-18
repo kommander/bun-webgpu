@@ -1,11 +1,14 @@
+/**
+ * Just for testing some performance and memory behavior.
+ */
 import { type Pointer } from "bun:ffi";
 import { 
   createGPUInstance, 
 } from '..';
 import type { GPUImpl } from "../GPU";
-import { globals } from "../index";
+import { setupGlobals } from "../index";
 
-globals();
+setupGlobals();
 
 export async function runTriangleToPngExample(filename: string = "triangle.png") {
   console.log("\n--- Running Triangle to PNG Example ---");
@@ -164,7 +167,6 @@ export async function runTriangleToPngExample(filename: string = "triangle.png")
         queue.submit([commandBuffer!]);
         await queue!.onSubmittedWorkDone();
 
-        // For memory-leak REPRODUCTION purposes just mapAsync
         await readbackBuffer!.mapAsync(GPUMapMode.READ, 0, readbackBufferSize);
         // const mappedData = readbackBuffer!.getMappedRange(0, readbackBufferSize);
 

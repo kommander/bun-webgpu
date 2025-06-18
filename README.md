@@ -4,7 +4,19 @@ WebGPU ([Dawn](https://dawn.googlesource.com/dawn)) FFI bindings for Bun.
 
 ## Usage
 
-TBD
+```ts
+import { setupGlobals } from 'bun-webgpu';
+
+setupGlobals();
+
+const adapter = navigator.gpu.requestAdapter();
+const device = await adapter?.requestDevice();
+
+// ... use WebGPU ...
+```
+
+Find out more about [WebGPU types here](https://gpuweb.github.io/types/).
+
 
 ## Building
 
