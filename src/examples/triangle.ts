@@ -2,11 +2,11 @@ import sharp from 'sharp';
 import { type Pointer } from "bun:ffi";
 import { 
   createGPUInstance, 
-  globals,
+  setupGlobals,
 } from '..';
 import type { GPUImpl } from "../GPU";
 
-globals();
+setupGlobals();
 
 export async function runTriangleToPngExample(filename: string = "triangle.png") {
   console.log("\n--- Running Triangle to PNG Example ---");

@@ -20,6 +20,8 @@ Find out more about [WebGPU types here](https://gpuweb.github.io/types/).
 
 ## Building
 
+_Note:_ There are prebuilt binaries in the pipeline artifacts.
+
 ### Prerequisites
 
 *   **Bun**: Ensure you have BunJS installed. (https://bun.sh)
