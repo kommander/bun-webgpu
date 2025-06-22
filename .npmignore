@@ -4,3 +4,4 @@ tools
 .zig-cache
 zig-out
 cts
+artifacts
