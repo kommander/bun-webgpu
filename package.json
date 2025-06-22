@@ -1,9 +1,9 @@
 {
   "name": "bun-webgpu",
+  "version": "0.1.0-rc.2",
   "module": "src/index.ts",
   "main": "src/index.ts",
   "type": "module",
-  "private": true,
   "license": "Apache-2.0",
   "scripts": {
     "test": "bun test",

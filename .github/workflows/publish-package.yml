@@ -1,0 +1,62 @@
+name: Publish NPM Package
+
+on:
+  workflow_call:
+    secrets:
+      NPM_TOKEN:
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organize binaries into src/lib directories
+        run: |
+          mkdir -p src/lib/x86_64-windows
+          mkdir -p src/lib/x86_64-linux  
+          mkdir -p src/lib/aarch64-macos
+          mkdir -p src/lib/x86_64-macos
+          
+          # Extract and move Windows x86_64 binary
+          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release
+          tar -xzf bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release.tar.gz
+          cp bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release/webgpu_wrapper.dll ../../src/lib/x86_64-windows/
+          cd ../..
+          
+          # Extract and move Many-Linux x86_64 binary (prefer this over regular linux for compatibility)
+          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release
+          tar -xzf bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release.tar.gz
+          cp bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release/libwebgpu_wrapper.so ../../src/lib/x86_64-linux/
+          cd ../..
+          
+          # Extract and move macOS aarch64 binary
+          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release
+          tar -xzf bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release.tar.gz
+          cp bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release/libwebgpu_wrapper.dylib ../../src/lib/aarch64-macos/
+          cd ../..
+          
+          # Extract and move macOS x86_64 binary
+          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release
+          tar -xzf bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release.tar.gz  
+          cp bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release/libwebgpu_wrapper.dylib ../../src/lib/x86_64-macos/
+          cd ../..
+
+      - name: Package
+        run: bun pm pack
+        
+      - name: Publish
+        run: bun publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
