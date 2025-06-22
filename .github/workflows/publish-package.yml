@@ -55,7 +55,12 @@ jobs:
 
       - name: Package
         run: bun pm pack
-        
+
+      - name: Login
+        run: bunx npm login
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish
         run: bun publish
         env:
