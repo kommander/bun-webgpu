@@ -5,8 +5,6 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
 	private _nextTexture: GPUTexture | null = null;
   private width: number;
   private height: number;
-
-	// Keep a reference to the associated device if needed for validation or texture creation
 	private _device: GPUDevice | null = null;
 
 	constructor(
@@ -31,7 +29,6 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
     };
 		this._device = descriptor.device;
 
-		// Invalidate any previously vended texture
 		this._currentTexture?.destroy();
 		this._currentTexture = null;
 
@@ -42,7 +39,7 @@ export class GPUCanvasContextMock implements GPUCanvasContext {
 		this._configuration = null;
 		this._currentTexture?.destroy();
 		this._currentTexture = null;
-		this._device = null; // Or keep if it should persist? Depends on desired mock behavior.
+		this._device = null;
 		return undefined;
 	}
 
