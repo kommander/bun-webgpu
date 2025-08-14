@@ -181,9 +181,24 @@ if (buildLib) {
   rmSync(tsconfigBuildPath, { force: true })
   
   if (tscResult.status !== 0) {
-    console.warn("Warning: TypeScript declaration generation failed")
-  } else {
-    console.log("TypeScript declarations generated")
+    console.error("Error: TypeScript declaration generation failed")
+    process.exit(1)
+  }
+  
+  console.log("TypeScript declarations generated")
+  
+  const rootTypesPath = join(rootDir, "index.d.ts")
+  if (existsSync(rootTypesPath)) {
+    const rootTypesContent = readFileSync(rootTypesPath, "utf8")
+    const generatedIndexPath = join(distDir, "index.d.ts")
+    if (existsSync(generatedIndexPath)) {
+      const generatedContent = readFileSync(generatedIndexPath, "utf8")
+      writeFileSync(generatedIndexPath, `${rootTypesContent}\n\n${generatedContent}`)
+      console.log("Merged root index.d.ts with generated declarations")
+    } else {
+      copyFileSync(rootTypesPath, generatedIndexPath)
+      console.log("Copied root index.d.ts to dist")
+    }
   }
 
   const exports = {
@@ -216,7 +231,10 @@ if (buildLib) {
         repository: packageJson.repository,
         bugs: packageJson.bugs,
         exports,
-        dependencies: packageJson.dependencies,
+        dependencies: {
+          ...packageJson.dependencies,
+          "@webgpu/types": packageJson.devDependencies["@webgpu/types"] || "^0.1.60",
+        },
         optionalDependencies: {
           ...packageJson.optionalDependencies,
           ...optionalDeps,
