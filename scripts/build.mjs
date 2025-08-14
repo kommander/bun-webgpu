@@ -10,9 +10,17 @@ const rootDir = resolve(__dirname, "..")
 const licensePath = join(rootDir, "LICENSE")
 const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8"))
 
+// Parse command line arguments
+// Usage examples:
+//   --native              Build and package native binaries
+//   --lib                 Build JavaScript library and TypeScript declarations  
+//   --native --lib        Build everything
+//   --native --skip-build Package existing native binaries (for CI)
+//   --native --skip-build --lib  Package existing binaries and build JS library (for CI publish)
 const args = process.argv.slice(2)
-const buildLib = args.find((arg) => arg === "--lib")
-const buildNative = args.find((arg) => arg === "--native")
+const buildLib = args.includes("--lib")
+const buildNative = args.includes("--native")
+const skipBuild = args.includes("--skip-build")
 const isDev = args.includes("--dev")
 
 const variants = [
@@ -27,6 +35,9 @@ const variants = [
 
 if (!buildLib && !buildNative) {
   console.error("Error: Please specify --lib, --native, or both")
+  console.error("  --native: Build and package native binaries")
+  console.error("  --lib: Build JavaScript library and TypeScript declarations")
+  console.error("  --skip-build: Skip building native binaries (use with --native to package existing binaries)")
   process.exit(1)
 }
 
@@ -53,21 +64,25 @@ if (missingRequired.length > 0) {
 }
 
 if (buildNative) {
-  console.log(`Building native ${isDev ? "dev" : "prod"} binaries...`)
-  
-  const zigBuild = spawnSync("zig", ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`], {
-    cwd: join(rootDir, "src", "zig"),
-    stdio: "inherit",
-  })
-  
-  if (zigBuild.error) {
-    console.error("Error: Zig is not installed or not in PATH")
-    process.exit(1)
-  }
-  
-  if (zigBuild.status !== 0) {
-    console.error("Error: Zig build failed")
-    process.exit(1)
+  if (!skipBuild) {
+    console.log(`Building native ${isDev ? "dev" : "prod"} binaries...`)
+    
+    const zigBuild = spawnSync("zig", ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`], {
+      cwd: join(rootDir, "src", "zig"),
+      stdio: "inherit",
+    })
+    
+    if (zigBuild.error) {
+      console.error("Error: Zig is not installed or not in PATH")
+      process.exit(1)
+    }
+    
+    if (zigBuild.status !== 0) {
+      console.error("Error: Zig build failed")
+      process.exit(1)
+    }
+  } else {
+    console.log("Packaging existing native binaries (--skip-build flag used)...")
   }
 
   for (const { platform, arch } of variants) {

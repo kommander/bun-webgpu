@@ -22,41 +22,57 @@ jobs:
         with:
           path: artifacts
 
-      - name: Organize binaries into src/lib directories
+      - name: Extract binaries to correct locations
         run: |
-          mkdir -p src/lib/x86_64-windows
-          mkdir -p src/lib/x86_64-linux  
-          mkdir -p src/lib/aarch64-macos
-          mkdir -p src/lib/x86_64-macos
+          # Extract Darwin arm64
+          if [ -f "artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release/bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release.tar.gz" ]; then
+            mkdir -p src/lib/aarch64-macos
+            tar -xzf "artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release/bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release.tar.gz"
+            cp "bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release/libwebgpu_wrapper.dylib" src/lib/aarch64-macos/
+          fi
           
-          # Extract and move Windows x86_64 binary
-          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release
-          tar -xzf bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release.tar.gz
-          cp bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release/webgpu_wrapper.dll ../../src/lib/x86_64-windows/
-          cd ../..
+          # Extract Darwin x64
+          if [ -f "artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release.tar.gz" ]; then
+            mkdir -p src/lib/x86_64-macos
+            tar -xzf "artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release.tar.gz"
+            cp "bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release/libwebgpu_wrapper.dylib" src/lib/x86_64-macos/
+          fi
           
-          # Extract and move Many-Linux x86_64 binary (prefer this over regular linux for compatibility)
-          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release
-          tar -xzf bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release.tar.gz
-          cp bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release/libwebgpu_wrapper.so ../../src/lib/x86_64-linux/
-          cd ../..
+          # Extract Linux x64 (prefer many-linux for compatibility)
+          if [ -f "artifacts/bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release.tar.gz" ]; then
+            mkdir -p src/lib/x86_64-linux
+            tar -xzf "artifacts/bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release.tar.gz"
+            cp "bun-webgpu-binaries-${{ github.sha }}-many-linux-x86_64-Release/libwebgpu_wrapper.so" src/lib/x86_64-linux/
+          elif [ -f "artifacts/bun-webgpu-binaries-${{ github.sha }}-linux-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-linux-x86_64-Release.tar.gz" ]; then
+            mkdir -p src/lib/x86_64-linux
+            tar -xzf "artifacts/bun-webgpu-binaries-${{ github.sha }}-linux-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-linux-x86_64-Release.tar.gz"
+            cp "bun-webgpu-binaries-${{ github.sha }}-linux-x86_64-Release/libwebgpu_wrapper.so" src/lib/x86_64-linux/
+          fi
           
-          # Extract and move macOS aarch64 binary
-          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release
-          tar -xzf bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release.tar.gz
-          cp bun-webgpu-binaries-${{ github.sha }}-macos-aarch64-Release/libwebgpu_wrapper.dylib ../../src/lib/aarch64-macos/
-          cd ../..
+          # Extract Windows x64
+          if [ -f "artifacts/bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release.tar.gz" ]; then
+            mkdir -p src/lib/x86_64-windows
+            tar -xzf "artifacts/bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release/bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release.tar.gz"
+            cp "bun-webgpu-binaries-${{ github.sha }}-windows-x86_64-Release/webgpu_wrapper.dll" src/lib/x86_64-windows/
+          fi
           
-          # Extract and move macOS x86_64 binary
-          cd artifacts/bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release
-          tar -xzf bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release.tar.gz  
-          cp bun-webgpu-binaries-${{ github.sha }}-macos-x86_64-Release/libwebgpu_wrapper.dylib ../../src/lib/x86_64-macos/
-          cd ../..
+          # List what we have
+          echo "Available binaries:"
+          ls -la src/lib/*/
 
-      - name: Package
-        run: bun pm pack
+      - name: Build and package all npm modules
+        run: |
+          # Build the library and create platform packages from existing binaries
+          bun run scripts/build.mjs --native --skip-build --lib
+          
+          # Verify packages were created
+          echo "Created packages:"
+          ls -la dist/
+          ls -la node_modules/bun-webgpu-*/
 
-      - name: Publish
-        run: bun publish
+      - name: Publish all packages
+        run: |
+          node scripts/publish.mjs --dry-run
         env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+          CI: true
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

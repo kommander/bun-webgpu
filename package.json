@@ -25,6 +25,7 @@
     "build:native": "node scripts/build.mjs --native",
     "build:native:dev": "node scripts/build.mjs --native --dev",
     "publish": "node scripts/publish.mjs",
+    "publish:dry-run": "node scripts/publish.mjs --dry-run",
     "build:linux": "./build-linux.sh",
     "build:windows": "pwsh build-windows.ps1"
   },

@@ -10,8 +10,18 @@ const rootDir = resolve(__dirname, "..")
 
 const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8"))
 
-console.log(
-  `
+const args = process.argv.slice(2)
+const dryRun = args.includes("--dry-run")
+
+const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true"
+
+if (dryRun) {
+  console.log("🔍 DRY RUN MODE - No packages will be published")
+}
+
+if (!isCI) {
+  console.log(
+    `
 Please confirm the following before continuing:
 
 1. The "version" field in package.json has been updated.
@@ -19,31 +29,34 @@ Please confirm the following before continuing:
 
 Continue? (y/n)
 `.trim(),
-)
+  )
 
-const confirm = spawnSync(
-  "node",
-  [
-    "-e",
-    `
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    process.stdin.on('data', (data) => {
-      const input = data.toString().toLowerCase();
-      if (input === 'y') process.exit(0);
-      if (input === 'n' || input === '\\x03') process.exit(1);
-    });
-    `,
-  ],
-  {
-    shell: false,
-    stdio: "inherit",
-  },
-)
+  const confirm = spawnSync(
+    "node",
+    [
+      "-e",
+      `
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+      process.stdin.on('data', (data) => {
+        const input = data.toString().toLowerCase();
+        if (input === 'y') process.exit(0);
+        if (input === 'n' || input === '\\x03') process.exit(1);
+      });
+      `,
+    ],
+    {
+      shell: false,
+      stdio: "inherit",
+    },
+  )
 
-if (confirm.status !== 0) {
-  console.log("Aborted.")
-  process.exit(1)
+  if (confirm.status !== 0) {
+    console.log("Aborted.")
+    process.exit(1)
+  }
+} else {
+  console.log("Running in CI mode, skipping confirmation...")
 }
 
 try {
@@ -100,18 +113,9 @@ if (mismatches.length > 0) {
   process.exit(1)
 }
 
-if (process.env.NPM_AUTH_TOKEN) {
-  const npmrcPath = join(process.env.HOME, ".npmrc")
-  const npmrcContent = `//registry.npmjs.org/:_authToken=${process.env.NPM_AUTH_TOKEN}\n`
-  
-  if (existsSync(npmrcPath)) {
-    const existing = readFileSync(npmrcPath, 'utf8')
-    if (!existing.includes('//registry.npmjs.org/:_authToken')) {
-      writeFileSync(npmrcPath, existing + '\n' + npmrcContent)
-    }
-  } else {
-    writeFileSync(npmrcPath, npmrcContent)
-  }
+if (isCI && !process.env.NPM_AUTH_TOKEN && !process.env.NPM_CONFIG_TOKEN) {
+  console.error("Error: NPM_AUTH_TOKEN or NPM_CONFIG_TOKEN environment variable is required in CI")
+  process.exit(1)
 }
 
 Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
@@ -131,20 +135,54 @@ Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
     }
   } catch {}
 
-  const npmAuth = spawnSync("npm", ["whoami"], {})
-  if (npmAuth.status !== 0) {
-    console.error("Error: NPM authentication failed. Please run 'npm login' or ensure NPM_AUTH_TOKEN is set")
-    process.exit(1)
+  // Check authentication (skip in CI if token is already set)
+  if (!isCI) {
+    const npmAuth = spawnSync("npm", ["whoami"], {})
+    if (npmAuth.status !== 0) {
+      console.error("Error: NPM authentication failed. Please run 'npm login'")
+      process.exit(1)
+    }
   }
 
-  const publish = spawnSync("npm", ["publish", "--access=public"], {
+  if (dryRun) {
+    console.log(`[DRY RUN] Would publish ${name}@${version} from ${dir}`)
+    return
+  }
+
+  const publishCmd = existsSync(join(dir, "package.json")) ? "bun" : "npm"
+  const publishArgs = publishCmd === "bun" 
+    ? ["publish", "--access", "public"]
+    : ["publish", "--access=public"]
+  
+  console.log(`Publishing ${name}@${version} from ${dir}...`)
+  const publish = spawnSync(publishCmd, publishArgs, {
     cwd: dir,
     stdio: "inherit",
+    env: {
+      ...process.env,
+      ...(process.env.NPM_AUTH_TOKEN ? { NPM_AUTH_TOKEN: process.env.NPM_AUTH_TOKEN } : {}),
+      ...(process.env.NPM_CONFIG_TOKEN ? { NPM_CONFIG_TOKEN: process.env.NPM_CONFIG_TOKEN } : {}),
+    }
   })
+  
   if (publish.status !== 0) {
     console.error(`Error: Failed to publish '${name}@${version}'.`)
     process.exit(1)
   }
 
-  console.log(`Package '${name}@${version}' published.`)
+  console.log(`✅ Package '${name}@${version}' published.`)
 })
+
+if (dryRun) {
+  console.log("\n📦 DRY RUN COMPLETE - No packages were actually published")
+  console.log(`Would have published ${Object.keys(packageJsons).length} packages:`)
+  Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
+    console.log(`  - ${name}@${version}`)
+  })
+} else {
+  console.log("\n🎉 All packages published successfully!")
+  console.log(`Published ${Object.keys(packageJsons).length} packages:`)
+  Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
+    console.log(`  - ${name}@${version}`)
+  })
+}
