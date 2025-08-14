@@ -1,6 +1,6 @@
 {
   "name": "bun-webgpu",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native WebGPU implementation for Bun runtime",
   "repository": {
     "type": "git",

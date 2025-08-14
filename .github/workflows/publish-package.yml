@@ -72,7 +72,7 @@ jobs:
 
       - name: Publish all packages
         run: |
-          node scripts/publish.mjs --dry-run
+          node scripts/publish.mjs
         env:
           CI: true
           NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
