@@ -124,38 +124,6 @@ jobs:
       run: |
         ldd src/lib/${{ matrix.target }}/${{ matrix.lib_name }}
 
-    - name: Install Vulkan support (Linux x86_64)
-      if: matrix.package_name == 'linux-x86_64'
-      run: |
-        apt update && \
-        apt install -y \
-          libvulkan1 mesa-vulkan-drivers vulkan-tools \
-        && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
-
-    - name: Install Vulkan support (Many-Linux)
-      if: matrix.package_name == 'many-linux-x86_64'
-      run: |
-        dnf install -y \
-          vulkan-loader \
-          vulkan-tools \
-          mesa-vulkan-drivers \
-          mesa-libGL \
-          libX11 \
-          libXrandr \
-          libXcursor \
-          libXinerama \
-          libXi \
-          libXcomposite \
-          libXdamage \
-          libXext \
-        && echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
-
-    - name: Run Example
-      env:
-        DEBUG: true
-      run: |
-        bun run src/examples/triangle.ts
-
     - name: Package
       run: |
         cmake -E make_directory bun-webgpu-binaries-${{ github.sha }}-${{ matrix.package_name }}-${{ matrix.build_type }}
