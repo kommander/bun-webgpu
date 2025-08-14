@@ -75,4 +75,4 @@ jobs:
           node scripts/publish.mjs
         env:
           CI: true
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
