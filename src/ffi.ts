@@ -1,56 +1,22 @@
 import { dlopen, suffix, FFIType } from "bun:ffi";
-import { join } from "path";
-import { fileURLToPath } from "url";
 import { existsSync } from "fs";
-import os from "os";
+import { createRequire } from "module";
 
-// Get the directory of the current module
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-
-// const DEFAULT_PATH = join(__dirname, "../dawn/");
-const DEFAULT_PATH = join(__dirname, "lib/");
-// const LIB_NAME = "webgpu_dawn";
-const LIB_NAME = "webgpu_wrapper";
-
-
-// Map platform and architecture to the target name format used in our build
-function getPlatformTarget(): string {
-  const platform = os.platform();
-  const arch = os.arch();
-
-  // Convert Bun/Node.js platform names to Zig platform names
-  const platformMap: Record<string, string> = {
-    'darwin': 'macos',
-    'win32': 'windows',
-    'linux': 'linux',
-  };
-
-  const archMap: Record<string, string> = {
-    'x64': 'x86_64',
-    'arm64': 'aarch64',
-  };
-
-  const zigPlatform = platformMap[platform] || platform;
-  const zigArch = archMap[arch] || arch;
-
-  return `${zigArch}-${zigPlatform}`;
-}
+const require = createRequire(import.meta.url);
 
 function findLibrary(): string {
-  const target = getPlatformTarget();
-  const libDir = DEFAULT_PATH;
+  try {
+    const isWindows = process.platform === "win32";
+    const libraryName = isWindows ? "webgpu_wrapper" : "libwebgpu_wrapper";
+    const targetLibPath = require.resolve(
+      `bun-webgpu-${process.platform}-${process.arch}/${libraryName}.${suffix}`
+    );
+    if (existsSync(targetLibPath)) {
+      return targetLibPath;
+    }
+  } catch {}
 
-  // First try target-specific directory
-  const [arch, osName] = target.split('-');
-  const isWindows = osName === 'windows';
-  const libraryName = isWindows ? LIB_NAME : `lib${LIB_NAME}`;
-  const targetLibPath = join(libDir, target, `${libraryName}.${suffix}`);
-
-  if (existsSync(targetLibPath)) {
-    return targetLibPath;
-  }
-
-  throw new Error(`Could not find dawn library for platform: ${target} at ${targetLibPath}`);
+  throw new Error(`bun-webgpu is not supported on the current platform: ${process.platform}-${process.arch}`);
 }
 
 function _loadLibrary(libPath?: string) {
