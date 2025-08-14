@@ -3,7 +3,7 @@ import { fatalError } from "./utils/error";
 
 export const pointerSize = process.arch === 'x64' || process.arch === 'arm64' ? 8 : 4;
 
-type PrimitiveType = 
+export type PrimitiveType = 
   'u8' | 'u16' | 'u32' | 'u64' | 
   'f32' | 'f64' | 
   'pointer' | 
@@ -77,7 +77,7 @@ type Prettify<T> = {
   [K in keyof T]: T[K]
 } & {};
 
-type Simplify<T> = T extends (...args: any[]) => any
+export type Simplify<T> = T extends (...args: any[]) => any
   ? T
   : T extends object
   ? Prettify<T>
@@ -199,7 +199,7 @@ function alignOffset(offset: number, align: number): number {
   return (offset + (align - 1)) & ~(align - 1);
 }
 
-interface EnumDef<T extends Record<string, number>> {
+export interface EnumDef<T extends Record<string, number>> {
   __type: 'enum';
   type: Exclude<PrimitiveType, 'bool_u8' | 'bool_u32'>;
   to(value: keyof T): number;
@@ -254,7 +254,7 @@ type StructField =
   | readonly [string, ObjectPointerDef<any>, StructFieldOptions?]
   | readonly [string, readonly [EnumDef<any> | StructDef<any> | PrimitiveType | ObjectPointerDef<any>], StructFieldOptions?];
 
-interface StructFieldPackOptions {
+export interface StructFieldPackOptions {
   validationHints?: any;
 }
 
@@ -272,7 +272,7 @@ interface StructLayoutField {
   lengthOf?: string;
 }
 
-interface StructFieldDescription { 
+export interface StructFieldDescription { 
   name: string; 
   offset: number; 
   size: number; 
@@ -282,14 +282,14 @@ interface StructFieldDescription {
   lengthOf?: string 
 }
 
-interface ArrayFieldMetadata {
+export interface ArrayFieldMetadata {
   elementSize: number;
   arrayOffset: number;
   lengthOffset: number;
   lengthPack: (view: DataView, offset: number, value: number) => void;
 }
 
-interface StructDef<OutputType, InputType = OutputType> {
+export interface StructDef<OutputType, InputType = OutputType> {
   __type: 'struct';
   size: number;
   align: number;
@@ -372,7 +372,7 @@ function primitivePackers(type: PrimitiveType) {
   return { pack, unpack };
 }
 
-interface StructDefOptions {
+export interface StructDefOptions {
   default?: Record<string, any>; // Default values for the entire struct on unpack
   mapValue?: (value: any) => any; // Map input object before packing
   reduceValue?: (value: any) => any; // Transform unpacked object to different type
