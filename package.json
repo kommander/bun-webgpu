@@ -4,11 +4,11 @@
   "description": "Native WebGPU implementation for Bun runtime",
   "repository": {
     "type": "git",  
-    "url": "https://github.com/sst/bun-webgpu"
+    "url": "https://github.com/kommander/bun-webgpu"
   },
-  "homepage": "https://github.com/sst/bun-webgpu",
+  "homepage": "https://github.com/kommander/bun-webgpu",
   "bugs": {
-    "url": "https://github.com/sst/bun-webgpu/issues"
+    "url": "https://github.com/kommander/bun-webgpu/issues"
   },
   "module": "src/index.ts",
   "main": "src/index.ts",
