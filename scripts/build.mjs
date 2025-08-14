@@ -19,9 +19,10 @@ const variants = [
   { platform: "darwin", arch: "x64" },
   { platform: "darwin", arch: "arm64" },
   { platform: "linux", arch: "x64" },
-  { platform: "linux", arch: "arm64" },
   { platform: "win32", arch: "x64" },
-  { platform: "win32", arch: "arm64" },
+  // These could be added in the future:
+  // { platform: "linux", arch: "arm64" },
+  // { platform: "win32", arch: "arm64" },
 ]
 
 if (!buildLib && !buildNative) {
@@ -53,7 +54,7 @@ if (missingRequired.length > 0) {
 
 if (buildNative) {
   console.log(`Building native ${isDev ? "dev" : "prod"} binaries...`)
-
+  
   const zigBuild = spawnSync("zig", ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`], {
     cwd: join(rootDir, "src", "zig"),
     stdio: "inherit",
@@ -72,16 +73,25 @@ if (buildNative) {
   for (const { platform, arch } of variants) {
     const nativeName = `${packageJson.name}-${platform}-${arch}`
     const nativeDir = join(rootDir, "node_modules", nativeName)
-    const libDir = join(rootDir, "src", "zig", "lib", getZigTarget(platform, arch))
+    
+    const zigTarget = getZigTarget(platform, arch)
+    const libDir = join(rootDir, "src", "lib", zigTarget)
 
-    rmSync(nativeDir, { recursive: true, force: true })
-    mkdirSync(nativeDir, { recursive: true })
-
-    for (const name of ["libwebgpu_wrapper", "webgpu_wrapper"]) {
-      for (const ext of [".so", ".dll", ".dylib"]) {
-        const src = join(libDir, `${name}${ext}`)
-        if (existsSync(src)) copyFileSync(src, join(nativeDir, `${name}${ext}`))
-      }
+    const ext = platform === "win32" ? ".dll" : platform === "darwin" ? ".dylib" : ".so"
+    
+    const isWindows = platform === "win32"
+    const libraryName = isWindows ? "webgpu_wrapper" : "libwebgpu_wrapper"
+    const src = join(libDir, `${libraryName}${ext}`)
+    
+    if (existsSync(src)) {
+      rmSync(nativeDir, { recursive: true, force: true })
+      mkdirSync(nativeDir, { recursive: true })
+      
+      copyFileSync(src, join(nativeDir, `${libraryName}${ext}`))
+      console.log(`  Copied: ${libraryName}${ext} for ${platform}-${arch}`)
+    } else {
+      console.log(`  Skipping ${platform}-${arch}: library not built (${src} not found)`)
+      continue
     }
 
     writeFileSync(
