@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Download and setup Zig 0.14.0 for Linux x86_64
-ZIG_VERSION="0.14.0"
+# Download and setup Zig for Linux x86_64
+ZIG_VERSION="${ZIG_VERSION:-0.14.1}"
 ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
 ZIG_DIR="$(pwd)/zig-linux-x86_64-${ZIG_VERSION}"
 ZIG_ARCHIVE="zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
@@ -20,4 +20,4 @@ echo "${ZIG_DIR}" >> $GITHUB_PATH
 echo "Cleaning up..."
 rm "${ZIG_ARCHIVE}"
 
-echo "Zig setup completed successfully!"
+echo "Zig ${ZIG_VERSION} setup completed successfully!"
