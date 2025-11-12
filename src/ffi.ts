@@ -1,22 +1,19 @@
 import { dlopen, suffix, FFIType } from "bun:ffi";
 import { existsSync } from "fs";
-import { createRequire } from "module";
 
-const require = createRequire(import.meta.url);
+const module = await import(`bun-webgpu-${process.platform}-${process.arch}/index.ts`)
+let targetLibPath = module.default
+
+if (/\$bunfs/.test(targetLibPath)) {
+  targetLibPath = targetLibPath.replace("../", "")
+}
+
+if (!existsSync(targetLibPath)) {
+  throw new Error(`bun-webgpu is not supported on the current platform: ${process.platform}-${process.arch}`)
+}
 
 function findLibrary(): string {
-  try {
-    const isWindows = process.platform === "win32";
-    const libraryName = isWindows ? "webgpu_wrapper" : "libwebgpu_wrapper";
-    const targetLibPath = require.resolve(
-      `bun-webgpu-${process.platform}-${process.arch}/${libraryName}.${suffix}`
-    );
-    if (existsSync(targetLibPath)) {
-      return targetLibPath;
-    }
-  } catch {}
-
-  throw new Error(`bun-webgpu is not supported on the current platform: ${process.platform}-${process.arch}`);
+  return targetLibPath;
 }
 
 function _loadLibrary(libPath?: string) {

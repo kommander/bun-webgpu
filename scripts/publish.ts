@@ -1,14 +1,20 @@
-import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { spawnSync, type SpawnSyncReturns } from "node:child_process"
+import { existsSync, readFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import process from "node:process"
 import { fileURLToPath } from "node:url"
+
+interface PackageJson {
+  name: string
+  version: string
+  optionalDependencies?: Record<string, string>
+}
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const rootDir = resolve(__dirname, "..")
 
-const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8"))
+const packageJson: PackageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8"))
 
 const args = process.argv.slice(2)
 const dryRun = args.includes("--dry-run")
@@ -79,12 +85,14 @@ if (!existsSync(libDir)) {
   process.exit(1)
 }
 
-const mismatches = []
-const packageJsons = {
+const mismatches: Array<{ name: string; dir: string; expected: string; actual: string }> = []
+const packageJsons: Record<string, PackageJson> = {
   [libDir]: JSON.parse(readFileSync(join(libDir, "package.json"), "utf8")),
 }
 
-for (const pkgName of Object.keys(packageJsons[libDir].optionalDependencies).filter((x) =>
+// Load all native package.json files
+const libPackageJson = packageJsons[libDir]!
+for (const pkgName of Object.keys(libPackageJson.optionalDependencies || {}).filter((x) =>
   x.startsWith(packageJson.name),
 )) {
   const nativeDir = join(rootDir, "node_modules", pkgName)
@@ -118,6 +126,7 @@ if (isCI && !process.env.NPM_AUTH_TOKEN && !process.env.NPM_CONFIG_TOKEN) {
   process.exit(1)
 }
 
+// Publish all packages (main + native packages)
 Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
   try {
     const versions = JSON.parse(
@@ -149,13 +158,17 @@ Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
     return
   }
 
-  const publishCmd = existsSync(join(dir, "package.json")) ? "bun" : "npm"
-  const publishArgs = publishCmd === "bun" 
-    ? ["publish", "--access", "public"]
-    : ["publish", "--access=public"]
-  
-  console.log(`Publishing ${name}@${version} from ${dir}...`)
-  const publish = spawnSync(publishCmd, publishArgs, {
+  console.log(`\nPublishing ${name}@${version}...`)
+
+  const isSnapshot = version.includes("-snapshot") || /^0\.0\.0-\d{8}-[a-f0-9]{8}$/.test(version)
+  const publishArgs = ["publish", "--access=public"]
+
+  if (isSnapshot) {
+    publishArgs.push("--tag", "snapshot")
+    console.log(`  Publishing as snapshot (--tag snapshot)`)
+  }
+
+  const publish: SpawnSyncReturns<Buffer> = spawnSync("npm", publishArgs, {
     cwd: dir,
     stdio: "inherit",
     env: {
@@ -164,25 +177,21 @@ Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
       ...(process.env.NPM_CONFIG_TOKEN ? { NPM_CONFIG_TOKEN: process.env.NPM_CONFIG_TOKEN } : {}),
     }
   })
-  
+
   if (publish.status !== 0) {
-    console.error(`Error: Failed to publish '${name}@${version}'.`)
+    console.error(`Failed to publish '${name}@${version}'.`)
     process.exit(1)
   }
 
-  console.log(`✅ Package '${name}@${version}' published.`)
+  console.log(`Successfully published '${name}@${version}'`)
 })
 
 if (dryRun) {
   console.log("\n📦 DRY RUN COMPLETE - No packages were actually published")
   console.log(`Would have published ${Object.keys(packageJsons).length} packages:`)
-  Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
+  Object.entries(packageJsons).forEach(([_, { name, version }]) => {
     console.log(`  - ${name}@${version}`)
   })
 } else {
-  console.log("\n🎉 All packages published successfully!")
-  console.log(`Published ${Object.keys(packageJsons).length} packages:`)
-  Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
-    console.log(`  - ${name}@${version}`)
-  })
+  console.log(`\nAll ${packageJson.name} packages published successfully!`)
 }

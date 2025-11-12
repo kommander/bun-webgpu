@@ -1,14 +1,39 @@
-import { spawnSync } from "node:child_process"
+import { spawnSync, type SpawnSyncReturns } from "node:child_process"
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs"
 import { dirname, join, resolve } from "path"
 import { fileURLToPath } from "url"
 import process from "process"
 
+interface Variant {
+  platform: string
+  arch: string
+}
+
+interface PackageJson {
+  name: string
+  version: string
+  license?: string
+  repository?: any
+  description?: string
+  homepage?: string
+  author?: string
+  bugs?: any
+  keywords?: string[]
+  module?: string
+  main?: string
+  types?: string
+  type?: string
+  dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
+  optionalDependencies?: Record<string, string>
+  peerDependencies?: Record<string, string>
+}
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const rootDir = resolve(__dirname, "..")
 const licensePath = join(rootDir, "LICENSE")
-const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8"))
+const packageJson: PackageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8"))
 
 // Parse command line arguments
 // Usage examples:
@@ -23,7 +48,7 @@ const buildNative = args.includes("--native")
 const skipBuild = args.includes("--skip-build")
 const isDev = args.includes("--dev")
 
-const variants = [
+const variants: Variant[] = [
   { platform: "darwin", arch: "x64" },
   { platform: "darwin", arch: "arm64" },
   { platform: "linux", arch: "x64" },
@@ -41,23 +66,23 @@ if (!buildLib && !buildNative) {
   process.exit(1)
 }
 
-const getZigTarget = (platform, arch) => {
-  const platformMap = { darwin: "macos", win32: "windows", linux: "linux" }
-  const archMap = { x64: "x86_64", arm64: "aarch64" }
+const getZigTarget = (platform: string, arch: string): string => {
+  const platformMap: Record<string, string> = { darwin: "macos", win32: "windows", linux: "linux" }
+  const archMap: Record<string, string> = { x64: "x86_64", arm64: "aarch64" }
   return `${archMap[arch] ?? arch}-${platformMap[platform] ?? platform}`
 }
 
-const replaceLinks = (text) => {
+const replaceLinks = (text: string): string => {
   return packageJson.homepage
     ? text.replace(
         /(\[.*?\]\()(\.\/.*?\))/g,
-        (_, p1, p2) => `${p1}${packageJson.homepage}/blob/HEAD/${p2.replace("./", "")}`,
+        (_, p1: string, p2: string) => `${p1}${packageJson.homepage}/blob/HEAD/${p2.replace("./", "")}`,
       )
     : text
 }
 
-const requiredFields = ["name", "version", "license", "repository", "description"]
-const missingRequired = requiredFields.filter(field => !packageJson[field])
+const requiredFields: (keyof PackageJson)[] = ["name", "version", "license", "repository", "description"]
+const missingRequired = requiredFields.filter((field) => !packageJson[field])
 if (missingRequired.length > 0) {
   console.error(`Error: Missing required fields in package.json: ${missingRequired.join(", ")}`)
   process.exit(1)
@@ -67,7 +92,7 @@ if (buildNative) {
   if (!skipBuild) {
     console.log(`Building native ${isDev ? "dev" : "prod"} binaries...`)
     
-    const zigBuild = spawnSync("zig", ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`], {
+    const zigBuild: SpawnSyncReturns<Buffer> = spawnSync("zig", ["build", `-Doptimize=${isDev ? "Debug" : "ReleaseFast"}`], {
       cwd: join(rootDir, "src", "zig"),
       stdio: "inherit",
     })
@@ -92,22 +117,35 @@ if (buildNative) {
     const zigTarget = getZigTarget(platform, arch)
     const libDir = join(rootDir, "src", "lib", zigTarget)
 
-    const ext = platform === "win32" ? ".dll" : platform === "darwin" ? ".dylib" : ".so"
-    
-    const isWindows = platform === "win32"
-    const libraryName = isWindows ? "webgpu_wrapper" : "libwebgpu_wrapper"
-    const src = join(libDir, `${libraryName}${ext}`)
-    
-    if (existsSync(src)) {
-      rmSync(nativeDir, { recursive: true, force: true })
-      mkdirSync(nativeDir, { recursive: true })
-      
-      copyFileSync(src, join(nativeDir, `${libraryName}${ext}`))
-      console.log(`  Copied: ${libraryName}${ext} for ${platform}-${arch}`)
-    } else {
-      console.log(`  Skipping ${platform}-${arch}: library not built (${src} not found)`)
+    rmSync(nativeDir, { recursive: true, force: true })
+    mkdirSync(nativeDir, { recursive: true })
+
+    let copiedFiles = 0
+    let libraryFileName: string | null = null
+    for (const name of ["libwebgpu_wrapper", "webgpu_wrapper"]) {
+      for (const ext of [".so", ".dll", ".dylib"]) {
+        const src = join(libDir, `${name}${ext}`)
+        if (existsSync(src)) {
+          const fileName = `${name}${ext}`
+          copyFileSync(src, join(nativeDir, fileName))
+          copiedFiles++
+          if (!libraryFileName) {
+            libraryFileName = fileName
+          }
+        }
+      }
+    }
+
+    if (copiedFiles === 0) {
+      console.log(`  Skipping ${platform}-${arch}: library not built (${libDir} not found)`)
       continue
     }
+
+    const indexTsContent = `const module = await import("./${libraryFileName}", { with: { type: "file" } })
+const path = module.default
+export default path;
+`
+    writeFileSync(join(nativeDir, "index.ts"), indexTsContent)
 
     writeFileSync(
       join(nativeDir, "package.json"),
@@ -116,6 +154,8 @@ if (buildNative) {
           name: nativeName,
           version: packageJson.version,
           description: `Prebuilt ${platform}-${arch} binaries for ${packageJson.name}`,
+          main: "index.ts",
+          types: "index.ts",
           license: packageJson.license,
           author: packageJson.author,
           homepage: packageJson.homepage,
@@ -147,12 +187,17 @@ if (buildLib) {
   rmSync(distDir, { recursive: true, force: true })
   mkdirSync(distDir, { recursive: true })
 
-  const externalDeps = [
+  const externalDeps: string[] = [
     ...Object.keys(packageJson.optionalDependencies || {}),
     ...Object.keys(packageJson.peerDependencies || {}),
   ]
 
   // Build main entry point
+  if (!packageJson.module) {
+    console.error("Error: 'module' field not found in package.json")
+    process.exit(1)
+  }
+
   spawnSync(
     "bun",
     [
@@ -188,7 +233,7 @@ if (buildLib) {
   
   writeFileSync(tsconfigBuildPath, JSON.stringify(tsconfigBuild, null, 2))
   
-  const tscResult = spawnSync("npx", ["tsc", "-p", tsconfigBuildPath], {
+  const tscResult: SpawnSyncReturns<Buffer> = spawnSync("npx", ["tsc", "-p", tsconfigBuildPath], {
     cwd: rootDir,
     stdio: "inherit",
   })
@@ -224,7 +269,7 @@ if (buildLib) {
     }
   }
 
-  const optionalDeps = Object.fromEntries(
+  const optionalDeps: Record<string, string> = Object.fromEntries(
     variants.map(({ platform, arch }) => [`${packageJson.name}-${platform}-${arch}`, `^${packageJson.version}`]),
   )
 
@@ -248,7 +293,7 @@ if (buildLib) {
         exports,
         dependencies: {
           ...packageJson.dependencies,
-          "@webgpu/types": packageJson.devDependencies["@webgpu/types"] || "^0.1.60",
+          "@webgpu/types": packageJson.devDependencies?.["@webgpu/types"] || "^0.1.60",
         },
         optionalDependencies: {
           ...packageJson.optionalDependencies,

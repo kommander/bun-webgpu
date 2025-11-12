@@ -63,7 +63,7 @@ jobs:
       - name: Build and package all npm modules
         run: |
           # Build the library and create platform packages from existing binaries
-          bun run scripts/build.mjs --native --skip-build --lib
+          bun scripts/build.ts --native --skip-build --lib
           
           # Verify packages were created
           echo "Created packages:"
@@ -72,7 +72,7 @@ jobs:
 
       - name: Publish all packages
         run: |
-          node scripts/publish.mjs
+          bun scripts/publish.ts
         env:
           CI: true
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
