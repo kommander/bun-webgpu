@@ -5,3 +5,5 @@ tools
 zig-out
 cts
 artifacts
+build-linux.sh
+build-windows.ps1
