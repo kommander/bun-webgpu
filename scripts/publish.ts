@@ -67,9 +67,7 @@ Continue? (y/n)
 
 try {
   const versions = JSON.parse(
-    spawnSync("npm", ["view", packageJson.name, "versions", "--json"], {})
-      .stdout.toString()
-      .trim(),
+    spawnSync("npm", ["view", packageJson.name, "versions", "--json"], {}).stdout.toString().trim(),
   )
 
   if (versions.includes(packageJson.version)) {
@@ -126,6 +124,21 @@ if (isCI && !process.env.NPM_AUTH_TOKEN && !process.env.NPM_CONFIG_TOKEN) {
   process.exit(1)
 }
 
+// Configure npm authentication in CI
+if (isCI && process.env.NPM_CONFIG_TOKEN) {
+  const npmConfig = spawnSync(
+    "npm",
+    ["config", "set", `//registry.npmjs.org/:_authToken=${process.env.NPM_CONFIG_TOKEN}`],
+    {
+      stdio: "inherit",
+    },
+  )
+  if (npmConfig.status !== 0) {
+    console.error("Error: Failed to configure npm authentication")
+    process.exit(1)
+  }
+}
+
 // Publish all packages (main + native packages)
 Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
   try {
@@ -171,11 +184,6 @@ Object.entries(packageJsons).forEach(([dir, { name, version }]) => {
   const publish: SpawnSyncReturns<Buffer> = spawnSync("npm", publishArgs, {
     cwd: dir,
     stdio: "inherit",
-    env: {
-      ...process.env,
-      ...(process.env.NPM_AUTH_TOKEN ? { NPM_AUTH_TOKEN: process.env.NPM_AUTH_TOKEN } : {}),
-      ...(process.env.NPM_CONFIG_TOKEN ? { NPM_CONFIG_TOKEN: process.env.NPM_CONFIG_TOKEN } : {}),
-    }
   })
 
   if (publish.status !== 0) {
