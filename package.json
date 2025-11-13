@@ -1,48 +1,53 @@
 {
-    "name": "bun-webgpu",
-    "version": "0.1.4",
-    "description": "Native WebGPU implementation for Bun runtime",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/kommander/bun-webgpu"
-    },
-    "homepage": "https://github.com/kommander/bun-webgpu",
-    "bugs": {
-        "url": "https://github.com/kommander/bun-webgpu/issues"
-    },
-    "module": "src/index.ts",
-    "main": "src/index.ts",
-    "type": "module",
-    "license": "Apache-2.0",
-    "author": "SST",
-    "keywords": [
-        "webgpu",
-        "bun",
-        "gpu",
-        "graphics",
-        "compute",
-        "dawn"
-    ],
-    "scripts": {
-        "test": "bun test",
-        "build:dev": "cd src/zig && zig build -Doptimize=Debug",
-        "build:prod": "cd src/zig && zig build -Doptimize=ReleaseFast",
-        "build": "bun run build:native && bun run build:lib",
-        "build:lib": "bun scripts/build.ts --lib",
-        "build:native": "bun scripts/build.ts --native",
-        "build:native:dev": "bun scripts/build.ts --native --dev",
-        "publish": "bun scripts/publish.ts",
-        "publish:dry-run": "bun scripts/publish.ts --dry-run",
-        "build:linux": "./build-linux.sh",
-        "build:windows": "pwsh build-windows.ps1"
-    },
-    "devDependencies": {
-        "@types/bun": "latest",
-        "@webgpu/types": "^0.1.60",
-        "commander": "^14.0.0",
-        "sharp": "^0.34.0"
-    },
-    "peerDependencies": {
-        "typescript": "^5"
-    }
+  "name": "bun-webgpu",
+  "version": "0.1.4",
+  "description": "Native WebGPU implementation for Bun runtime",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kommander/bun-webgpu"
+  },
+  "homepage": "https://github.com/kommander/bun-webgpu",
+  "bugs": {
+    "url": "https://github.com/kommander/bun-webgpu/issues"
+  },
+  "module": "src/index.ts",
+  "main": "src/index.ts",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "SST",
+  "keywords": [
+    "webgpu",
+    "bun",
+    "gpu",
+    "graphics",
+    "compute",
+    "dawn"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "build:dev": "cd src/zig && zig build -Doptimize=Debug",
+    "build:prod": "cd src/zig && zig build -Doptimize=ReleaseFast",
+    "build": "bun run build:native && bun run build:lib",
+    "build:lib": "bun scripts/build.ts --lib",
+    "build:native": "bun scripts/build.ts --native",
+    "build:native:dev": "bun scripts/build.ts --native --dev",
+    "publish": "bun scripts/publish.ts",
+    "publish:dry-run": "bun scripts/publish.ts --dry-run",
+    "build:linux": "./build-linux.sh",
+    "build:windows": "pwsh build-windows.ps1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@webgpu/types": "^0.1.60",
+    "commander": "^14.0.0",
+    "sharp": "^0.34.0",
+    "prettier": "3.6.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  }
 }
