@@ -849,7 +849,7 @@ export function loadLibrary(libPath?: string) {
     {} as NormalizedSymbolsType, // Crucially, type the initial accumulator
   )
   const FFI_SYMBOLS =
-    process.env.DEBUG === "true" || process.env.TRACE_WEBGPU === "true"
+    process.env.WGPU_DEBUG_FFI === "true" || process.env.TRACE_WEBGPU === "true"
       ? convertToDebugSymbols(normalizedSymbols)
       : normalizedSymbols
   return FFI_SYMBOLS
@@ -857,16 +857,30 @@ export function loadLibrary(libPath?: string) {
 
 export type FFISymbols = ReturnType<typeof loadLibrary>
 
+let ffiLogWriter: ReturnType<ReturnType<typeof Bun.file>["writer"]> | null = null
+
 function convertToDebugSymbols<T extends Record<string, any>>(symbols: T): T {
   const debugSymbols: Record<string, any> = {}
 
-  if (process.env.DEBUG === "true") {
+  if (process.env.WGPU_DEBUG_FFI === "true") {
+    const now = new Date()
+    const timestamp = now.toISOString().replace(/[:.]/g, "-").replace(/T/, "_").split("Z")[0]
+    const logFilePath = `ffi_wgpu_debug_${timestamp}.log`
+    ffiLogWriter = Bun.file(logFilePath).writer()
+
+    const writer = ffiLogWriter
+    const writeSync = (msg: string) => {
+      const buffer = new TextEncoder().encode(msg + "\n")
+      writer.write(buffer)
+      writer.flush()
+    }
+
     Object.entries(symbols).forEach(([key, value]) => {
       if (typeof value === "function") {
         debugSymbols[key] = (...args: any[]) => {
-          console.log(`${key}(${args.map((arg) => String(arg)).join(", ")})`)
+          writeSync(`${key}(${args.map((arg) => String(arg)).join(", ")})`)
           const result = value(...args)
-          console.log(`${key} returned:`, String(result))
+          writeSync(`${key} returned: ${String(result)}`)
           return result
         }
       } else {
