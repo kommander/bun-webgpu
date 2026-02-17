@@ -302,15 +302,20 @@ async function main(args: Args) {
         }
 
         console.log(`Unpacking ${downloadedArchivePath} to ${artifactDir} using tar...`)
-        const tarArgs = ["-xf", downloadedArchivePath, "-C", artifactDir, "--strip-components=1"]
-        if (process.platform === "win32") {
-          tarArgs.unshift("--force-local")
-        }
-
-        const tarProc = Bun.spawnSync(["tar", ...tarArgs], {
-          stdout: "pipe",
-          stderr: "pipe",
-        })
+        const tarProc =
+          process.platform === "win32"
+            ? Bun.spawnSync(
+                ["tar", "--force-local", "-xf", downloadedArchivePath.replace(/\\/g, "/"), "--strip-components=1"],
+                {
+                  cwd: artifactDir,
+                  stdout: "pipe",
+                  stderr: "pipe",
+                },
+              )
+            : Bun.spawnSync(["tar", "-xf", downloadedArchivePath, "-C", artifactDir, "--strip-components=1"], {
+                stdout: "pipe",
+                stderr: "pipe",
+              })
 
         const stdoutContent = tarProc.stdout.toString("utf-8")
         const stderrContent = tarProc.stderr.toString("utf-8")
