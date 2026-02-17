@@ -95,6 +95,7 @@ jobs:
           bun install
 
       - name: Download artifacts
+        shell: bash
         run: |
           PLATFORM="${{ matrix.os }}"
           if [ "${{ matrix.package_name }}" = "many-linux-x86_64" ]; then PLATFORM="many-linux"; fi
