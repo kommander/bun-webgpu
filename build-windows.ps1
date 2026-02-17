@@ -8,6 +8,52 @@ param(
 
 Write-Host "Building WebGPU wrapper manually for Windows ($BuildType build)..."
 
+$RepoRoot = $PSScriptRoot
+$WindowsLibRoot = Join-Path $RepoRoot "dawn\libs\x86_64-windows"
+$DawnStaticLib = Join-Path $WindowsLibRoot "webgpu_dawn.lib"
+$OutputDir = Join-Path $RepoRoot "src\lib\x86_64-windows"
+
+function Resolve-DawnIncludeRoot {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$LibRoot,
+        [Parameter(Mandatory=$true)]
+        [string]$ProjectRoot
+    )
+
+    $headerCandidates = @(
+        (Join-Path $LibRoot "include\dawn\webgpu.h"),
+        (Join-Path $LibRoot "dawn\webgpu.h"),
+        (Join-Path $ProjectRoot "dawn\include\dawn\webgpu.h")
+    )
+
+    foreach ($candidate in $headerCandidates) {
+        if (Test-Path $candidate) {
+            $dawnDir = Split-Path $candidate -Parent
+            return Split-Path $dawnDir -Parent
+        }
+    }
+
+    $discoveredHeader = Get-ChildItem -Path (Join-Path $ProjectRoot "dawn") -Filter "webgpu.h" -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.DirectoryName -match "[\\/]dawn$" } |
+        Select-Object -First 1
+
+    if ($discoveredHeader) {
+        $dawnDir = $discoveredHeader.DirectoryName
+        return Split-Path $dawnDir -Parent
+    }
+
+    $checked = $headerCandidates -join "`n - "
+    throw "Could not locate dawn/webgpu.h. Checked:`n - $checked"
+}
+
+$DawnIncludeRoot = Resolve-DawnIncludeRoot -LibRoot $WindowsLibRoot -ProjectRoot $RepoRoot
+Write-Host "Using Dawn include root: $DawnIncludeRoot"
+
+if (-not (Test-Path $DawnStaticLib)) {
+    throw "Missing Dawn static library at: $DawnStaticLib"
+}
+
 # Find Visual Studio installation and MSVC tools
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (Test-Path $vswhere) {
@@ -40,22 +86,34 @@ try {
     Write-Host "Using optimization: $zigOptFlag"
     
     # Compile the Zig code to object file in temp directory
-    & zig build-obj src/zig/lib.zig `
-        -target x86_64-windows-msvc `
-        $zigOptFlag `
-        -I dawn/libs/x86_64-windows/include `
-        -I dawn/include `
-        -lc `
-        --name webgpu_wrapper `
-        --cache-dir "$TempDir" `
-        --global-cache-dir "$TempDir"
+    $zigArgs = @(
+        "build-obj",
+        (Join-Path $RepoRoot "src/zig/lib.zig"),
+        "-target", "x86_64-windows-msvc",
+        $zigOptFlag,
+        "-I", $DawnIncludeRoot,
+        "-lc",
+        "--name", "webgpu_wrapper",
+        "--cache-dir", "$TempDir",
+        "--global-cache-dir", "$TempDir"
+    )
+
+    & zig @zigArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to compile Zig object file"
     }
 
     # Move the object file to temp directory for linking
-    Move-Item webgpu_wrapper.obj "$TempDir\"
+    $objCandidates = @(
+        (Join-Path (Get-Location) "webgpu_wrapper.obj"),
+        (Join-Path $RepoRoot "webgpu_wrapper.obj")
+    )
+    $builtObj = $objCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $builtObj) {
+        throw "Could not locate generated object file webgpu_wrapper.obj"
+    }
+    Move-Item $builtObj "$TempDir\"
 
     # Generate .def file from object file symbols
     Write-Host "Generating module definition file from object symbols..."
@@ -93,7 +151,7 @@ try {
     Write-Host "Generated .def file with $($symbols.Count) symbols"
 
     # Ensure the output directory exists
-    New-Item -ItemType Directory -Path "src\lib\x86_64-windows" -Force | Out-Null
+    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 
     # Select appropriate runtime libraries and flags based on build type
     if ($BuildType -eq "Debug") {
@@ -110,11 +168,11 @@ try {
     Write-Host "Linking with: $linkExe"
     $linkArgs = @(
         "/DLL"
-        "/OUT:src\lib\x86_64-windows\webgpu_wrapper.dll"
-        "/IMPLIB:src\lib\x86_64-windows\webgpu_wrapper.lib"
+        "/OUT:$OutputDir\webgpu_wrapper.dll"
+        "/IMPLIB:$OutputDir\webgpu_wrapper.lib"
         "/DEF:$defFile"
         "$TempDir\webgpu_wrapper.obj"
-        "dawn\libs\x86_64-windows\webgpu_dawn.lib"
+        $DawnStaticLib
         "user32.lib", "kernel32.lib", "gdi32.lib", "ole32.lib", "uuid.lib"
         "d3d11.lib", "d3d12.lib", "dxgi.lib", "dxguid.lib"
         $runtimeLibs.Split(' ')
@@ -136,7 +194,7 @@ try {
     }
 
     Write-Host "Build completed successfully!" -ForegroundColor Green
-    Write-Host "Output: src\lib\x86_64-windows\webgpu_wrapper.dll"
+    Write-Host "Output: $OutputDir\webgpu_wrapper.dll"
 
 } finally {
     # Cleanup
