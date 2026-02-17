@@ -1,19 +1,91 @@
 import { dlopen, suffix, FFIType } from "bun:ffi"
 import { existsSync } from "fs"
+import { createRequire } from "module"
+import path from "path"
+import { fileURLToPath } from "url"
 
-const module = await import(`bun-webgpu-${process.platform}-${process.arch}/index.ts`)
-let targetLibPath = module.default
+const require = createRequire(import.meta.url)
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-if (/\$bunfs/.test(targetLibPath)) {
-  targetLibPath = targetLibPath.replace("../", "")
+function debugLoader(message: string): void {
+  if (process.env.WGPU_DEBUG_LOADER === "true") {
+    console.error(`[ffi-loader] ${message}`)
+  }
 }
 
-if (!existsSync(targetLibPath)) {
-  throw new Error(`bun-webgpu is not supported on the current platform: ${process.platform}-${process.arch}`)
+function getArchCandidates(): string[] {
+  if (process.arch === "arm64") {
+    return ["arm64", "aarch64"]
+  }
+  return [process.arch]
+}
+
+function resolveFromInstalledPackage(): string | null {
+  const extensions = [suffix, "dylib", "so", "dll"]
+  for (const arch of getArchCandidates()) {
+    const packageName = `bun-webgpu-${process.platform}-${arch}`
+    for (const libName of ["libwebgpu_wrapper", "webgpu_wrapper"]) {
+      for (const extension of extensions) {
+        const spec = `${packageName}/${libName}.${extension}`
+        try {
+          const resolved = require.resolve(spec)
+          debugLoader(`resolved installed library '${spec}' -> ${resolved}`)
+          return resolved
+        } catch {
+          debugLoader(`failed installed library candidate '${spec}'`)
+        }
+      }
+    }
+  }
+  return null
+}
+
+function resolveFromLocalBuild(): string | null {
+  const platformMap: Record<string, string> = {
+    darwin: "macos",
+    linux: "linux",
+    win32: "windows",
+  }
+  const archMap: Record<string, string> = {
+    x64: "x86_64",
+    arm64: "aarch64",
+    aarch64: "aarch64",
+  }
+
+  const targetDir = `${archMap[process.arch] ?? process.arch}-${platformMap[process.platform] ?? process.platform}`
+  const localBaseDir = path.resolve(__dirname, "lib", targetDir)
+
+  const candidates = [
+    path.join(localBaseDir, `libwebgpu_wrapper.${suffix}`),
+    path.join(localBaseDir, `webgpu_wrapper.${suffix}`),
+  ]
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      debugLoader(`resolved local library -> ${candidate}`)
+      return candidate
+    }
+    debugLoader(`failed local library candidate '${candidate}'`)
+  }
+
+  return null
 }
 
 function findLibrary(): string {
-  return targetLibPath
+  const fromPackage = resolveFromInstalledPackage()
+  if (fromPackage) {
+    return fromPackage
+  }
+
+  const fromLocal = resolveFromLocalBuild()
+  if (fromLocal) {
+    return fromLocal
+  }
+
+  throw new Error(
+    `bun-webgpu is not supported on the current platform: ${process.platform}-${process.arch} (no installed package or local src/lib build found)`,
+  )
 }
 
 function _loadLibrary(libPath?: string) {
