@@ -345,7 +345,11 @@ export class GPUAdapterImpl implements GPUAdapter {
           }
 
           if (jsCallback) {
-            jsCallback.close()
+            const callbackToClose = jsCallback
+            jsCallback = null
+            queueMicrotask(() => {
+              callbackToClose.close()
+            })
           }
         }
 

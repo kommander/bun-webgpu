@@ -14,6 +14,7 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
     private _mapState: GPUBufferMapState = 'unmapped';
     private _pendingMap: Promise<undefined> | null = null;
     private _mapCallback: JSCallback;
+    private _mapCallbackCloseScheduled = false;
     private _mapCallbackPromiseData: {
       resolve: (value: undefined) => void;
       reject: (reason?: any) => void;
@@ -94,7 +95,7 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
           this._mapCallbackPromiseData = null;
 
           if (this._destroyed) {
-            this._mapCallback.close();
+            this._scheduleMapCallbackClose();
           }
         },
         {
@@ -102,6 +103,18 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
             returns: FFIType.void,
         }
       );
+    }
+
+    private _scheduleMapCallbackClose(): void {
+      if (this._mapCallbackCloseScheduled) {
+        return;
+      }
+
+      this._mapCallbackCloseScheduled = true;
+      const callbackToClose = this._mapCallback;
+      queueMicrotask(() => {
+        callbackToClose.close();
+      });
     }
 
     private _checkRangeOverlap(newOffset: number, newSize: number): boolean {
@@ -367,6 +380,9 @@ export class GPUBufferImpl extends EventEmitter implements GPUBuffer {
         this._destroyed = true;
         this.emit('destroyed');
         this._mapState = 'unmapped';
+        if (!this._pendingMap) {
+          this._scheduleMapCallbackClose();
+        }
       } catch (e) {
          console.error("Error calling bufferDestroy FFI function:", e);
       }

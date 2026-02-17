@@ -1,5 +1,5 @@
 /// <reference types="@webgpu/types" />
-import { JSCallback, toArrayBuffer, type Pointer, ptr, FFIType } from "bun:ffi";
+import { JSCallback, type Pointer, ptr, FFIType } from "bun:ffi";
 import { type FFISymbols } from "./ffi";
 import { GPUAdapterImpl } from "./GPUAdapter";
 import { 
@@ -7,6 +7,7 @@ import {
   WGPURequestAdapterOptionsStruct,
   WGPUSupportedWGSLLanguageFeaturesStruct,
 } from "./structs_def";
+import { decodeCallbackMessage } from "./shared";
 import { fatalError } from "./utils/error";
 import { allocStruct } from "./structs_ffi";
 
@@ -139,7 +140,7 @@ export class GPUImpl implements GPU {
 
             const callbackFn = (status: number, adapterPtr: Pointer | null, messagePtr: Pointer | null, messageSize: number, userdata1: Pointer | null, userdata2: Pointer | null) => {
                 this._ticker.unregister();
-                const message = messagePtr ? Buffer.from(toArrayBuffer(messagePtr)).toString() : null;
+                const message = decodeCallbackMessage(messagePtr, messageSize);
 
                 if (status === RequestAdapterStatus.Success) {
                     if (adapterPtr) {
@@ -155,7 +156,11 @@ export class GPUImpl implements GPU {
                 }
 
                 if (jsCallback) {
-                    jsCallback.close();
+                    const callbackToClose = jsCallback;
+                    jsCallback = null;
+                    queueMicrotask(() => {
+                        callbackToClose.close();
+                    });
                 }
             };
 
