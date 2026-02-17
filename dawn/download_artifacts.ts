@@ -302,7 +302,7 @@ async function main(args: Args) {
         }
 
         console.log(`Unpacking ${downloadedArchivePath} to ${artifactDir} using tar...`)
-        const tarArgs = ["xf", downloadedArchivePath, "-C", artifactDir, "--strip-components=1"]
+        const tarArgs = ["-xf", downloadedArchivePath, "-C", artifactDir, "--strip-components=1"]
         if (process.platform === "win32") {
           tarArgs.unshift("--force-local")
         }
