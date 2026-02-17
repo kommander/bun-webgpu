@@ -315,7 +315,7 @@ async function main(args: Args) {
 }
 
 if (import.meta.main) {
-  const defaultRunPath = "kommander/dawn/actions/runs/19315248188"
+  const defaultRunPath = "kommander/dawn/actions/runs/22080543611"
   const defaultBuildType = "release"
 
   program
