@@ -19,6 +19,8 @@ interface ProcessableArtifact {
 const platformDirNameMap: Record<string, string> = {
   "macos-latest": "aarch64-macos",
   "macos-13": "x86_64-macos",
+  "macos-15-intel": "x86_64-macos",
+  "many-linux": "x86_64-linux",
   "ubuntu-latest": "x86_64-linux",
   "windows-latest": "x86_64-windows",
 }
@@ -115,16 +117,25 @@ async function main(args: Args) {
         test: (name: string) => name.includes("-windows"),
       },
       {
+        id: "many-linux",
+        test: (name: string) => name.includes("-many-linux"),
+      },
+      {
         id: "ubuntu-latest",
-        test: (name: string) => name.includes("-ubuntu") || name.includes("-linux"),
+        test: (name: string) => name.includes("-ubuntu"),
       },
       {
         id: "macos-13",
         test: (name: string) => name.includes("-macos-13"),
       },
       {
+        id: "macos-15-intel",
+        test: (name: string) => name.includes("-macos-15-intel"),
+      },
+      {
         id: "macos-latest",
-        test: (name: string) => name.includes("-macos-") && !name.includes("-macos-13"),
+        test: (name: string) =>
+          name.includes("-macos-") && !name.includes("-macos-13") && !name.includes("-macos-15-intel"),
       },
     ]
 
