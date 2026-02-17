@@ -9,6 +9,7 @@ interface Args {
   runPath: string
   buildType: "debug" | "release"
   platform?: string
+  requireMatch?: boolean
 }
 
 interface ProcessableArtifact {
@@ -107,6 +108,10 @@ async function main(args: Args) {
 
     if (!data.artifacts || data.artifacts.length === 0) {
       console.log("No artifacts found for this run.")
+      if (args.requireMatch) {
+        console.error("--require-match is set and no artifacts were found for the run.")
+        process.exit(1)
+      }
       return
     }
 
@@ -194,8 +199,14 @@ async function main(args: Args) {
       } else {
         console.log(`No artifacts found matching the specified platforms and build type '${args.buildType}'.`)
       }
+      if (args.requireMatch) {
+        console.error("--require-match is set and no matching artifacts were found.")
+        process.exit(1)
+      }
       return
     }
+
+    let unpackedCount = 0
 
     for (const item of artifactsToProcess) {
       const { artifactData, platformId } = item
@@ -307,10 +318,16 @@ async function main(args: Args) {
           console.log(`Unpacked "${artifactName}" to ${artifactDir} successfully.`)
           if (stdoutContent.length > 0) console.log(`tar stdout: ${stdoutContent}`)
           if (stderrContent.length > 0) console.warn(`tar stderr (on success): ${stderrContent}`)
+          unpackedCount++
         }
       } catch (error) {
         console.error(`Error processing artifact ${artifactName}:`, error)
       }
+    }
+
+    if (args.requireMatch && unpackedCount === 0) {
+      console.error("--require-match is set and no artifacts were successfully unpacked.")
+      process.exit(1)
     }
 
     console.log(`\nArtifacts cached in: ${getCacheDir(args.runPath)}`)
@@ -338,16 +355,19 @@ if (import.meta.main) {
       "-p, --platform <name>",
       "Optional: Specific platform to download (e.g., macos-latest, windows-latest, linux, macos)",
     )
+    .option("--require-match", "Fail if no matching artifacts are found or unpacked", false)
     .action((options) => {
       const runPath = options.runPath
       const buildType = options.buildType.toLowerCase()
       const platform = options.platform
+      const requireMatch = Boolean(options.requireMatch)
 
       console.log(`Using runPath: ${runPath}`)
       console.log(`Using buildType: ${buildType}`)
       if (platform) {
         console.log(`Using platform: ${platform}`)
       }
+      console.log(`Require match: ${requireMatch}`)
 
       if (buildType !== "debug" && buildType !== "release") {
         console.error(`Invalid build type "${buildType}". Must be "debug" or "release".`)
@@ -358,6 +378,7 @@ if (import.meta.main) {
         runPath,
         buildType: buildType as "debug" | "release",
         platform,
+        requireMatch,
       })
     })
 

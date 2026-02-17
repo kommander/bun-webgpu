@@ -100,7 +100,7 @@ jobs:
           PLATFORM="${{ matrix.os }}"
           if [ "${{ matrix.package_name }}" = "many-linux-x86_64" ]; then PLATFORM="many-linux"; fi
           if [ "${{ matrix.package_name }}" = "macos-x86_64" ]; then PLATFORM="macos-15-intel"; fi
-          bun run dawn/download_artifacts.ts -p "$PLATFORM" -b ${{ matrix.build_type }}
+          bun run dawn/download_artifacts.ts -p "$PLATFORM" -b ${{ matrix.build_type }} --require-match
 
       - name: Build Binaries (Windows)
         if: matrix.os == 'windows-latest'
