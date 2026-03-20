@@ -53,8 +53,9 @@ const isDev = args.includes("--dev")
 const variantPattern = new RegExp(`^${packageJson.name}-(?<platform>[^-]+)-(?<arch>[^-]+)$`)
 const variants: Variant[] = Object.keys(packageJson.optionalDependencies || {})
   .flatMap((dep) => {
-    const match = dep.match(variantPattern)
-    return match?.groups ? [{ platform: match.groups.platform!, arch: match.groups.arch! }] : []
+    const groups = dep.match(variantPattern)?.groups
+    if (!groups) return []
+    return [{ platform: groups.platform!, arch: groups.arch! }]
   })
 
 if (!buildLib && !buildNative) {
