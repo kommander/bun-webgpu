@@ -50,12 +50,11 @@ const skipBuild = args.includes("--skip-build")
 const isDev = args.includes("--dev")
 
 // Derive platform variants from optionalDependencies in package.json
-const prefix = `${packageJson.name}-`
+const variantPattern = new RegExp(`^${packageJson.name}-(?<platform>[^-]+)-(?<arch>[^-]+)$`)
 const variants: Variant[] = Object.keys(packageJson.optionalDependencies || {})
-  .filter((dep) => dep.startsWith(prefix))
-  .map((dep) => {
-    const parts = dep.slice(prefix.length).split("-")
-    return { platform: parts[0]!, arch: parts[1]! }
+  .flatMap((dep) => {
+    const match = dep.match(variantPattern)
+    return match?.groups ? [{ platform: match.groups.platform!, arch: match.groups.arch! }] : []
   })
 
 if (!buildLib && !buildNative) {
