@@ -1,15 +1,15 @@
 import { FFIType, JSCallback, type Pointer, ptr } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
-import { fatalError } from "./utils/error";
-import { packObjectArray } from "./structs_ffi";
+import type { FFISymbols } from "./ffi.js";
+import { fatalError } from "./utils/error.js";
+import { packObjectArray } from "./structs_ffi.js";
 import { 
     normalizeGPUExtent3DStrict, 
     WGPUCallbackInfoStruct, 
     WGPUExtent3DStruct, 
     WGPUTexelCopyBufferLayoutStruct, 
     WGPUTexelCopyTextureInfoStruct
-} from "./structs_def";
-import { InstanceTicker } from "./GPU";
+} from "./structs_def.js";
+import { InstanceTicker } from "./GPU.js";
 
 // Type alias for buffer sources compatible with bun:ffi ptr()
 export type PtrSource = ArrayBuffer | ArrayBufferView;

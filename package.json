@@ -10,9 +10,23 @@
   "bugs": {
     "url": "https://github.com/kommander/bun-webgpu/issues"
   },
-  "module": "src/index.ts",
-  "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "bun": {
+        "source": "./src/index.ts"
+      },
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "type": "module",
+  "files": [
+    "dist",
+    "src"
+  ],
   "license": "Apache-2.0",
   "author": "SST",
   "keywords": [
@@ -36,9 +50,17 @@
     "build:linux": "./build-linux.sh",
     "build:windows": "pwsh build-windows.ps1"
   },
+  "dependencies": {
+    "@webgpu/types": "^0.1.60"
+  },
+  "optionalDependencies": {
+    "bun-webgpu-darwin-x64": "^0.1.5",
+    "bun-webgpu-darwin-arm64": "^0.1.5",
+    "bun-webgpu-linux-x64": "^0.1.5",
+    "bun-webgpu-win32-x64": "^0.1.5"
+  },
   "devDependencies": {
     "@types/bun": "latest",
-    "@webgpu/types": "^0.1.60",
     "commander": "^14.0.0",
     "sharp": "^0.34.0",
     "prettier": "3.6.2"

@@ -4,9 +4,9 @@
 import { type Pointer } from "bun:ffi";
 import { 
   createGPUInstance, 
-} from '..';
-import type { GPUImpl } from "../GPU";
-import { setupGlobals } from "../index";
+} from '../index.js';
+import type { GPUImpl } from "../GPU.js";
+import { setupGlobals } from "../index.js";
 
 setupGlobals();
 

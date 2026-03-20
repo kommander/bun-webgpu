@@ -1,5 +1,5 @@
 import { ptr, toArrayBuffer, type Pointer } from "bun:ffi";
-import { fatalError } from "./utils/error";
+import { fatalError } from "./utils/error.js";
 
 export const pointerSize = process.arch === 'x64' || process.arch === 'arm64' ? 8 : 4;
 

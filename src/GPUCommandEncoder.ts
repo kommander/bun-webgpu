@@ -1,9 +1,9 @@
 import { type Pointer, ptr } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
-import { GPUComputePassEncoderImpl } from "./GPUComputePassEncoder";
-import { GPURenderPassEncoderImpl } from "./GPURenderPassEncoder";
-import { GPUCommandBufferImpl } from "./GPUCommandBuffer";
-import { fatalError } from "./utils/error";
+import type { FFISymbols } from "./ffi.js";
+import { GPUComputePassEncoderImpl } from "./GPUComputePassEncoder.js";
+import { GPURenderPassEncoderImpl } from "./GPURenderPassEncoder.js";
+import { GPUCommandBufferImpl } from "./GPUCommandBuffer.js";
+import { fatalError } from "./utils/error.js";
 import {
     WGPURenderPassDescriptorStruct,
     WGPUComputePassDescriptorStruct,
@@ -13,8 +13,8 @@ import {
     WGPUExtent3DStruct,
     UINT64_MAX,
     WGPUStringView,
-} from "./structs_def";
-import { GPUBufferImpl } from "./GPUBuffer";
+} from "./structs_def.js";
+import { GPUBufferImpl } from "./GPUBuffer.js";
 
 export class GPUCommandEncoderImpl implements GPUCommandEncoder {
     __brand: "GPUCommandEncoder" = "GPUCommandEncoder";

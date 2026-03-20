@@ -1,7 +1,7 @@
 import { toArrayBuffer, type Pointer } from "bun:ffi";
-import { fatalError, OperationError } from "./utils/error";
-import { defineEnum, defineStruct, objectPtr } from "./structs_ffi";
-import { DEFAULT_SUPPORTED_LIMITS, WGPUErrorType } from "./shared";
+import { fatalError, OperationError } from "./utils/error.js";
+import { defineEnum, defineStruct, objectPtr } from "./structs_ffi.js";
+import { DEFAULT_SUPPORTED_LIMITS, WGPUErrorType } from "./shared.js";
 
 export const WGPUBool = 'bool_u32';
 export const UINT64_MAX = 0xFFFFFFFFFFFFFFFFn;

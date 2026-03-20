@@ -193,11 +193,6 @@ if (buildLib) {
   ]
 
   // Build main entry point
-  if (!packageJson.module) {
-    console.error("Error: 'module' field not found in package.json")
-    process.exit(1)
-  }
-
   spawnSync(
     "bun",
     [
@@ -205,7 +200,7 @@ if (buildLib) {
       "--target=bun",
       "--outdir=dist",
       ...externalDeps.flatMap((dep) => ["--external", dep]),
-      packageJson.module,
+      "src/index.ts",
     ],
     {
       cwd: rootDir,
@@ -260,53 +255,6 @@ if (buildLib) {
       console.log("Copied root index.d.ts to dist")
     }
   }
-
-  const exports = {
-    ".": {
-      import: "./index.js",
-      require: "./index.js",
-      types: "./index.d.ts"
-    }
-  }
-
-  const optionalDeps: Record<string, string> = Object.fromEntries(
-    variants.map(({ platform, arch }) => [`${packageJson.name}-${platform}-${arch}`, `^${packageJson.version}`]),
-  )
-
-  writeFileSync(
-    join(distDir, "package.json"),
-    JSON.stringify(
-      {
-        name: packageJson.name,
-        module: "index.js",
-        main: "index.js",
-        types: "index.d.ts",
-        type: packageJson.type,
-        version: packageJson.version,
-        description: packageJson.description,
-        keywords: packageJson.keywords,
-        license: packageJson.license,
-        author: packageJson.author,
-        homepage: packageJson.homepage,
-        repository: packageJson.repository,
-        bugs: packageJson.bugs,
-        exports,
-        dependencies: {
-          ...packageJson.dependencies,
-          "@webgpu/types": packageJson.devDependencies?.["@webgpu/types"] || "^0.1.60",
-        },
-        optionalDependencies: {
-          ...packageJson.optionalDependencies,
-          ...optionalDeps,
-        },
-      },
-      null,
-      2,
-    ),
-  )
-
-  writeFileSync(join(distDir, "README.md"), replaceLinks(readFileSync(join(rootDir, "README.md"), "utf8")))
-  if (existsSync(licensePath)) copyFileSync(licensePath, join(distDir, "LICENSE"))
 
   console.log("Library built at:", distDir)
 }

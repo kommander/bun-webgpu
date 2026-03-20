@@ -1,15 +1,15 @@
 /// <reference types="@webgpu/types" />
 import { JSCallback, type Pointer, ptr, FFIType } from "bun:ffi";
-import { type FFISymbols } from "./ffi";
-import { GPUAdapterImpl } from "./GPUAdapter";
+import { type FFISymbols } from "./ffi.js";
+import { GPUAdapterImpl } from "./GPUAdapter.js";
 import { 
   WGPUCallbackInfoStruct, 
   WGPURequestAdapterOptionsStruct,
   WGPUSupportedWGSLLanguageFeaturesStruct,
-} from "./structs_def";
-import { decodeCallbackMessage } from "./shared";
-import { fatalError } from "./utils/error";
-import { allocStruct } from "./structs_ffi";
+} from "./structs_def.js";
+import { decodeCallbackMessage } from "./shared.js";
+import { fatalError } from "./utils/error.js";
+import { allocStruct } from "./structs_ffi.js";
 
 const RequestAdapterStatus = {
   Success: 1,
