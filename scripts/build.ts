@@ -179,6 +179,19 @@ export default path;
     if (existsSync(licensePath)) copyFileSync(licensePath, join(nativeDir, "LICENSE"))
     console.log("Built:", nativeName)
   }
+
+  // Sync optionalDependencies in root package.json from variants
+  const optionalDeps: Record<string, string> = Object.fromEntries(
+    variants.map(({ platform, arch }) => [`${packageJson.name}-${platform}-${arch}`, `^${packageJson.version}`]),
+  )
+  const packageJsonPath = join(rootDir, "package.json")
+  const currentPackageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"))
+  currentPackageJson.optionalDependencies = {
+    ...currentPackageJson.optionalDependencies,
+    ...optionalDeps,
+  }
+  writeFileSync(packageJsonPath, JSON.stringify(currentPackageJson, null, 2) + "\n")
+  console.log("Synced optionalDependencies in package.json")
 }
 
 if (buildLib) {
