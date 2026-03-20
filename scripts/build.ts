@@ -27,6 +27,7 @@ interface PackageJson {
   devDependencies?: Record<string, string>
   optionalDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
+  exports?: Record<string, any>
 }
 
 const __filename = fileURLToPath(import.meta.url)
@@ -193,6 +194,12 @@ if (buildLib) {
   ]
 
   // Build main entry point
+  const entryPoint = packageJson.exports?.["."]?.bun?.source
+  if (!entryPoint) {
+    console.error("Error: 'exports[\".\"].bun.source' not found in package.json")
+    process.exit(1)
+  }
+
   spawnSync(
     "bun",
     [
@@ -200,7 +207,7 @@ if (buildLib) {
       "--target=bun",
       "--outdir=dist",
       ...externalDeps.flatMap((dep) => ["--external", dep]),
-      "src/index.ts",
+      entryPoint,
     ],
     {
       cwd: rootDir,
