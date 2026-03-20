@@ -54,8 +54,7 @@ const variantPattern = new RegExp(`^${packageJson.name}-(?<platform>[^-]+)-(?<ar
 const variants: Variant[] = Object.keys(packageJson.optionalDependencies || {})
   .flatMap((dep) => {
     const groups = dep.match(variantPattern)?.groups
-    if (!groups) return []
-    return [{ platform: groups.platform!, arch: groups.arch! }]
+    return groups !== undefined ? [{ platform: groups.platform!, arch: groups.arch! }] : []
   })
 
 if (!buildLib && !buildNative) {
