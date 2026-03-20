@@ -49,15 +49,14 @@ const buildNative = args.includes("--native")
 const skipBuild = args.includes("--skip-build")
 const isDev = args.includes("--dev")
 
-const variants: Variant[] = [
-  { platform: "darwin", arch: "x64" },
-  { platform: "darwin", arch: "arm64" },
-  { platform: "linux", arch: "x64" },
-  { platform: "win32", arch: "x64" },
-  // These could be added in the future:
-  // { platform: "linux", arch: "arm64" },
-  // { platform: "win32", arch: "arm64" },
-]
+// Derive platform variants from optionalDependencies in package.json
+const prefix = `${packageJson.name}-`
+const variants: Variant[] = Object.keys(packageJson.optionalDependencies || {})
+  .filter((dep) => dep.startsWith(prefix))
+  .map((dep) => {
+    const parts = dep.slice(prefix.length).split("-")
+    return { platform: parts[0]!, arch: parts[1]! }
+  })
 
 if (!buildLib && !buildNative) {
   console.error("Error: Please specify --lib, --native, or both")
@@ -180,18 +179,6 @@ export default path;
     console.log("Built:", nativeName)
   }
 
-  // Sync optionalDependencies in root package.json from variants
-  const optionalDeps: Record<string, string> = Object.fromEntries(
-    variants.map(({ platform, arch }) => [`${packageJson.name}-${platform}-${arch}`, `^${packageJson.version}`]),
-  )
-  const packageJsonPath = join(rootDir, "package.json")
-  const currentPackageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"))
-  currentPackageJson.optionalDependencies = {
-    ...currentPackageJson.optionalDependencies,
-    ...optionalDeps,
-  }
-  writeFileSync(packageJsonPath, JSON.stringify(currentPackageJson, null, 2) + "\n")
-  console.log("Synced optionalDependencies in package.json")
 }
 
 if (buildLib) {
