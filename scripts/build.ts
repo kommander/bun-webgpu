@@ -4,11 +4,6 @@ import { dirname, join, resolve } from "path"
 import { fileURLToPath } from "url"
 import process from "process"
 
-interface Variant {
-  platform: string
-  arch: string
-}
-
 interface PackageJson {
   name: string
   version: string
@@ -51,7 +46,7 @@ const isDev = args.includes("--dev")
 
 // Derive platform variants from optionalDependencies in package.json
 const variantPattern = new RegExp(`^${packageJson.name}-(?<platform>[^-]+)-(?<arch>[^-]+)$`)
-const variants: Variant[] = Object.keys(packageJson.optionalDependencies || {})
+const variants = Object.keys(packageJson.optionalDependencies || {})
   .flatMap((dep) => {
     const groups = dep.match(variantPattern)?.groups
     return groups !== undefined ? [{ platform: groups.platform!, arch: groups.arch! }] : []
