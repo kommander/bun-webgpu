@@ -1,8 +1,8 @@
 import { ptr, type Pointer } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
-import { GPUTextureViewImpl } from "./GPUTextureView";
-import { fatalError } from "./utils/error";
-import { WGPUTextureViewDescriptorStruct } from "./structs_def";
+import type { FFISymbols } from "./ffi.js";
+import { GPUTextureViewImpl } from "./GPUTextureView.js";
+import { fatalError } from "./utils/error.js";
+import { WGPUTextureViewDescriptorStruct } from "./structs_def.js";
 
 export class GPUTextureImpl implements GPUTexture {
     __brand: "GPUTexture" = "GPUTexture";

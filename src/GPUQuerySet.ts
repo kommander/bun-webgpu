@@ -1,5 +1,5 @@
 import { type Pointer } from "bun:ffi";
-import { type FFISymbols } from "./ffi";
+import { type FFISymbols } from "./ffi.js";
 
 export class GPUQuerySetImpl implements GPUQuerySet {
     __brand: "GPUQuerySet" = "GPUQuerySet";

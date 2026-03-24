@@ -1,11 +1,11 @@
 import { FFIType, JSCallback, ptr, toArrayBuffer, type Pointer } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
-import { BufferUsageFlags } from "./common";
-import { fatalError, OperationError } from "./utils/error";
-import { WGPUCallbackInfoStruct } from "./structs_def";
-import type { InstanceTicker } from "./GPU";
-import { AsyncStatus, decodeCallbackMessage, packUserDataId, unpackUserDataId } from "./shared";
-import type { GPUDeviceImpl } from "./GPUDevice";
+import type { FFISymbols } from "./ffi.js";
+import { BufferUsageFlags } from "./common.js";
+import { fatalError, OperationError } from "./utils/error.js";
+import { WGPUCallbackInfoStruct } from "./structs_def.js";
+import type { InstanceTicker } from "./GPU.js";
+import { AsyncStatus, decodeCallbackMessage, packUserDataId, unpackUserDataId } from "./shared.js";
+import type { GPUDeviceImpl } from "./GPUDevice.js";
 import { EventEmitter } from "events";
 
 export class GPUBufferImpl extends EventEmitter implements GPUBuffer {

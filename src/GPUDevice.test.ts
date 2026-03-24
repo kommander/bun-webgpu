@@ -1,9 +1,9 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
 import { 
     createGPUInstance, 
-} from "./index";
-import type { GPUImpl } from "./GPU";
-import { globals } from "./index";
+} from "./index.js";
+import type { GPUImpl } from "./GPU.js";
+import { globals } from "./index.js";
 
 globals();
 

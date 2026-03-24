@@ -20,31 +20,31 @@ import {
   WGPUExternalTextureBindingLayoutStruct,
   normalizeGPUExtent3DStrict,
   WGPUStringView,
-} from "./structs_def"
-import { WGPUComputePipelineDescriptorStruct } from "./structs_def"
-import { allocStruct } from "./structs_ffi"
-import { type FFISymbols } from "./ffi"
-import { GPUQueueImpl } from "./GPUQueue"
-import { GPUCommandEncoderImpl } from "./GPUCommandEncoder"
-import { GPUTextureImpl } from "./GPUTexture"
-import { GPUBufferImpl } from "./GPUBuffer"
-import { GPUSamplerImpl } from "./GPUSampler"
-import { GPUBindGroupImpl } from "./GPUBindGroup"
-import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout"
-import { GPUQuerySetImpl } from "./GPUQuerySet"
-import { GPUShaderModuleImpl } from "./GPUShaderModule"
-import { GPUPipelineLayoutImpl } from "./GPUPipelineLayout"
-import { GPUComputePipelineImpl } from "./GPUComputePipeline"
-import { GPURenderPipelineImpl } from "./GPURenderPipeline"
-import { createWGPUError, fatalError, GPUPipelineErrorImpl, OperationError } from "./utils/error"
-import { WGPULimitsStruct } from "./structs_def"
+} from "./structs_def.js"
+import { WGPUComputePipelineDescriptorStruct } from "./structs_def.js"
+import { allocStruct } from "./structs_ffi.js"
+import { type FFISymbols } from "./ffi.js"
+import { GPUQueueImpl } from "./GPUQueue.js"
+import { GPUCommandEncoderImpl } from "./GPUCommandEncoder.js"
+import { GPUTextureImpl } from "./GPUTexture.js"
+import { GPUBufferImpl } from "./GPUBuffer.js"
+import { GPUSamplerImpl } from "./GPUSampler.js"
+import { GPUBindGroupImpl } from "./GPUBindGroup.js"
+import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout.js"
+import { GPUQuerySetImpl } from "./GPUQuerySet.js"
+import { GPUShaderModuleImpl } from "./GPUShaderModule.js"
+import { GPUPipelineLayoutImpl } from "./GPUPipelineLayout.js"
+import { GPUComputePipelineImpl } from "./GPUComputePipeline.js"
+import { GPURenderPipelineImpl } from "./GPURenderPipeline.js"
+import { createWGPUError, fatalError, GPUPipelineErrorImpl, OperationError } from "./utils/error.js"
+import { WGPULimitsStruct } from "./structs_def.js"
 import {
   WGPUBufferDescriptorStruct,
   WGPUTextureDescriptorStruct,
   WGPUSamplerDescriptorStruct,
   WGPURenderBundleEncoderDescriptorStruct,
-} from "./structs_def"
-import type { InstanceTicker } from "./GPU"
+} from "./structs_def.js"
+import type { InstanceTicker } from "./GPU.js"
 import {
   normalizeIdentifier,
   DEFAULT_SUPPORTED_LIMITS,
@@ -53,12 +53,12 @@ import {
   AsyncStatus,
   unpackUserDataId,
   packUserDataId,
-} from "./shared"
-import { GPUAdapterInfoImpl, WGPUErrorType } from "./shared"
+} from "./shared.js"
+import { GPUAdapterInfoImpl, WGPUErrorType } from "./shared.js"
 import { EventEmitter } from "events"
-import { GPUTextureViewImpl } from "./GPUTextureView"
-import { GPURenderBundleEncoderImpl } from "./GPURenderBundleEncoder"
-import { BufferUsageFlags } from "./common"
+import { GPUTextureViewImpl } from "./GPUTextureView.js"
+import { GPURenderBundleEncoderImpl } from "./GPURenderBundleEncoder.js"
+import { BufferUsageFlags } from "./common.js"
 
 type EventListenerOptions = any
 export type DeviceErrorCallback = (this: GPUDevice, ev: GPUUncapturedErrorEvent) => any

@@ -1,6 +1,6 @@
 import type { Pointer } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
-import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout";
+import type { FFISymbols } from "./ffi.js";
+import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout.js";
 
 export class GPUComputePipelineImpl implements GPUComputePipeline {
     __brand: "GPUComputePipeline" = "GPUComputePipeline";

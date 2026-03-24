@@ -1,5 +1,5 @@
 import { type Pointer, toArrayBuffer } from "bun:ffi";
-import { BufferPool, type BlockBuffer } from "./buffer_pool";
+import { BufferPool, type BlockBuffer } from "./buffer_pool.js";
 
 export const AsyncStatus = {
     Success: 1,

@@ -1,7 +1,7 @@
 import type { Pointer } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
-import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout";
-import { fatalError } from "./utils/error";
+import type { FFISymbols } from "./ffi.js";
+import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout.js";
+import { fatalError } from "./utils/error.js";
 
 export class GPURenderPipelineImpl implements GPURenderPipeline {
     __brand: "GPURenderPipeline" = "GPURenderPipeline";

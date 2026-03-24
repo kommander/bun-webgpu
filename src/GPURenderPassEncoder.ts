@@ -1,7 +1,7 @@
 import { type Pointer, ptr } from "bun:ffi";
-import { type FFISymbols } from "./ffi";
-import { fatalError } from "./utils/error";
-import { WGPU_WHOLE_SIZE, WGPUIndexFormat, WGPUStringView, WGPUColorStruct } from "./structs_def";
+import { type FFISymbols } from "./ffi.js";
+import { fatalError } from "./utils/error.js";
+import { WGPU_WHOLE_SIZE, WGPUIndexFormat, WGPUStringView, WGPUColorStruct } from "./structs_def.js";
 
 export class GPURenderPassEncoderImpl implements GPURenderPassEncoder {
   __brand: "GPURenderPassEncoder" = "GPURenderPassEncoder";

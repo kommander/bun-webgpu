@@ -1,4 +1,4 @@
-import { createGPUInstance, globals } from "../src/index";
+import { createGPUInstance, globals } from "../src/index.js";
 
 globals();
 

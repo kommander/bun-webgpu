@@ -1,9 +1,9 @@
 import { expect, describe, it, beforeAll, afterAll } from "bun:test";
 import { 
     createGPUInstance, 
-} from "./index";
-import type { GPUImpl } from "./GPU";
-import { TextureUsageFlags } from "./common";
+} from "./index.js";
+import type { GPUImpl } from "./GPU.js";
+import { TextureUsageFlags } from "./common.js";
 
 // Global variables for the test suite
 let gpu: GPUImpl | null = null;

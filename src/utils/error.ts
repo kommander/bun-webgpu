@@ -1,4 +1,4 @@
-import { WGPUErrorType } from "../shared";
+import { WGPUErrorType } from "../shared.js";
 
 export function fatalError(...args: any[]): never {
     const message = args.join(' ');

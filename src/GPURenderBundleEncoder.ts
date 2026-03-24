@@ -1,11 +1,11 @@
 import { type Pointer, ptr } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
-import { GPURenderBundleImpl } from "./GPURenderBundle";
-import { WGPURenderBundleDescriptorStruct, WGPUIndexFormat, WGPUStringView } from "./structs_def";
-import { fatalError } from "./utils/error";
-import { GPUBufferImpl } from "./GPUBuffer";
-import { GPURenderPipelineImpl } from "./GPURenderPipeline";
-import { GPUBindGroupImpl } from "./GPUBindGroup";
+import type { FFISymbols } from "./ffi.js";
+import { GPURenderBundleImpl } from "./GPURenderBundle.js";
+import { WGPURenderBundleDescriptorStruct, WGPUIndexFormat, WGPUStringView } from "./structs_def.js";
+import { fatalError } from "./utils/error.js";
+import { GPUBufferImpl } from "./GPUBuffer.js";
+import { GPURenderPipelineImpl } from "./GPURenderPipeline.js";
+import { GPUBindGroupImpl } from "./GPUBindGroup.js";
 
 export class GPURenderBundleEncoderImpl implements GPURenderBundleEncoder {
     __brand: "GPURenderBundleEncoder" = "GPURenderBundleEncoder";
