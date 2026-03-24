@@ -1,6 +1,6 @@
 import { type Pointer } from "bun:ffi";
-import { type FFISymbols } from "./ffi";
-import { fatalError } from "./utils/error";
+import { type FFISymbols } from "./ffi.js";
+import { fatalError } from "./utils/error.js";
 
 export class GPUShaderModuleImpl implements GPUShaderModule {
     __brand: "GPUShaderModule" = "GPUShaderModule";

@@ -1,7 +1,7 @@
 import { expect, describe, it, beforeAll, afterAll } from "bun:test"
-import { createGPUInstance } from "./index"
-import type { GPUImpl } from "./GPU"
-import type { GPUAdapterImpl } from "./GPUAdapter" // Import implementation for testing cache
+import { createGPUInstance } from "./index.js"
+import type { GPUImpl } from "./GPU.js"
+import type { GPUAdapterImpl } from "./GPUAdapter.js" // Import implementation for testing cache
 
 // Global variables for the test suite
 let gpu: GPUImpl | null = null

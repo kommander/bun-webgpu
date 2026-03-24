@@ -7,3 +7,7 @@ cts
 artifacts
 build-linux.sh
 build-windows.ps1
+src/**/*.test.ts
+src/examples
+src/zig
+src/benchmark

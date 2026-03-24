@@ -5,7 +5,7 @@ import {
     objectPtr,
     allocStruct,
     packObjectArray,
-} from "./structs_ffi";
+} from "./structs_ffi.js";
 import { toArrayBuffer } from "bun:ffi";
 
 describe("Structs FFI", () => {

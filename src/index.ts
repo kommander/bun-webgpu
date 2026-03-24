@@ -1,11 +1,11 @@
 /// <reference types="@webgpu/types" />
 /// <reference types="../index.d.ts" />
 import { type Pointer } from "bun:ffi"
-import { loadLibrary, type FFISymbols } from "./ffi"
-import { GPUImpl } from "./GPU"
-import { GPUDeviceImpl } from "./GPUDevice"
-import { GPUAdapterInfoImpl, GPUSupportedLimitsImpl } from "./shared"
-import { BufferUsageFlags, MapModeFlags, ShaderStageFlags, TextureUsageFlags } from "./common"
+import { loadLibrary, type FFISymbols } from "./ffi.js"
+import { GPUImpl } from "./GPU.js"
+import { GPUDeviceImpl } from "./GPUDevice.js"
+import { GPUAdapterInfoImpl, GPUSupportedLimitsImpl } from "./shared.js"
+import { BufferUsageFlags, MapModeFlags, ShaderStageFlags, TextureUsageFlags } from "./common.js"
 import {
   GPUOutOfMemoryError,
   GPUErrorImpl,
@@ -13,9 +13,9 @@ import {
   GPUValidationError,
   AbortError,
   GPUPipelineErrorImpl,
-} from "./utils/error"
+} from "./utils/error.js"
 
-export * from "./mocks/GPUCanvasContext"
+export * from "./mocks/GPUCanvasContext.js"
 
 function createInstance(lib: FFISymbols): Pointer | null {
   try {

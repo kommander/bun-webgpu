@@ -1,5 +1,5 @@
 import type { Pointer } from "bun:ffi";
-import type { FFISymbols } from "./ffi";
+import type { FFISymbols } from "./ffi.js";
 
 export class GPUPipelineLayoutImpl implements GPUPipelineLayout {
     __brand: "GPUPipelineLayout" = "GPUPipelineLayout";

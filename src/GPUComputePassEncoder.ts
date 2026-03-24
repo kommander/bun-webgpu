@@ -1,6 +1,6 @@
 import { type Pointer, ptr } from "bun:ffi";
-import { type FFISymbols } from "./ffi";
-import { WGPUStringView } from "./structs_def";
+import { type FFISymbols } from "./ffi.js";
+import { WGPUStringView } from "./structs_def.js";
 
 export class GPUComputePassEncoderImpl implements GPUComputePassEncoder {
   __brand: "GPUComputePassEncoder" = "GPUComputePassEncoder";

@@ -1,7 +1,7 @@
 /// <reference types="../index.d.ts" />
 import { type Pointer, FFIType, JSCallback, ptr, toArrayBuffer } from "bun:ffi"
-import type { FFISymbols } from "./ffi"
-import { GPUDeviceImpl } from "./GPUDevice"
+import type { FFISymbols } from "./ffi.js"
+import { GPUDeviceImpl } from "./GPUDevice.js"
 import {
   WGPUCallbackInfoStruct,
   WGPUDeviceDescriptorStruct,
@@ -10,17 +10,17 @@ import {
   WGPUSupportedFeaturesStruct,
   WGPUAdapterInfoStruct,
   WGPUDeviceLostReasonDef,
-} from "./structs_def"
-import { createWGPUError, fatalError, GPUErrorImpl, OperationError } from "./utils/error"
-import type { InstanceTicker } from "./GPU"
-import { allocStruct } from "./structs_ffi"
+} from "./structs_def.js"
+import { createWGPUError, fatalError, GPUErrorImpl, OperationError } from "./utils/error.js"
+import type { InstanceTicker } from "./GPU.js"
+import { allocStruct } from "./structs_ffi.js"
 import {
   GPUAdapterInfoImpl,
   normalizeIdentifier,
   DEFAULT_SUPPORTED_LIMITS,
   GPUSupportedLimitsImpl,
   decodeCallbackMessage,
-} from "./shared"
+} from "./shared.js"
 
 const RequestDeviceStatus = {
   Success: 1,

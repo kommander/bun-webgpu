@@ -1,5 +1,5 @@
 import { expect, describe, it } from "bun:test";
-import { BufferPool } from "./buffer_pool";
+import { BufferPool } from "./buffer_pool.js";
 
 describe("BufferPool", () => {
 
