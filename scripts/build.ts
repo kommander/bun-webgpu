@@ -4,6 +4,11 @@ import { dirname, join, resolve } from "path"
 import { fileURLToPath } from "url"
 import process from "process"
 
+interface Variant {
+  platform: string
+  arch: string
+}
+
 interface PackageJson {
   name: string
   version: string
@@ -22,7 +27,6 @@ interface PackageJson {
   devDependencies?: Record<string, string>
   optionalDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
-  exports?: Record<string, any>
 }
 
 const __filename = fileURLToPath(import.meta.url)
@@ -44,13 +48,15 @@ const buildNative = args.includes("--native")
 const skipBuild = args.includes("--skip-build")
 const isDev = args.includes("--dev")
 
-// Derive platform variants from optionalDependencies in package.json
-const variantPattern = new RegExp(`^${packageJson.name}-(?<platform>[^-]+)-(?<arch>[^-]+)$`)
-const variants = Object.keys(packageJson.optionalDependencies || {})
-  .flatMap((dep) => {
-    const groups = dep.match(variantPattern)?.groups
-    return groups !== undefined ? [{ platform: groups.platform!, arch: groups.arch! }] : []
-  })
+const variants: Variant[] = [
+  { platform: "darwin", arch: "x64" },
+  { platform: "darwin", arch: "arm64" },
+  { platform: "linux", arch: "x64" },
+  { platform: "win32", arch: "x64" },
+  // These could be added in the future:
+  // { platform: "linux", arch: "arm64" },
+  // { platform: "win32", arch: "arm64" },
+]
 
 if (!buildLib && !buildNative) {
   console.error("Error: Please specify --lib, --native, or both")
@@ -172,7 +178,6 @@ export default path;
     if (existsSync(licensePath)) copyFileSync(licensePath, join(nativeDir, "LICENSE"))
     console.log("Built:", nativeName)
   }
-
 }
 
 if (buildLib) {
@@ -188,9 +193,8 @@ if (buildLib) {
   ]
 
   // Build main entry point
-  const entryPoint = packageJson.exports?.["."]?.bun?.source
-  if (!entryPoint) {
-    console.error("Error: 'exports[\".\"].bun.source' not found in package.json")
+  if (!packageJson.module) {
+    console.error("Error: 'module' field not found in package.json")
     process.exit(1)
   }
 
@@ -201,7 +205,7 @@ if (buildLib) {
       "--target=bun",
       "--outdir=dist",
       ...externalDeps.flatMap((dep) => ["--external", dep]),
-      entryPoint,
+      packageJson.module,
     ],
     {
       cwd: rootDir,
@@ -256,6 +260,53 @@ if (buildLib) {
       console.log("Copied root index.d.ts to dist")
     }
   }
+
+  const exports = {
+    ".": {
+      import: "./index.js",
+      require: "./index.js",
+      types: "./index.d.ts"
+    }
+  }
+
+  const optionalDeps: Record<string, string> = Object.fromEntries(
+    variants.map(({ platform, arch }) => [`${packageJson.name}-${platform}-${arch}`, `^${packageJson.version}`]),
+  )
+
+  writeFileSync(
+    join(distDir, "package.json"),
+    JSON.stringify(
+      {
+        name: packageJson.name,
+        module: "index.js",
+        main: "index.js",
+        types: "index.d.ts",
+        type: packageJson.type,
+        version: packageJson.version,
+        description: packageJson.description,
+        keywords: packageJson.keywords,
+        license: packageJson.license,
+        author: packageJson.author,
+        homepage: packageJson.homepage,
+        repository: packageJson.repository,
+        bugs: packageJson.bugs,
+        exports,
+        dependencies: {
+          ...packageJson.dependencies,
+          "@webgpu/types": packageJson.devDependencies?.["@webgpu/types"] || "^0.1.60",
+        },
+        optionalDependencies: {
+          ...packageJson.optionalDependencies,
+          ...optionalDeps,
+        },
+      },
+      null,
+      2,
+    ),
+  )
+
+  writeFileSync(join(distDir, "README.md"), replaceLinks(readFileSync(join(rootDir, "README.md"), "utf8")))
+  if (existsSync(licensePath)) copyFileSync(licensePath, join(distDir, "LICENSE"))
 
   console.log("Library built at:", distDir)
 }

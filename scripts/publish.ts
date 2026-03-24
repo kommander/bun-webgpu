@@ -77,19 +77,20 @@ try {
   }
 } catch {}
 
-const distDir = join(rootDir, "dist")
-if (!existsSync(distDir)) {
+const libDir = join(rootDir, "dist")
+if (!existsSync(libDir)) {
   console.error("Error: dist directory not found. Please run 'bun run build' first.")
   process.exit(1)
 }
 
 const mismatches: Array<{ name: string; dir: string; expected: string; actual: string }> = []
 const packageJsons: Record<string, PackageJson> = {
-  [rootDir]: packageJson,
+  [libDir]: JSON.parse(readFileSync(join(libDir, "package.json"), "utf8")),
 }
 
 // Load all native package.json files
-for (const pkgName of Object.keys(packageJson.optionalDependencies || {}).filter((x) =>
+const libPackageJson = packageJsons[libDir]!
+for (const pkgName of Object.keys(libPackageJson.optionalDependencies || {}).filter((x) =>
   x.startsWith(packageJson.name),
 )) {
   const nativeDir = join(rootDir, "node_modules", pkgName)
