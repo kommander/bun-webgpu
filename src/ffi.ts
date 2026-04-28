@@ -1,12 +1,12 @@
 import { dlopen, suffix, FFIType } from "bun:ffi"
 import { existsSync } from "fs"
-import { createRequire } from "module"
 import path from "path"
 import { fileURLToPath } from "url"
 
-const require = createRequire(import.meta.url)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+let targetLibPath: string | null = null
 
 function debugLoader(message: string): void {
   if (process.env.WGPU_DEBUG_LOADER === "true") {
@@ -14,31 +14,8 @@ function debugLoader(message: string): void {
   }
 }
 
-function getArchCandidates(): string[] {
-  if (process.arch === "arm64") {
-    return ["arm64", "aarch64"]
-  }
-  return [process.arch]
-}
-
 function resolveFromInstalledPackage(): string | null {
-  const extensions = [suffix, "dylib", "so", "dll"]
-  for (const arch of getArchCandidates()) {
-    const packageName = `bun-webgpu-${process.platform}-${arch}`
-    for (const libName of ["libwebgpu_wrapper", "webgpu_wrapper"]) {
-      for (const extension of extensions) {
-        const spec = `${packageName}/${libName}.${extension}`
-        try {
-          const resolved = require.resolve(spec)
-          debugLoader(`resolved installed library '${spec}' -> ${resolved}`)
-          return resolved
-        } catch {
-          debugLoader(`failed installed library candidate '${spec}'`)
-        }
-      }
-    }
-  }
-  return null
+  return targetLibPath
 }
 
 function resolveFromLocalBuild(): string | null {
@@ -86,6 +63,24 @@ function findLibrary(): string {
   throw new Error(
     `bun-webgpu is not supported on the current platform: ${process.platform}-${process.arch} (no installed package or local src/lib build found)`,
   )
+}
+
+try {
+  const module = await import(`bun-webgpu-${process.platform}-${process.arch}/index.ts`)
+  let resolvedTargetLibPath = module.default as string
+
+  if (/\$bunfs/.test(resolvedTargetLibPath)) {
+    resolvedTargetLibPath = resolvedTargetLibPath.replace("../", "")
+  }
+
+  if (!existsSync(resolvedTargetLibPath)) {
+    debugLoader(`installed package resolved to missing path '${resolvedTargetLibPath}'`)
+  } else {
+    targetLibPath = resolvedTargetLibPath
+    debugLoader(`resolved installed package library -> ${targetLibPath}`)
+  }
+} catch (error) {
+  debugLoader(`failed installed package import: ${error instanceof Error ? error.message : String(error)}`)
 }
 
 function _loadLibrary(libPath?: string) {
