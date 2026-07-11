@@ -58,6 +58,10 @@ export class GPUQueueImpl implements GPUQueue {
         }
         const handleView = packObjectArray(commandBuffersArray)
         this.lib.wgpuQueueSubmit(this.ptr, commandBuffersArray.length, ptr(handleView.buffer));
+
+        for (const buffer of commandBuffersArray) {
+            buffer._destroy();
+        }
     }
 
     onSubmittedWorkDone(): Promise<undefined> {
