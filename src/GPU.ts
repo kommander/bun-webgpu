@@ -9,7 +9,7 @@ import {
 } from "./structs_def.js";
 import { decodeCallbackMessage } from "./shared.js";
 import { fatalError } from "./utils/error.js";
-import { allocStruct } from "./structs_ffi.js";
+import { allocStruct, CallArena } from "./structs_ffi.js";
 
 const RequestAdapterStatus = {
   Success: 1,
@@ -125,14 +125,17 @@ export class GPUImpl implements GPU {
     return new Promise((resolve, reject) => {
         let packedOptionsPtr: Pointer | null = null;
         let jsCallback: JSCallback | null = null;
+        // Released once the request callback has run; the native call and the callback both read this graph.
+        const arena = new CallArena();
         
         try {
             if (options) {
                 try {
-                    const buffer = WGPURequestAdapterOptionsStruct.pack(options); 
+                    const buffer = WGPURequestAdapterOptionsStruct.pack(options, { arena });
                     packedOptionsPtr = ptr(buffer);
                 } catch (e) {
                     // console.error("Error packing WGPURequestAdapterOptionsStruct", e);
+                    arena.release();
                     resolve(null);
                     return;
                 }
@@ -160,6 +163,7 @@ export class GPUImpl implements GPU {
                     jsCallback = null;
                     queueMicrotask(() => {
                         callbackToClose.close();
+                        arena.release();
                     });
                 }
             };
@@ -178,7 +182,7 @@ export class GPUImpl implements GPU {
                 callback: jsCallback?.ptr,
                 userdata1: null,
                 userdata2: null,
-            });
+            }, { arena });
 
             const packedCallbackInfoPtr = ptr(buffer);
 
@@ -190,6 +194,7 @@ export class GPUImpl implements GPU {
             this._ticker.register();
         } catch (e) {
             if (jsCallback) jsCallback.close();
+            arena.release();
             reject(e);
         }
     });

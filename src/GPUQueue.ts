@@ -27,6 +27,8 @@ export class GPUQueueImpl implements GPUQueue {
     private _onSubmittedWorkDoneCallback: JSCallback;
     private _onSubmittedWorkDoneResolves: ((value: undefined) => void)[] = [];
     private _onSubmittedWorkDoneRejects: ((reason?: any) => void)[] = [];
+    // Callback info buffers native code still holds; dropped when the completions arrive.
+    private _onSubmittedWorkDoneInfos: ArrayBuffer[] = [];
     
     constructor(public readonly ptr: Pointer, private lib: FFISymbols, private instanceTicker: InstanceTicker) {
         this._onSubmittedWorkDoneCallback = new JSCallback(
@@ -41,6 +43,7 @@ export class GPUQueueImpl implements GPUQueue {
                 }
                 this._onSubmittedWorkDoneResolves = [];
                 this._onSubmittedWorkDoneRejects = [];
+                this._onSubmittedWorkDoneInfos = [];
             },
             {
                 args: [FFIType.u32, FFIType.pointer, FFIType.pointer],
@@ -77,6 +80,7 @@ export class GPUQueueImpl implements GPUQueue {
                 mode: 'AllowProcessEvents',
                 callback: this._onSubmittedWorkDoneCallback.ptr,
             });
+            this._onSubmittedWorkDoneInfos.push(callbackInfo);
     
             try {
                 this.lib.wgpuQueueOnSubmittedWorkDone(
