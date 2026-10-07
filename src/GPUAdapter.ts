@@ -13,7 +13,7 @@ import {
 } from "./structs_def.js"
 import { createWGPUError, fatalError, GPUErrorImpl, OperationError } from "./utils/error.js"
 import type { InstanceTicker } from "./GPU.js"
-import { allocStruct } from "./structs_ffi.js"
+import { allocStruct, CallArena } from "./structs_ffi.js"
 import {
   GPUAdapterInfoImpl,
   normalizeIdentifier,
@@ -56,6 +56,8 @@ export class GPUAdapterImpl implements GPUAdapter {
   private _destroyed = false
   private _device: GPUDeviceImpl | null = null
   private _state: "valid" | "consumed" | "invalid" = "valid"
+  // Native code calls these for the device's whole lifetime, long after requestDevice returns.
+  private _deviceCallbacks: JSCallback[] = []
 
   constructor(
     public readonly adapterPtr: Pointer,
@@ -231,6 +233,8 @@ export class GPUAdapterImpl implements GPUAdapter {
     return new Promise((resolve, reject) => {
       let packedDescriptorPtr: Pointer | null = null
       let jsCallback: JSCallback | null = null
+      // Released once the request callback has run; the native call and the callback both read this graph.
+      const arena = new CallArena()
 
       try {
         // --- 1. Pack Descriptor ---
@@ -277,6 +281,7 @@ export class GPUAdapterImpl implements GPUAdapter {
         if (!deviceLostCallback.ptr) {
           fatalError("Failed to create deviceLostCallback")
         }
+        this._deviceCallbacks = [uncapturedErrorCallback, deviceLostCallback]
 
         const fullDescriptor: GPUDeviceDescriptor & {
           uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
@@ -309,10 +314,12 @@ export class GPUAdapterImpl implements GPUAdapter {
               limits,
               features,
             },
+            arena,
           })
           packedDescriptorPtr = ptr(descBuffer)
         } catch (e) {
           this._state = "valid"
+          arena.release()
           reject(e)
           return
         }
@@ -349,6 +356,7 @@ export class GPUAdapterImpl implements GPUAdapter {
             jsCallback = null
             queueMicrotask(() => {
               callbackToClose.close()
+              arena.release()
             })
           }
         }
@@ -363,13 +371,16 @@ export class GPUAdapterImpl implements GPUAdapter {
         }
 
         // --- 3. Pack CallbackInfo ---
-        const buffer = WGPUCallbackInfoStruct.pack({
-          nextInChain: null,
-          mode: "AllowProcessEvents",
-          callback: jsCallback?.ptr,
-          userdata1: null,
-          userdata2: null,
-        })
+        const buffer = WGPUCallbackInfoStruct.pack(
+          {
+            nextInChain: null,
+            mode: "AllowProcessEvents",
+            callback: jsCallback?.ptr,
+            userdata1: null,
+            userdata2: null,
+          },
+          { arena },
+        )
 
         const packedCallbackInfoPtr = ptr(buffer)
 
@@ -381,6 +392,7 @@ export class GPUAdapterImpl implements GPUAdapter {
         console.error("Error during requestDevice:", e)
         this._state = "valid"
         if (jsCallback) jsCallback.close()
+        arena.release()
         reject(e)
       }
     })

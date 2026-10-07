@@ -256,6 +256,24 @@ type StructField =
 
 export interface StructFieldPackOptions {
   validationHints?: any;
+  arena?: CallArena;
+}
+
+/** Holds every buffer a packed argument graph points into, so GC cannot reclaim them while native code reads them. */
+export class CallArena {
+  owners = new Set<unknown>();
+  hold<T>(value: T): T {
+    this.owners.add(value);
+    return value;
+  }
+  release() {
+    this.owners.clear();
+  }
+}
+
+function owned<T>(value: T, options?: StructFieldPackOptions): T {
+  options?.arena?.hold(value);
+  return value;
 }
 
 interface StructLayoutField {
@@ -380,8 +398,9 @@ export interface StructDefOptions {
 
 const { pack: pointerPacker, unpack: pointerUnpacker } = primitivePackers('pointer');
 
-export function packObjectArray(val: (PointyObject | null)[]) {
-  const buffer = new ArrayBuffer(val.length * pointerSize);
+export function packObjectArray(val: (PointyObject | null)[], options?: StructFieldPackOptions) {
+  const buffer = owned(new ArrayBuffer(val.length * pointerSize), options);
+  for (const value of val) owned(value, options);
   const bufferView = new DataView(buffer);
   for (let i = 0; i < val.length; i++) {
       const instance = val[i];
@@ -425,8 +444,8 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     } else if (typeof typeOrStruct === 'string' && typeOrStruct === 'cstring') {
       size = pointerSize;
       align = pointerSize;
-      pack = (view: DataView, off: number, val: string | null) => {
-        const bufPtr = val ? ptr(encoder.encode(val + '\0')) : null;
+      pack = (view: DataView, off: number, val: string | null, obj, options) => {
+        const bufPtr = val ? ptr(owned(encoder.encode(val + '\0'), options)) : null;
         pointerPacker(view, off, bufPtr);
       };
       unpack = (view: DataView, off: number) => {
@@ -438,8 +457,8 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     } else if (typeof typeOrStruct === 'string' && typeOrStruct === 'char*') {
       size = pointerSize;
       align = pointerSize;
-      pack = (view: DataView, off: number, val: string | null) => {
-        const bufPtr = val ? ptr(encoder.encode(val)) : null; // No null terminator
+      pack = (view: DataView, off: number, val: string | null, obj, options) => {
+        const bufPtr = val ? ptr(owned(encoder.encode(val), options)) : null; // No null terminator
         pointerPacker(view, off, bufPtr);
       };
       unpack = (view: DataView, off: number) => {
@@ -496,7 +515,8 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       size = pointerSize;
       align = pointerSize;
 
-      pack = (view, off, value: PointyObject | null) => {
+      pack = (view, off, value: PointyObject | null, obj, options) => {
+          owned(value, options);
           const ptrValue = value?.ptr ?? null;
           // @ts-ignore
           if (ptrValue === undefined) {
@@ -522,12 +542,12 @@ export function defineStruct<const Fields extends readonly StructField[], const 
       if (isEnum(def)) {
         // Packing an array of enums
         arrayElementSize = typeSizes[def.type];
-        pack = (view, off, val: string[], obj) => {
+        pack = (view, off, val: string[], obj, options) => {
           if (!val || val.length === 0) {
             pointerPacker(view, off, null);
             return;
           }
-          const buffer = new ArrayBuffer(val.length * arrayElementSize);
+          const buffer = owned(new ArrayBuffer(val.length * arrayElementSize), options);
           const bufferView = new DataView(buffer);
           for (let i = 0; i < val.length; i++) {
             const num = def.to(val[i]!);
@@ -546,7 +566,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
             pointerPacker(view, off, null);
             return;
           }
-          const buffer = new ArrayBuffer(val.length * arrayElementSize);
+          const buffer = owned(new ArrayBuffer(val.length * arrayElementSize), options);
           const bufferView = new DataView(buffer);
           for (let i = 0; i < val.length; i++) {
             def.packInto(val[i], bufferView, i * arrayElementSize, options);
@@ -561,12 +581,12 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         arrayElementSize = typeSizes[def];
         const { pack: primitivePack } = primitivePackers(def);
          // Ensure 'val' type matches the expected primitive array type
-        pack = (view, off, val: PrimitiveToTSType<typeof def>[]) => {
+        pack = (view, off, val: PrimitiveToTSType<typeof def>[], obj, options) => {
           if (!val || val.length === 0) {
             pointerPacker(view, off, null);
             return;
           }
-          const buffer = new ArrayBuffer(val.length * arrayElementSize);
+          const buffer = owned(new ArrayBuffer(val.length * arrayElementSize), options);
           const bufferView = new DataView(buffer);
           for (let i = 0; i < val.length; i++) {
             primitivePack(bufferView, i * arrayElementSize, val[i]);
@@ -577,13 +597,13 @@ export function defineStruct<const Fields extends readonly StructField[], const 
         // TODO: Implement unpack for primitve array
       } else if (isObjectPointerDef(def)) {
         arrayElementSize = pointerSize;
-        pack = (view, off, val) => {
+        pack = (view, off, val, obj, options) => {
           if (!val || val.length === 0) {
               pointerPacker(view, off, null);
               return;
           }
 
-          const packedView = packObjectArray(val);
+          const packedView = packObjectArray(val, options);
           pointerPacker(view, off, ptr(packedView.buffer));
         }
         unpack = () => {
@@ -729,7 +749,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     arrayFields,
 
     pack(obj: Simplify<StructObjectInputType<Fields>>, options?: StructFieldPackOptions): ArrayBuffer {
-      const buf = new ArrayBuffer(totalSize);
+      const buf = owned(new ArrayBuffer(totalSize), options);
       const view = new DataView(buf);
       
       let mappedObj: any = obj;

@@ -144,6 +144,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
     {
       resolve: (value: GPUError | null) => void
       reject: (reason?: any) => void
+      owners: ArrayBuffer[]
     }
   > = new Map()
 
@@ -380,13 +381,13 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
       const id = this._errorScopePopId++
       const userDataBuffer = packUserDataId(id)
       const userDataPtr = ptr(userDataBuffer)
-      this._popErrorScopePromises.set(id, { resolve, reject })
-
       const callbackInfo = WGPUCallbackInfoStruct.pack({
         mode: "AllowProcessEvents",
         callback: this._popErrorScopeCallback.ptr!,
         userdata1: userDataPtr,
       })
+      // The entry keeps both buffers alive until the callback reads userdata1 and deletes it.
+      this._popErrorScopePromises.set(id, { resolve, reject, owners: [userDataBuffer, callbackInfo] })
       this.lib.wgpuDevicePopErrorScope(this.devicePtr, ptr(callbackInfo))
       this.instanceTicker.register()
     })
