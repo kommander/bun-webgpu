@@ -293,7 +293,7 @@ if (buildLib) {
         exports,
         dependencies: {
           ...packageJson.dependencies,
-          "@webgpu/types": packageJson.devDependencies?.["@webgpu/types"] || "^0.1.60",
+          "@webgpu/types": packageJson.dependencies?.["@webgpu/types"] || "^0.1.60",
         },
         optionalDependencies: {
           ...packageJson.optionalDependencies,

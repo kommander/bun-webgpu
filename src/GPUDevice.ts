@@ -732,7 +732,7 @@ export class GPUDeviceImpl extends EventEmitter implements GPUDevice {
       fatalError("Failed to create shader module (FFI returned null)")
     }
 
-    return new GPUShaderModuleImpl(modulePtr, this.lib, descriptor.label || "no-label")
+    return new GPUShaderModuleImpl(modulePtr, this.lib, this.instanceTicker, descriptor.label || "no-label")
   }
 
   createBindGroup(descriptor: GPUBindGroupDescriptor): GPUBindGroup {

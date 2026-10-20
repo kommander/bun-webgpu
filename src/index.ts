@@ -3,7 +3,26 @@
 import { type Pointer } from "bun:ffi"
 import { loadLibrary, type FFISymbols } from "./ffi.js"
 import { GPUImpl } from "./GPU.js"
+import { GPUAdapterImpl, GPUUncapturedErrorEventImpl } from "./GPUAdapter.js"
+import { GPUBindGroupImpl } from "./GPUBindGroup.js"
+import { GPUBindGroupLayoutImpl } from "./GPUBindGroupLayout.js"
+import { GPUBufferImpl } from "./GPUBuffer.js"
+import { GPUCommandBufferImpl } from "./GPUCommandBuffer.js"
+import { GPUCommandEncoderImpl } from "./GPUCommandEncoder.js"
+import { GPUComputePassEncoderImpl } from "./GPUComputePassEncoder.js"
+import { GPUComputePipelineImpl } from "./GPUComputePipeline.js"
 import { GPUDeviceImpl } from "./GPUDevice.js"
+import { GPUPipelineLayoutImpl } from "./GPUPipelineLayout.js"
+import { GPUQuerySetImpl } from "./GPUQuerySet.js"
+import { GPUQueueImpl } from "./GPUQueue.js"
+import { GPURenderBundleImpl } from "./GPURenderBundle.js"
+import { GPURenderBundleEncoderImpl } from "./GPURenderBundleEncoder.js"
+import { GPURenderPassEncoderImpl } from "./GPURenderPassEncoder.js"
+import { GPURenderPipelineImpl } from "./GPURenderPipeline.js"
+import { GPUSamplerImpl } from "./GPUSampler.js"
+import { GPUCompilationInfoImpl, GPUCompilationMessageImpl, GPUShaderModuleImpl } from "./GPUShaderModule.js"
+import { GPUTextureImpl } from "./GPUTexture.js"
+import { GPUTextureViewImpl } from "./GPUTextureView.js"
 import { GPUAdapterInfoImpl, GPUSupportedLimitsImpl } from "./shared.js"
 import { BufferUsageFlags, MapModeFlags, ShaderStageFlags, TextureUsageFlags } from "./common.js"
 import {
@@ -47,9 +66,32 @@ export const globalConstructors = {
   GPUShaderStage: ShaderStageFlags,
   GPUMapMode: MapModeFlags,
 
-  GPUDevice: GPUDeviceImpl as any,
+  GPU: GPUImpl as any,
+  GPUAdapter: GPUAdapterImpl as any,
   GPUAdapterInfo: GPUAdapterInfoImpl as any,
   GPUSupportedLimits: GPUSupportedLimitsImpl as any,
+  GPUDevice: GPUDeviceImpl as any,
+  GPUQueue: GPUQueueImpl as any,
+  GPUBuffer: GPUBufferImpl as any,
+  GPUTexture: GPUTextureImpl as any,
+  GPUTextureView: GPUTextureViewImpl as any,
+  GPUSampler: GPUSamplerImpl as any,
+  GPUShaderModule: GPUShaderModuleImpl as any,
+  GPUCompilationInfo: GPUCompilationInfoImpl as any,
+  GPUCompilationMessage: GPUCompilationMessageImpl as any,
+  GPUBindGroup: GPUBindGroupImpl as any,
+  GPUBindGroupLayout: GPUBindGroupLayoutImpl as any,
+  GPUPipelineLayout: GPUPipelineLayoutImpl as any,
+  GPURenderPipeline: GPURenderPipelineImpl as any,
+  GPUComputePipeline: GPUComputePipelineImpl as any,
+  GPUCommandEncoder: GPUCommandEncoderImpl as any,
+  GPUCommandBuffer: GPUCommandBufferImpl as any,
+  GPURenderPassEncoder: GPURenderPassEncoderImpl as any,
+  GPUComputePassEncoder: GPUComputePassEncoderImpl as any,
+  GPURenderBundleEncoder: GPURenderBundleEncoderImpl as any,
+  GPURenderBundle: GPURenderBundleImpl as any,
+  GPUQuerySet: GPUQuerySetImpl as any,
+  GPUUncapturedErrorEvent: GPUUncapturedErrorEventImpl as any,
 }
 
 export async function setupGlobals({ libPath }: { libPath?: string } = {}) {

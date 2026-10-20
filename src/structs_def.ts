@@ -846,6 +846,36 @@ export const WGPUShaderSourceWGSLStruct = defineStruct([
     ['code', WGPUStringView]
 ]);
 
+export const WGPUCompilationMessageType = defineEnum({
+    error: 0x00000001,
+    warning: 0x00000002,
+    info: 0x00000003,
+});
+
+export const WGPUCompilationMessageStruct = defineStruct([
+    ['nextInChain', 'pointer', { optional: true }],
+    ['message', WGPUStringView],
+    ['type', WGPUCompilationMessageType],
+    ['lineNum', 'u64'],
+    ['linePos', 'u64'],
+    ['offset', 'u64'],
+    ['length', 'u64'],
+]);
+
+// Chained to WGPUCompilationMessage, carries UTF-16 positions as required by the WebGPU spec
+export const WGPUDawnCompilationMessageUtf16Struct = defineStruct([
+    ['chain', WGPUChainedStructStruct],
+    ['linePos', 'u64'],
+    ['offset', 'u64'],
+    ['length', 'u64'],
+]);
+
+export const WGPUCompilationInfoStruct = defineStruct([
+    ['nextInChain', 'pointer', { optional: true }],
+    ['messageCount', 'u64'],
+    ['messages', 'pointer', { optional: true }],
+]);
+
 // --- Render Pipeline Structs ---
 
 export const WGPUVertexStepMode = defineEnum({
