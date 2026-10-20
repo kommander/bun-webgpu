@@ -685,7 +685,7 @@ export function defineStruct<const Fields extends readonly StructField[], const 
     const elemSize = def.type === 'u32' ? 4 : 8;
 
     requester.unpack = (view, off) => {
-      const result = [];
+      const result: ReturnType<typeof def.from>[] = [];
       const length = lengthOfField.unpack(view, lengthOfField.offset);
       const ptrAddress = pointerUnpacker(view, off);
 
